@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<head>
+    <title>Not Found</title>
+    <link rel="stylesheet" href="/common.css">
+</head>
+<body>
+    <div id="main">
+        <div id="content">
+            <h1>404 - Resource not found.</h1>
+            <p>The requested resource at </p> 
+            <p><em>{{ error404resource }}</em></p>
+            <p>could not be found. Make sure you have requested the correct resource, and that you didn't mistype the resource's URL.</p>
+            <p id="domain"><em>{{ domain }}</em></p>
+        </div>
+    </div>
+</body>
+</html>

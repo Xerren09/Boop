@@ -1,0 +1,10 @@
+{
+    "events" : [
+        "push"
+    ],
+    "run": [
+		"npm install",
+		"npm run build"
+    ],
+    "main": "./build/index.html"
+}
