@@ -97,3 +97,47 @@ textarea {
     padding-left: 10px;
     margin-left: 2px;
 }
+.log {
+    margin-top: 25px;
+}
+
+
+.collapsibleArea {
+    background-color: #00abec;
+    color: white;
+    padding: 10px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    border-radius: 5px 5px;
+}
+  
+.active, .collapsibleArea:hover {
+    background-color: #b9b9b9;
+}
+  
+.collapsibleArea:after {
+    content: '\002B';
+    color: white;
+    float: right;
+    margin-left: 5px;
+}
+  
+.open:after {
+    content: "\2212";
+}
+  
+.collapsibleContent {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+}
+
+.fa-check {
+    color: greenyellow;
+}
+
+.fa-x {
+    color: red;
+}
