@@ -4,6 +4,7 @@
   "description": "A lightweight development server for hosting websites and NodeJS apps.",
   "main": "boop.ts",
   "scripts": {
+    "start": "node boop",
     "build": "tsc --build",
     "run": "npx ts-node boop.ts",
     "dev": "ts-node boop.ts"

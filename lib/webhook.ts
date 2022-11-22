@@ -89,17 +89,31 @@ export function getWebhookEventDetails(req: express.Request): WebhookEvent {
  * */
 function isSignatureValid(req: express.Request): boolean {
     const signatureHeader: string = req.get('X-Hub-Signature-256') || "";
-    if (signatureHeader.length != 0) {
-        const signature = Buffer.from(signatureHeader, 'utf8');
-        const hmac = crypto.createHmac("sha256", process.env.SECRET || "");
-        const messageDigest = Buffer.from("sha256" + '=' + hmac.update(req.rawBody).digest('hex'), 'utf8')
-        if (crypto.timingSafeEqual(messageDigest, signature)) {
-            return true;
-        }
-        else if (process.env.NODE_ENV == "development") {
-            // Ignore the security when in development mode.
-            return true;
+    // Discard message if there is no signature
+    if (process.env.NODE_ENV != "development") {
+        if (signatureHeader.length != 0) {
+            const signature = Buffer.from(signatureHeader, 'utf8');
+            const secret = process.env.SECRET || "";
+            // Verify with SECRET if there is one, otherwise just check if the hashes match
+            if (secret.length != 0) {
+                const hmac = crypto.createHmac("sha256", process.env.SECRET || "");
+                const messageDigest = Buffer.from("sha256" + '=' + hmac.update(req.rawBody).digest('hex'), 'utf8')
+                if (crypto.timingSafeEqual(messageDigest, signature)) {
+                    return true;
+                }
+            }
+            else {
+                const hash = Buffer.from("sha256" + '=' + crypto.createHash('sha256').update(req.rawBody).digest('hex'), 'utf8');
+                if (crypto.timingSafeEqual(hash, signature)) {
+                    return true;
+                }
+            }
         }
     }
+    else {
+        // Ignore security in development mode
+        return true;
+    }
+    
     return false;
 }
