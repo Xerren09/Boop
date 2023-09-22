@@ -8,7 +8,7 @@ import { createProxyHost, createWebsiteHost } from './host'
 import { checkIfPathExists, pointsToFile } from "../util";
 
 /**Contains the list of currently online projects. */
-const projects: Project[] = [];
+export const projects: Project[] = [];
 
 /**
  * Selects the requested project's host and directs the request to it.

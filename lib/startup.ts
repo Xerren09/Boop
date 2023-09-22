@@ -3,6 +3,8 @@ import * as path from "path"
 import { checkIfPathExists } from "./util";
 import { projectsFolderPath, projectsSettingsFolderPath } from "./constants";
 import { startProject } from "./install/flow";
+import { projects } from "./projects/index";
+import kill from "tree-kill";
 
 export function startBoop() {
     if (checkIfPathExists(projectsSettingsFolderPath) == false) {
@@ -11,6 +13,15 @@ export function startBoop() {
     if (checkIfPathExists(projectsFolderPath) == false) {
         fs.mkdirSync(projectsFolderPath);
     }
+    process.on('close', (code) => {
+        projects.forEach(element => {
+            if (element.hostProcess != null) {
+                if (element.hostProcess.pid) {
+                    kill(element.hostProcess.pid);
+                }
+            }
+        });
+    });
     restartHosts();
 }
 
