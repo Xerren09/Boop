@@ -1,0 +1,16 @@
+.terminal-content {
+    background-color: #2d3436; 
+    color: #dddddd;
+    padding: 12px;
+    border: none;
+    resize: none;
+    outline: none;
+    width: calc(100% - 24px);
+    height: max-content;
+}
+
+.content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease-out;
+}

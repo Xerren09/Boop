@@ -105,5 +105,7 @@ dist
 
 .vs
 .vscode
-data/*
-projects/
+
+# Boop dynamic stuff
+/projects/
+/bin/

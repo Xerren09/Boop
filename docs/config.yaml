@@ -1,0 +1,9 @@
+type: service
+branch: main
+build:
+  - npm install
+  - npm run build
+deploy:
+  env:
+    port: 7777
+  entry: npm run start
