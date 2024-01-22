@@ -26,6 +26,19 @@ By default Boop will listen on port 8004. This can be changed:
 
 `boop --port 1234`
 
+## Security
+
+Disclaimer here. Boop is intended for scenarios where you have your own server and know how to safely configure it; and it was built with that in mind. 
+
+Webhooks should be secured with a `secret`. This can be either set through a .env file in Boop's root, or through the `--secret` flag on startup:
+
+`boop --secret <hash>`
+
+See [Securing your webhooks](https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks) for more.
+
+**Omitting a `secret` will allow anyone to use Boop and host their own projects.** 
+
+Boop also exposes some dangerous APIs. It should always run behind a well configured webserver that only exposes the desired routes.
 
 ## Project configuration
 
@@ -65,18 +78,6 @@ Webhook events can be directed to the following route:
 `/boop/webhook`
 
 Note: if multiple events are received for a project while it is busy, only the last one received will be kept. Once the project handlers are free again, the last event will be processed.
-
-## Security
-
-Webhooks should be secured with a `secret`. This can be either set through a .env file in Boop's root, or through the `--secret` flag on startup:
-
-`boop --secret <hash>`
-
-See [Securing your webhooks](https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks) for more.
-
-**Omitting a `secret` will allow anyone to use Boop and host their own projects.** 
-
-Boop also exposes some dangerous APIs. It should always run behind a well configured webserver that only exposes the desired routes.
 
 **Any route beginning with `/boop/` should not be freely exposed to the internet.** Other routes are project specific, but it is highly recommended to individually set a redirect on your webserver and not blanket allow them.
 
