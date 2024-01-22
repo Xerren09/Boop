@@ -16,7 +16,7 @@ Boop requires at least **NodeJS v16.9.0**, and git to be installed.
 
 Install the app globally: 
 
-`npm install --global @Xerren09/boop`
+`npm install --global @xerren09/boop`
 
 Then just run:
 
