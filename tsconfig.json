@@ -1,6 +1,6 @@
 {
     // This is an alias to @tsconfig/node16: https://github.com/tsconfig/bases
-    "extends": "ts-node/node16/tsconfig.json",
+    //"extends": "ts-node/node16/tsconfig.json",
 
     // Most ts-node options can be specified here using their programmatic names.
     "ts-node": {
@@ -14,23 +14,24 @@
         // compilerOptions specified here will override those declared below,
         // but *only* in ts-node.  Useful if you want ts-node and tsc to use
         // different options with a single tsconfig.json.
+        "allowJs": true,
+        "checkJs": true
       }
     },
     "compilerOptions": {
         "noImplicitAny": false,
         "noEmitOnError": true,
-        "removeComments": false,
-        "sourceMap": true,
-        "target": "ES2016",
-        "outDir": "js",
-        "moduleResolution": "Node",
+        "removeComments": true,
+        "sourceMap": false,
+        "lib": ["es2022"],
+        "target": "es2022",
+        "outDir": "bin",
+        "module": "Node16",
+        "moduleResolution": "node16",
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
-        "allowJs": true
     },
     "include": [
-        "types/*.d.ts",
-        "lib/**/*",
-        "boop.ts"
+        "src/**/*"
     ]
 }
