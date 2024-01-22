@@ -1,7 +1,8 @@
 {
   "name": "@xerren09/boop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A lightweight NodeJS CI/CD server for GitHub repositories ",
+  "preferGlobal": true,
   "scripts": {
     "build:ui": "npm run --prefix ./web build",
     "build:app": "tsc --build",
