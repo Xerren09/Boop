@@ -1,3 +1,6 @@
+import { R_OK, W_OK } from "constants";
+import { PathLike } from "fs";
+import { access } from "fs/promises";
 import net from "net";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
@@ -15,7 +18,7 @@ export function getFreePort() {
             const addressInfo = server.address();
             if (addressInfo != null && typeof addressInfo != "string") {
                 const port = addressInfo.port;
-                server.close(()=>{
+                server.close(() => {
                     resolve(port);
                 });
             }
@@ -26,24 +29,28 @@ export function getFreePort() {
     });
 }
 
-export function getArgValue(flag: string) {
-    const flagIndex = process.argv.findIndex(el => el.toLowerCase() == flag.toLowerCase());
-    if (flagIndex != -1) {
-        const flagValIndex = flagIndex + 1;
-        if (process.argv.length > (flagValIndex) && (process.argv[flagValIndex].startsWith('--') == false)) {
-            return process.argv[flagValIndex];
-        }
-        else {
-            return undefined;
-        }
-    }
-    else {
-        return undefined;
-    }
-}
-
-export function __dirname(importUrl: string) {
+/**
+ * Replacement for __dirname missing in ES Modules
+ * @param importUrl The local file's `import.meta.url`
+ * @returns
+ */
+export function resolve__dirname(importUrl: string) {
     const filename = fileURLToPath(importUrl);
     const _dirname = dirname(filename);
     return _dirname;
+}
+
+/**
+ * Wrapper around {@link access} that resolves with `true` if the path exists, and `false` if it doesn't. Doesn't throw.
+ * @param path 
+ * @returns 
+ */
+export async function pathExists(path: PathLike): Promise<boolean> {
+    try {
+        await access(path, W_OK | R_OK);
+        return true;
+    }
+    catch {
+        return false;
+    }
 }

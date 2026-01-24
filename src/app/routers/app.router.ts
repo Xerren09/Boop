@@ -2,9 +2,9 @@ import express from "express";
 import { join } from "path";
 
 /**
- * Creates a new Express Router that serves static files, for example a web-app.
+ * Creates a new Express Router that serves static files, for example for a web-app.
  * @param route The route the app should be served on
- * @param rootPath The root path of file's conatining directory
+ * @param rootPath The root path of the file's conatining directory
  * @param index The path within `rootPath` pointing to the index file
  * @returns {Router}
  */
@@ -16,7 +16,7 @@ export function createAppRouter(route: string, rootPath: string, index: string) 
     const staticRedirectRoute = `/${route}`;
     const indexPath = join(rootPath, index);
     router.use(staticRedirectRoute, express.static(rootPath));
-    router.get(redirectRoute, function (req, res, next) {
+    router.get(redirectRoute, function (_req, res) {
         // Unsure if this works as intended? Won't this block other index-like files from resolving?
         res.sendFile(indexPath);
     });

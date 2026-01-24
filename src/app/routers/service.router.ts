@@ -10,9 +10,9 @@ const httpProxyServer = httpProxy.createProxyServer({
  * @returns {Router}
  */
 export function createServiceRouter(route: string, port: number) {
-    var router = express.Router();
+    const router = express.Router();
     //const redirectRoute = `/${route}/*`;
-    router.use((req, res, next) => {
+    router.use((req, res) => {
         // Remove the boop attachment route from the url so the Proxy Host gets the correct request
         req.url = req.url.replace(`/${route}`, "");
         if (req.url === "/") {
@@ -20,11 +20,11 @@ export function createServiceRouter(route: string, port: number) {
         }
         // Forward request to proxy
         if (port !== undefined) {
-            httpProxyServer.web(req, res, {target: `http://localhost:${port}/`});
+            httpProxyServer.web(req, res, { target: `http://localhost:${port}/` });
         }
         else {
             res.status(503).send(`
-            <h1>503 - Service proxy unavailable</h1>
+            <h1>503 - Service port not specified.</h1>
 
             <p>Can&#39;t proxy requests for this project (${route}); it did not specify a port.</p>
 
@@ -33,11 +33,9 @@ export function createServiceRouter(route: string, port: number) {
             <p>Either:</p>
 
             <ul>
-                <li>Set the PORT environment variable in the project&#39;s config.yaml file (<a href="https://github.com/Xerren09/Boop#project-configuration">example</a>).</li>
-                <li>Or through the Boop web UI at <a href="http://${req.host}/boop/${route}">${route}</a>, and click the &quot;Edit variables&quot; option.</li>
+                <li>Set the <code>PORT</code> environment variable in the project&#39;s config.yaml file (<a href="https://github.com/Xerren09/Boop#project-configuration">example</a>).</li>
+                <li>Or through the Boop web UI at <a href="http://${req.host}/boop/${route}">${route}</a>, by setting a <code>PORT</code> variable in the &quot;Environment&quot; tab.</li>
             </ul>
-
-            <p>If you have set the PORT variable, make sure your application is using it correctly on startup.</p>
             `);
         }
     });

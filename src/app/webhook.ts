@@ -1,9 +1,8 @@
 import * as crypto from "crypto";
 import * as express from "express";
-import { BoopProject } from "./projects/project.js";
-import { activeProjects } from "./projects/index.js";
-import { logger } from "./logger.js";
+import ProjectManager from "./project/manager.js";
 import { INVALID_WEBHOOK_SIGNATURE, NOT_A_WEBHOOK } from "./constants.js";
+import logger from "../logger.js";
 
 /**
  * Handles the Webhook event, then installs and runs the application.
@@ -11,24 +10,23 @@ import { INVALID_WEBHOOK_SIGNATURE, NOT_A_WEBHOOK } from "./constants.js";
  * @param res 
  * @returns 
  */
-export async function webhook(req: express.Request, res: express.Response) {
+export async function webhookHandler(req: express.Request, res: express.Response) {
     if (req.get('X-GitHub-Event') !== undefined) {
         if (isSignatureValid(req)) {
-            const webhookEvent = getWebhookEventDetails(req);
+            const webhookEvent = parseWebhookEvent(req);
             //
             logger.info(`Incoming webhook event from ${webhookEvent.repository.url}.`);
             //
-            let project = activeProjects.find(el => el.name == webhookEvent.repository.name);
+            const project = ProjectManager.projects.find(el => el.name == webhookEvent.repository.name);
             if (project) {
-                project.onWebhookEvent(webhookEvent);
-                const message = `Webhook event accepted. Build added to queue. If a build is already in progress, this build will be started after it is complete. This event may be skipped if multiple events are received at the same time while busy, and only the last received event in the queue will be processed. Check ${res.req.hostname}/boop/projects/${webhookEvent.repository.name} for details.`;
-                res.status(202).send(message);
+                project.onWebhookEvent(webhookEvent, res);
             }
             else {
                 // Project doesn't yet exists on this machine; create it
                 logger.info(`First time setup started for ${webhookEvent.repository.name}.`);
-                BoopProject.createProject(webhookEvent);
-                res.status(202).send(`Webhook event accepted. Check ${req.hostname}/boop/projects/${webhookEvent.repository.name} for more details.`);
+                ProjectManager.Create(webhookEvent.repository.name, webhookEvent.repository.url).then((fresh) => {
+                    fresh.onWebhookEvent(webhookEvent, res);
+                });
             }
         }
         else {
@@ -37,7 +35,6 @@ export async function webhook(req: express.Request, res: express.Response) {
         }
     }
     else {
-        logger.error(NOT_A_WEBHOOK);
         res.status(400).send(NOT_A_WEBHOOK);
     }
 }
@@ -47,13 +44,13 @@ export async function webhook(req: express.Request, res: express.Response) {
  * @param {express.Request} req Express Request object
  * @returns {WebhookEvent}
  */
-export function getWebhookEventDetails(req: express.Request): WebhookEvent {
+function parseWebhookEvent(req: express.Request): WebhookEvent {
     const webhookEvent: WebhookEvent = {
         type: req.get('X-GitHub-Event') || "",
         time: Date.now(),
         repository: {
             url: req.body.repository.html_url,  // "https://github.com/Codertocat/Hello-World"
-            branch: req.body.ref  ? req.body.ref .split("refs/heads/")[1] : null,  // "refs/heads/main" -> main
+            branch: req.body.ref  ? req.body.ref.split("refs/heads/")[1] : null,  // "refs/heads/main" -> main
             name: req.body.repository.name,  // "Hello-World" -- this is file system safe!
             owner: {
                 name: req.body.repository.owner.login,  // "Codertocat"
@@ -80,25 +77,33 @@ export function getWebhookEventDetails(req: express.Request): WebhookEvent {
  * Check whether or not the request's signature is valid.
  * How it works:
  * https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks
+ * 
+ * If no `SECRET` environment variable is set, the function returns false. This can be 
+ * overridden by setting the `DISABLE_WEBHOOK_SECURITY` variable to `"true"`
  * @param {express.Request} req Express Request object
  * @returns {boolean}
  * */
 function isSignatureValid(req: express.Request): boolean {
-    const signatureHash: string = req.get('X-Hub-Signature-256') || "";
-    // Discard message if there is no signature
-    if (process.env.NODE_ENV != "development") {
-        if (signatureHash.length != 0) {
-            const body: string = JSON.stringify(req.body);
-            const WEBHOOK_SECRET = process.env.SECRET || "";
-            const signature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex");
-            const trusted = Buffer.from(`sha256=${signature}`, 'ascii');
-            const untrusted =  Buffer.from(req.get("x-hub-signature-256"), 'ascii');
-            return crypto.timingSafeEqual(trusted, untrusted);
-        }
+    // Ignore security check
+    if (process.env["DISABLE_WEBHOOK_SECURITY"] == "true") {
+        return true;
     }
     else {
-        // Ignore security in development mode
-        return true;
+        // If no SECRET is defined, we can't validate the signature, so reject it.
+        if (!process.env["SECRET"]) {
+            return false;
+        }
+    }
+
+    const signatureHash: string = req.get('X-Hub-Signature-256') ?? "";
+    // Discard message if there is no signature
+    if (signatureHash.length != 0) {
+        const body: string = JSON.stringify(req.body);
+        const WEBHOOK_SECRET = process.env["SECRET"] || "";
+        const signature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex");
+        const trusted = Buffer.from(`sha256=${signature}`, 'ascii');
+        const untrusted =  Buffer.from(signatureHash, 'ascii');
+        return crypto.timingSafeEqual(trusted, untrusted);
     }
     return false;
 }

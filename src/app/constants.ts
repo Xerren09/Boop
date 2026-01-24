@@ -2,11 +2,50 @@ import { join } from "path";
 /**
  * Path leading to the `projects` folder, where repositories are downloaded.
  */
-export const projectsFolderPath = join(process.cwd(), "/projects");
+export const PROJECTS_DIR = join(process.cwd(), "/projects");
+/**
+ * Path to Boop's main log file.
+ */
+export const LOG_FILE = join(process.cwd(), "/boop.log");
 /**
  * The name of the in-repo configuration file Boop uses to install and run the project.
  */
-export const configFileName = "config.yaml";
-
+export const BOOP_BUILD_FILE_NAME = "config.yaml";
+/**
+ * The name of the in-repo directory where the Boop build file is (ideally) located.
+ */
+export const BOOP_BUILD_FILE_DIR_NAME = ".boop";
+/**
+ * The filename of a project's main data file.
+ */
+export const PROJECT_FILE_NAME = "project.json";
+/**
+ * The filename of a project's ENV file.
+ */
+export const PROJECT_ENV_FILE_NAME = "env.json";
+/**
+ * The filename of a project's webhook events log.
+ */
+export const PROJECT_EVENTS_FILE_NAME = "events.json";
+/**
+ * The name of a project's repository contents' directory.
+ */
+export const PROJECT_BIN_DIR_NAME = "files";
+/**
+ * The name of a project's logs directory.
+ */
+export const PROJECT_LOGS_DIR_NAME = "logs";
+/**
+ * The name of a project's install logs directory. Used with {@link PROJECT_LOGS_DIR_NAME}
+ */
+export const PROJECT_LOGS_INSTALL_DIR_NAME = "install";
+/**
+ * The filename of a project's standard event log.
+ */
+export const PROJECT_LOG_FILE_NAME = "project.log";
 export const INVALID_WEBHOOK_SIGNATURE = "Unauthorized webhook request, signature invalid.";
 export const NOT_A_WEBHOOK = "Invalid.";
+/**
+ * The maximum number of process output entries to keep as output history.
+ */
+export const MAX_TERMINAL_HISTORY = 9001;

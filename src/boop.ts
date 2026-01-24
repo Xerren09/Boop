@@ -1,122 +1,110 @@
 #!/usr/bin/env node
-
+import { styleText, parseArgs, type ParseArgsOptionsConfig } from 'node:util';
 import express from 'express';
 import expressWs from "express-ws";
-const app = express();
-expressWs(app);
 import { config } from "dotenv";
-config();
-import { join } from 'path';
+config({quiet: true});
 import morgan from "morgan";
 // Boop application imports
-import { webhook } from './app/webhook.js'
-import { activeProjects, projectSelector } from "./app/projects/index.js";
-import { existsSync, mkdirSync, readdirSync } from "fs";
-import { projectsFolderPath } from "./app/constants.js";
-import { BoopProject } from "./app/projects/project.js";
-import { apiRouter } from "./api/api.router.js";
-import { uiRouter } from "./ui/ui.router.js";
-import { logger } from "./app/logger.js";
-import { getArgValue } from "./utils.js";
+import Manager from './app/project/manager.js';
+import logger from './logger.js';
+import { webhookHandler } from './app/webhook.js';
+import { uiRouter } from './app/routers/ui.router.js';
+import { apiRouter } from './app/routers/api.router.js';
+import { projectSelector } from './app/routers/selector.js';
+import { checkGitAvailable } from './app/shell/clone.js';
+
+const boopArgsOptions: ParseArgsOptionsConfig = {
+    port: {
+        type: 'string',
+    },
+    secret: {
+        type: 'string',
+    },
+};
+const args = parseArgs({ options: boopArgsOptions });
+
+try {
+    await checkGitAvailable();
+}
+catch {
+    // TODO: shut down boop
+}
 
 // Port flag:
-let port = process.env.PORT || 8004;
-const argPort = getArgValue("--port");
-if (argPort !== undefined) {
-    let val = Number(argPort);
-    if (Number.isNaN(val) === false) {
-        port = val;
-    }
-}
+const port = Number((args.values.port as string) ?? process.env['PORT'] ?? 8004);
 // Secret flag:
-const secret = getArgValue("--secret");
-if (secret !== undefined) {
-    process.env.SECRET = secret;
-}
-else {
-    logger.warn("No SECRET variable set; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
-}
-//
+const secret = args.values.secret ?? process.env['SECRET'] ?? "";
 
+const app = express();
+expressWs(app);
 app.use(express.json());
 app.use(express.urlencoded());
-
 app.use(morgan(
-    ':method :url :status :remote-addr :res[content-length] - :response-time ms',
+    ':method :url :status :remote-addr',
     {
         stream: {
             write: (message) => {
                 logger.info(message.trim());
             },
         },
-        skip(req, res) {
-            // Skip UI router + project selector
-            if (req.method === "GET")
-                return true;
-            if (req.originalUrl.startsWith("/boop/webhook"))
+        skip(req, _res) {
+            // Only log webhook events.
+            if ((req.method === "POST") && (req.originalUrl.startsWith("/boop/webhook"))) {
                 return false;
-            if (req.originalUrl.startsWith("/boop/api"))
-                return false;
+            }
             return true;
         },
     }
 ));
-
 // Webhook entry
-app.post('/boop/webhook', webhook);
-
+app.post('/boop/webhook', webhookHandler);
 // API router
 app.use('/boop/api', apiRouter);
-
+// Web interface router
 app.use('/boop/', uiRouter);
-
 // Entry point for all other requests, these either get ignored or forwarded to the project hosts
-app.all('*', projectSelector);
+app.all('/{*splat}', projectSelector);
 
-// BOOP
-app.listen(port, () => {
-    if (existsSync(projectsFolderPath)) {
-        const items = readdirSync(projectsFolderPath, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name);
-        for (const projectDir of items) {
-            // Start project
-            const projectFilePath = join(projectsFolderPath, projectDir, "project.json");
-            if (existsSync(projectFilePath)) {
-                const projectName = projectDir;
-                const project = new BoopProject(projectName);
-                project.start().then(() => {
-                    activeProjects.push(project);
-                }).catch(err => {
-                    logger.error(`Project startup ${project.name} failed (${err}).`);
-                });
-            }
-        }
+
+// BOOP!
+const BOOP = app.listen(port, async () => { 
+    console.log(`                         __ `);
+    console.log(` _____ _____ _____ _____|  |`);
+    console.log(`| __  |     |     |  _  |  |`);
+    console.log(`| __ -|  |  |  |  |   __|__|`);
+    console.log(`|_____|_____|_____|__|  |__|`);
+    console.log(`Tiny CI/CD server for GitHub webhooks!\n`);
+    if (secret !== undefined) {
+        process.env['SECRET'] = secret.toString();
     }
     else {
-        mkdirSync(projectsFolderPath);
+        logger.warn("No SECRET variable set; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
     }
-    logger.info(`------ Boop listening on port ${port} ------`);
+    console.log(`====`);
+    console.log(`Boop listening on port ${port}`);
+    console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
+    console.log(`====\n`);
+    await Manager.LoadAll();
+    await Manager.DeployAll();
 });
 
-const shutDownHandler = (crash?: boolean) => { 
-    logger.info("------------ Boop shutting down ------------");
-    for (const project of activeProjects) {
-        if (project.process) {
-            project.process.kill();
-        }
-        logger.info(`${project.name} disposed.`);
-    }
-    logger.info("-------------- Boop shut down --------------");
-    if (crash !== true) {
-        process.exit(0);
-    }
-};
+async function handle_termination() {
+    console.log(`\n====`);
+    logger.info("Shutting down...");
+    await Manager.DisposeAll();
+    logger.on('finish', (info) => {
+        BOOP.close();
+        process.exit(process.exitCode);
+    });
+    logger.end();
+}
 
-process.once('SIGINT', shutDownHandler);
+process.once('SIGINT', handle_termination);
+process.once('SIGTERM', handle_termination);
 
-process.once('uncaughtException', (err) => {
-    logger.error(`------------------ FATAL ------------------`);
-    logger.error(`FATAL: ${err.message}${err.cause ? ` (cause: ${err.cause})` : undefined}`);
-    logger.error(`FATAL: ${err.stack}`);
-    shutDownHandler(true);
-    process.exit(1);
+process.once('uncaughtException', async (err) => {
+    logger.error(err);
+    process.exitCode = 1;
+    await handle_termination();
 });
