@@ -58,11 +58,12 @@ export class ServiceProject extends BoopProject {
                         }
                         resolve();
                     }
-                    
                 });
-                this._process.once("exit", () => {
+                this._process.once("exit", (code) => {
                     this._router = null;
-                    this.log.debug(`Project process stopped (${this._process?.pid}).`);
+                    if (code !== 0) {
+                        this.SharedLog("warn", `Project process exited (${this._process?.pid}).`);
+                    }
                 });
             }
             else {
@@ -78,6 +79,9 @@ export class ServiceProject extends BoopProject {
      * @returns 
      */
     protected async _stop(): Promise<void> {
+        if (this._process === undefined) {
+            return;
+        }
         if (this._process.exited == false) {
             await this._process.kill();
         }
