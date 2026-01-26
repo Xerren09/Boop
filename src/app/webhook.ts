@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as express from "express";
 import ProjectManager from "./project/manager.js";
-import { INVALID_WEBHOOK_SIGNATURE, NOT_A_WEBHOOK } from "./constants.js";
+import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_SECRET, INVALID_WEBHOOK_SIGNATURE, NOT_A_WEBHOOK } from "./constants.js";
 import logger from "../logger.js";
 
 /**
@@ -85,12 +85,12 @@ function parseWebhookEvent(req: express.Request): WebhookEvent {
  * */
 function isSignatureValid(req: express.Request): boolean {
     // Ignore security check
-    if (process.env["DISABLE_WEBHOOK_SECURITY"] == "true") {
+    if (process.env[ENV_DISABLE_WEBHOOK_SECURITY] == "true") {
         return true;
     }
     else {
         // If no SECRET is defined, we can't validate the signature, so reject it.
-        if (!process.env["SECRET"]) {
+        if (!process.env[ENV_SECRET]) {
             return false;
         }
     }
@@ -99,7 +99,7 @@ function isSignatureValid(req: express.Request): boolean {
     // Discard message if there is no signature
     if (signatureHash.length != 0) {
         const body: string = JSON.stringify(req.body);
-        const WEBHOOK_SECRET = process.env["SECRET"] || "";
+        const WEBHOOK_SECRET = process.env[ENV_SECRET] || "";
         const signature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex");
         const trusted = Buffer.from(`sha256=${signature}`, 'ascii');
         const untrusted =  Buffer.from(signatureHash, 'ascii');

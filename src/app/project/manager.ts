@@ -18,6 +18,10 @@ class ProjectManager {
         return this._projects;
     }
 
+    public Find(target: string): BoopProject {
+        return this.projects.find(el => el.name == target);
+    }
+
     /**
      * Loads a project with the specified name.
      * @param projectName 
@@ -57,7 +61,7 @@ class ProjectManager {
      * @returns 
      */
     public async Create(name: string, remote: string): Promise<BoopProject> {
-        const projectDir = join(PROJECTS_DIR, name);
+        const projectDir = join(PROJECTS_DIR, name, PROJECT_FILE_NAME);
         if (await pathExists(projectDir)) {
             const err = new Error(`Can't create project; already exists (${remote}).`);
             logger.error(err);
@@ -144,19 +148,18 @@ class ProjectManager {
     /**
      * Stops all loaded projects' processes if they have one.
      */
-    public async DisposeAll(force: boolean = false) {
-        logger.info(`Disposing projects...`);
+    public async StopAll(force: boolean = false) {
+        logger.info(`Stopping projects...`);
         for (const project of this._projects) {
+            await project.installer.kill(force);
             if (project instanceof ServiceProject) {
                 try {
-                    await project.installer.kill(force);
                     if (force === true) {
                         await project.process.kill(force);
                     }
                     else {
                         await project.stop();
                     }
-                    logger.info(`Project '${project.name}' disposed.`);
                 }
                 catch (error) {
                     logger.error(`Project '${project.name}' failed to stop.`, error);
@@ -166,7 +169,7 @@ class ProjectManager {
                 await project.stop();
             }
         }
-        logger.info(`Disposed all project processes!`);
+        logger.info(`Stopped all project processes!`);
     }
 
     /**

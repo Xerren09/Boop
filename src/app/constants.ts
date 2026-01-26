@@ -49,3 +49,6 @@ export const NOT_A_WEBHOOK = "Invalid.";
  * The maximum number of process output entries to keep as output history.
  */
 export const MAX_TERMINAL_HISTORY = 9001;
+export const ENV_DISABLE_WEBHOOK_SECURITY = "DISABLE_WEBHOOK_SECURITY";
+export const ENV_PORT = "PORT";
+export const ENV_SECRET = "SECRET";
