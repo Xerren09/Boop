@@ -151,9 +151,11 @@ class ProjectManager {
     public async StopAll(force: boolean = false) {
         logger.info(`Stopping projects...`);
         for (const project of this._projects) {
-            await project.installer.kill(force);
-            if (project instanceof ServiceProject) {
-                try {
+            try {
+                if (force === true) {
+                    await project.installer.kill(force);
+                }
+                if (project instanceof ServiceProject) {
                     if (force === true) {
                         await project.process.kill(force);
                     }
@@ -161,12 +163,12 @@ class ProjectManager {
                         await project.stop();
                     }
                 }
-                catch (error) {
-                    logger.error(`Project '${project.name}' failed to stop.`, error);
+                else {
+                    await project.stop();
                 }
             }
-            else {
-                await project.stop();
+            catch (error) {
+                logger.error(`Project '${project.name}' failed to stop.`, error);
             }
         }
         logger.info(`Stopped all project processes!`);
@@ -188,11 +190,7 @@ class ProjectManager {
             logger.error(err);
             throw err;
         }
-        if (project instanceof ServiceProject) {
-            if (project.installing) {
-                await project.installer.kill();
-            }
-        }
+        await project.installer.kill();
         await project.stop();
         await rm(project.rootDir, { recursive: true, force: true });
         const idx = this._projects.indexOf(project);
