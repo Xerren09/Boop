@@ -27,6 +27,8 @@ export async function webhookHandler(req: express.Request, res: express.Response
                 res.status(202).send(`Accepted, creating Boop project.`);
                 ProjectManager.Create(webhookEvent.repository.name, webhookEvent.repository.url).then((fresh) => {
                     fresh.onWebhookEvent(webhookEvent);
+                }).catch(err => {
+                    // If Create throws we can't handle it any better than it already does on its own; catch and ignore the re-throw.
                 });
             }
         }
