@@ -1,6 +1,6 @@
-import { downloadRemote } from "../shell/clone.js";
+import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
-import { BoopProject, type ProjectConfig } from "./index.js"
+import { BoopProject, type ProjectConfig } from "./boop.project.js"
 import { createAppRouter } from "../routers/app.router.js";
 
 export class AppProject extends BoopProject {

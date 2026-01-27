@@ -11,7 +11,7 @@ import { InstallRunner } from "../shell/installRunner.js";
 import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
 import logger from "../../logger.js";
-import { downloadRemote } from "../shell/clone.js";
+import { downloadRemote } from "../shell/git.js";
 
 interface BoopProjectEvents {
     'deploy': (success: boolean) => void;
@@ -25,6 +25,8 @@ export interface BoopProject {
     removeListener<EventType extends keyof BoopProjectEvents>(event: EventType, listener: BoopProjectEvents[EventType]): this;
     removeAllListeners<EventType extends keyof BoopProjectEvents>(event?: EventType): this;
 }
+
+// TODO: add instantiate static function
 
 export abstract class BoopProject extends EventEmitter {
     /**

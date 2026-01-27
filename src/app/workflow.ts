@@ -1,7 +1,7 @@
 import { basename, join } from "path";
 import { BOOP_BUILD_FILE_NAME, BOOP_BUILD_FILE_DIR_NAME } from "./constants.js";
 import { parse } from "yaml";
-import type { ProjectType } from "./project/index.js";
+import type { ProjectType } from "./project/boop.project.js";
 import { readFile } from "fs/promises";
 import { pathExists } from "./utilities.js";
 

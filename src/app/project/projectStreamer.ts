@@ -1,5 +1,5 @@
 import WebSocket from "ws"
-import type { BoopProject } from "./index.js";
+import type { BoopProject } from "./boop.project.js";
 import type { InstallerStep, InstallRunner } from "../shell/installRunner.js";
 import { ServiceProject } from "./service.project.js";
 

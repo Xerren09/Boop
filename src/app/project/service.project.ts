@@ -1,6 +1,6 @@
-import { downloadRemote } from "../shell/clone.js";
+import { downloadRemote } from "../shell/git.js";
 import { shellExecuteAsync, type BoopProcess } from "../shell/shell.js";
-import { BoopProject, type ProjectConfig } from "./index.js"
+import { BoopProject, type ProjectConfig } from "./boop.project.js"
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import { createServiceRouter } from "../routers/service.router.js";
 
