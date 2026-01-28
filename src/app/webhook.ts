@@ -53,7 +53,7 @@ function parseWebhookEvent(req: express.Request): WebhookEvent {
         time: Date.now(),
         repository: {
             url: req.body.repository.html_url,  // "https://github.com/Codertocat/Hello-World"
-            branch: req.body.ref  ? req.body.ref.split("refs/heads/")[1] : null,  // "refs/heads/main" -> main
+            branch: req.body.ref ? req.body.ref.split("refs/heads/")[1] : null,  // "refs/heads/main" -> main
             name: req.body.repository.name,  // "Hello-World" -- this is file system safe!
             owner: {
                 name: req.body.repository.owner.login,  // "Codertocat"
@@ -61,11 +61,11 @@ function parseWebhookEvent(req: express.Request): WebhookEvent {
             },
         },
         commit: {
-            id: req.body.head_commit?.id || null,
-            url: req.body.head_commit?.url || null
+            id: req.body.head_commit?.id ?? null,
+            url: req.body.head_commit?.url ?? null
         },
         security: {
-            hash: req.get('X-Hub-Signature-256') || null,
+            hash: req.get('X-Hub-Signature-256') ?? null,
             valid: isSignatureValid(req)
         },
         sender: {
@@ -93,7 +93,7 @@ function isSignatureValid(req: express.Request): boolean {
     }
     else {
         // If no SECRET is defined, we can't validate the signature, so reject it.
-        if (!process.env[ENV_SECRET]) {
+        if (process.env[ENV_SECRET] == undefined) {
             return false;
         }
     }
