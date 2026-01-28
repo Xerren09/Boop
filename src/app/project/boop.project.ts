@@ -213,8 +213,8 @@ export abstract class BoopProject extends EventEmitter {
     }
 
     protected SharedLog(level: "info" | "error" | "warn", message: string, ...meta: any[]) {
-        this.log[level](message, meta);
-        logger[level](`'${this.name}': ${message}`, meta);
+        this.log[level](message, ...meta);
+        logger[level](`'${this.name}': ${message}`, ...meta);
     }
 
     /**
