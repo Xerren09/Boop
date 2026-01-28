@@ -60,7 +60,9 @@ export class BoopProcess extends EventEmitter {
     }
 
     /**
-     * Gets if the process was sent a kill signal using {@link kill}
+     * Gets if the process was sent a kill signal using {@link kill}. 
+     * 
+     * Does not necessarily guarantee that the process was actually terminated.
      */
     public get wasKilled(): boolean {
         return this._wasKilled;
@@ -178,6 +180,7 @@ export class BoopProcess extends EventEmitter {
                     return resolve();
                 }
                 const signal = forced === true ? 'SIGKILL' : 'SIGTERM';
+                this._wasKilled = true;
                 treeKill(this._process.pid, signal, (err: any) => {
                     if (err) {
                         reject(new Error(`Process "${this._process.spawnargs}" (${this.pid}) could not be stopped.`, { cause: err }));
@@ -189,7 +192,6 @@ export class BoopProcess extends EventEmitter {
                     }
                     else {
                         resolve();
-                        this._wasKilled = true;
                         logger.debug(`Killed process (${this.pid})`, {
                             pid: this.pid,
                             forced: forced
