@@ -35,6 +35,7 @@ catch {
 
 // Port flag:
 const port = Number((args.values.port as string) ?? process.env[ENV_PORT] ?? 8004);
+process.env[ENV_PORT] = `${port}`;
 // Secret flag:
 const secret = args.values.secret ?? process.env[ENV_SECRET] ?? "";
 
@@ -78,7 +79,7 @@ const BOOP = app.listen(port, async () => {
     console.log(`|_____|_____|_____|__|  |__|`);
     console.log(`Tiny CI/CD server for GitHub webhooks!\n`);
     if (secret !== undefined) {
-        process.env[ENV_PORT] = secret.toString();
+        process.env[ENV_SECRET] = secret.toString();
     }
     else {
         logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
