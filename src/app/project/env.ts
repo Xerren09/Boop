@@ -18,16 +18,20 @@ export class EnvFile {
         if (existsSync(this._file)) {
             const text = readFileSync(this._file).toString('utf8');
             if (text.length != 0) {
-                this._env = JSON.parse(text);
+                const p = JSON.parse(text) as Environment;
+                for (const key of Object.keys(p)) {
+                    this.set(key, p[key]);
+                }
             }
         }
     }
 
     public set(key: string, value: string | number) {
-        this._env[key] = value;
+        this._env[key.toUpperCase()] = value;
     }
 
     public get(key: string): string | number | null {
+        key = key.toUpperCase();
         if (this._env[key] != undefined) {
             return this._env[key];
         }
@@ -35,6 +39,7 @@ export class EnvFile {
     }
 
     public delete(key: string) {
+        key = key.toUpperCase();
         if (this._env[key] != undefined) {
             delete this._env[key];
         }
