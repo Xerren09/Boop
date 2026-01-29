@@ -49,8 +49,8 @@ export class ServiceProject extends BoopProject {
                     }
                     else {
                         this.log.debug(`Project process started (${this._process?.pid}).`);
-                        const port = Number((this.environment.env["PORT"] ?? this.environment.env["port"]) ?? -1);
-                        if (port !== -1) {
+                        const port = Number(this.environment.get("PORT") ?? -1);
+                        if (port > -1) {
                             this._router = createServiceRouter(this.name, port);
                         }
                         else {
