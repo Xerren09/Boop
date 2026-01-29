@@ -49,7 +49,7 @@ export function checkGitAvailable() {
                 resolve();
             }
             else {
-                reject(proc);
+                reject();
             }
         });
     });
