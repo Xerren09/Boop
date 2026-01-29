@@ -235,10 +235,10 @@ export abstract class BoopProject extends EventEmitter {
         catch (err) {
             const error = new Error(`Project failed to deploy.`, { cause: err });
             this.SharedLog("error", `Failed to deploy.`, error);
+            this._router = null;
             throw error;
         }
         finally {
-            this._router = null;
             this.emit("deploy", this.deployed);
         }
         
