@@ -64,6 +64,9 @@ export class ServiceProject extends BoopProject {
                     if (this._process.wasKilled == false) {
                         this.SharedLog("warn", `Project process exited (${this._process?.pid}).`, { code: code });
                     }
+                    else {
+                        this.log.warn(`Project process exited (${this._process?.pid}).`, { code: code });
+                    }
                 });
             }
             else {
