@@ -8,6 +8,7 @@ import { pathExists } from "../utilities.js";
 import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow, WorkflowConfig } from "../workflow.js";
 import { AppProject } from "./app.project.js";
+import { InstantiateProject } from "./instantiate.js";
 
 class ProjectManager {
     private _projects: BoopProject[] = [];
@@ -38,14 +39,7 @@ class ProjectManager {
             throw err;
         }
         try {
-            const config = JSON.parse((await readFile(projectFile)).toString()) as ProjectConfig;
-            let project: BoopProject;
-            if (config.type == "service") {
-                project = new ServiceProject(config);
-            }
-            else {
-                project = new AppProject(config);
-            }
+            const project = await InstantiateProject(projectFile);
             this._projects.push(project);
             logger.info(`Loaded project '${project.name}'`);
         }
@@ -77,13 +71,7 @@ class ProjectManager {
             const projectFile = await createProjectFile(join(projectDir, PROJECT_FILE_NAME), remote, buildConfig);
             await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME));
             await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME));
-            let project: BoopProject;
-            if (buildConfig.type == "service") {
-                project = new ServiceProject(projectFile);
-            }
-            else {
-                project = new AppProject(projectFile);
-            }
+            const project = await InstantiateProject(projectFile);
             this._projects.push(project);
             logger.info(`Created new project '${project.name}' (${remote}).`);
             return project;

@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from "fs";
 import type { WebhookEvent } from "../webhook.js";
-import { writeFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
+import { pathExists } from "../utilities.js";
 
 export class EventsFile {
     private _file: string;
@@ -13,16 +13,24 @@ export class EventsFile {
         return this._events;
     }
 
+    /**
+     * The latest event in the history. `null` if the event history is empty.
+     */
     public get lastEvent(): WebhookEvent | null {
         return this._events[this._events.length - 1] ?? null;
     }
 
     constructor(file: string) {
-        // HACK: This loads via the sync methods but only once.
         this._file = file;
-        if (existsSync(this._file)) {
-            const text = readFileSync(this._file).toString('utf8');
+    }
+
+    public async load() {
+        if (await pathExists(this._file)) {
+            const text = (await readFile(this._file)).toString('utf8');
             this._events = JSON.parse(text);
+        }
+        else {
+            throw new Error(`File '${this._file}' does not exist.`);
         }
     }
 
