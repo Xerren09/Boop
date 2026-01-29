@@ -26,8 +26,6 @@ export interface BoopProject {
     removeAllListeners<EventType extends keyof BoopProjectEvents>(event?: EventType): this;
 }
 
-// TODO: add instantiate static function
-
 export abstract class BoopProject extends EventEmitter {
     /**
      * The root project directory where all the configuration files and project files are stored.
@@ -249,7 +247,7 @@ export abstract class BoopProject extends EventEmitter {
      * Stops the project's handler and removes its router.
      */
     public async stop(): Promise<void> {
-        if (this.deployed) {
+        if (this.deployed == false) {
             return;
         }
         try {
@@ -257,7 +255,7 @@ export abstract class BoopProject extends EventEmitter {
             this.SharedLog("info", `Stopped.`);
         }
         catch (err) {
-            const error = new Error(`Project failed to deploy.`, { cause: err });
+            const error = new Error(`Project failed to stop.`, { cause: err });
             this.SharedLog("error", `Failed to stop.`, error);
             throw error;
         }
