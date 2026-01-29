@@ -29,7 +29,8 @@ try {
     await checkGitAvailable();
 }
 catch {
-    // TODO: shut down boop
+    // Consider this a fatal error since nothing works without git
+    throw new Error("Git is not available, but Boop needs it to work. Install git and try again.");
 }
 
 // Port flag:
@@ -80,13 +81,14 @@ const BOOP = app.listen(port, async () => {
         process.env[ENV_PORT] = secret.toString();
     }
     else {
-        logger.warn("No SECRET variable set; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
+        logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
     }
     if (process.env[ENV_DISABLE_WEBHOOK_SECURITY] !== undefined) {
         logger.warn("Webhook security disabled; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
     }
     console.log(`====`);
-    console.log(`Boop listening on port ${port}`);
+    console.log(`Boop listening on port`, styleText("blueBright", `${port}`));
+    console.log(`Webhook listener available at`, styleText("blueBright", `http://localhost:${port}/boop/webhook`));
     console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
     console.log(`====\n`);
     await Manager.LoadAll();
@@ -95,7 +97,7 @@ const BOOP = app.listen(port, async () => {
 
 async function handle_termination() {
     console.log(`\n====`);
-    logger.info("Shutting down...");
+    logger.info("Boop shutting down...");
     await Manager.StopAll();
     logger.on('finish', (info) => {
         BOOP.close();
