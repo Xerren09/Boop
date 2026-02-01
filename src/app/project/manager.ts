@@ -54,8 +54,8 @@ class ProjectManager {
      * @returns 
      */
     public async Create(name: string, remote: string): Promise<BoopProject> {
-        const projectDir = join(PROJECTS_DIR, name, PROJECT_FILE_NAME);
-        if (await pathExists(projectDir)) {
+        const projectDir = join(PROJECTS_DIR, name);
+        if (await pathExists(join(projectDir, PROJECT_FILE_NAME))) {
             const err = new Error(`Can't create project; already exists (${remote}).`);
             logger.error(err);
             throw err;
