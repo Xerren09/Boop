@@ -188,7 +188,7 @@ export abstract class BoopProject extends EventEmitter {
         }
     }
 
-    protected async install(): Promise<void> {
+    public async install(): Promise<void> {
         this.SharedLog("info", `Install process started.`);
         await this.stop();
         if (this._installer.running) {
