@@ -76,6 +76,11 @@ class ProjectManager {
             return project;
         }
         catch (error) {
+            // Do cleanup
+            if (await pathExists(projectDir)) {
+                await rm(projectDir, { recursive: true, force: true });
+            }
+            // FIXME: ERROR CAUSE -> RETHROW
             const err = new Error(`Failed to create new project (${remote}).`, { cause: error });
             logger.error(err);
             throw err
@@ -99,8 +104,8 @@ class ProjectManager {
             try {
                 await this.Load(name);
             }
-            catch {
-                logger.warn(`Couldn't load project '${name}'.`);
+            catch (err) {
+                logger.error(`Couldn't load project '${name}'.`, err);
             }
         }
         if (this._projects.length == 0) {
