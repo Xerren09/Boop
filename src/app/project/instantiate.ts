@@ -2,6 +2,9 @@ import { readFile } from "fs/promises";
 import { AppProject } from "./app.project.js";
 import { ProjectConfig, BoopProject } from "./boop.project.js";
 import { ServiceProject } from "./service.project.js";
+import { pathExists } from "../utilities.js";
+import { join } from "path";
+import { PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../constants.js";
 
 /**
  * Creates and initialises a new {@link BoopProject}.
@@ -25,7 +28,17 @@ export async function InstantiateProject(config: ProjectConfig | string): Promis
             ret = new ServiceProject(projectConfig);
             break;
     }
-    await ret.environment.load();
-    await ret.events.load();
+    if (await pathExists(join(ret.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_EVENTS_FILE_NAME))) {
+        await ret.events.load();
+    }
+    else {
+        await ret.events.save();
+    }
+    if (await pathExists(join(ret.rootDir, PROJECT_ENV_FILE_NAME))) {
+        await ret.environment.load();
+    }
+    else {
+        await ret.environment.save();
+    }
     return ret;
 }
