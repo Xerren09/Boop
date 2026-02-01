@@ -11,13 +11,12 @@ import { join } from "path";
 export function createAppRouter(route: string, rootPath: string, index: string) {
     var router = express.Router();
     // The entry route for this website, requests get tunnelled here
-    const redirectRoute = `/${route}/*`;
+    const indexRoute = `/${route}/`;
     // The route for file serving
-    const staticRedirectRoute = `/${route}`;
+    const filesRoute = `/${route}`;
     const indexPath = join(rootPath, index);
-    router.use(staticRedirectRoute, express.static(rootPath));
-    router.get(redirectRoute, function (_req, res) {
-        // Unsure if this works as intended? Won't this block other index-like files from resolving?
+    router.use(filesRoute, express.static(rootPath));
+    router.get(indexRoute, function (_req, res) {
         res.sendFile(indexPath);
     });
     return router;
