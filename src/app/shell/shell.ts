@@ -3,6 +3,7 @@ import EventEmitter from "events";
 import { ProcessOutput, type ProcessOutputLine } from "./processOutput.js";
 import treeKill from "tree-kill";
 import logger from "../../logger.js";
+import { stripVTControlCharacters } from "util";
 
 /**
  * Spawns a new shell and runs the given command.
@@ -98,20 +99,22 @@ export class BoopProcess extends EventEmitter {
     }
 
     private onStdout = (msg: any) => {
+        const line = stripVTControlCharacters(msg.toString());
         const output: ProcessOutputLine = {
             stream: "stdout",
-            line: msg.toString()
+            line: line
         };
-        this.Output.addLine("stdout", msg.toString());
+        this.Output.addLine("stdout", line);
         this.emit("output", output.stream, output.line);
     }
 
     private onStderr = (msg: any) => {
+        const line = stripVTControlCharacters(msg.toString());
         const output: ProcessOutputLine = {
             stream: "stderr",
-            line: msg.toString()
+            line: line
         };
-        this.Output.addLine("stderr", msg.toString());
+        this.Output.addLine("stderr", line);
         this.emit("output", output.stream, output.line);
     }
 
