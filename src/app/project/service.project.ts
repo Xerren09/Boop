@@ -1,4 +1,3 @@
-import { downloadRemote } from "../shell/git.js";
 import { shellExecuteAsync, type BoopProcess } from "../shell/shell.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js"
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";

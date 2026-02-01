@@ -1,4 +1,3 @@
-import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js"
 import { createAppRouter } from "../routers/app.router.js";

@@ -1,13 +1,12 @@
 import { PROJECT_BIN_DIR_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, PROJECTS_DIR } from "../constants.js";
 import { join } from "path";
 import logger from "../../logger.js";
-import { BoopProject, type ProjectConfig, type ProjectType } from "./boop.project.js";
+import { BoopProject, type ProjectConfig } from "./boop.project.js";
 import { ServiceProject } from "./service.project.js";
-import { mkdir, rm, writeFile, readdir, readFile } from "fs/promises";
+import { mkdir, rm, writeFile, readdir } from "fs/promises";
 import { pathExists } from "../utilities.js";
 import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow, WorkflowConfig } from "../workflow.js";
-import { AppProject } from "./app.project.js";
 import { InstantiateProject } from "./instantiate.js";
 
 class ProjectManager {
