@@ -31,7 +31,7 @@ export function downloadRemote(remoteUrl: string) {
                 resolve();
             }
             else {
-                reject(proc);
+                reject(code);
             }
         });
     });   
@@ -42,7 +42,7 @@ export function downloadRemote(remoteUrl: string) {
  * @returns 
  */
 export function checkGitAvailable() {
-    return new Promise<void>(async (resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
         const proc = exec(`git --version`);
         proc.once("exit", (code) => {
             if (code == 0) {
