@@ -111,7 +111,7 @@ process.once('SIGINT', handle_termination);
 process.once('SIGTERM', handle_termination);
 
 process.once('uncaughtException', async (err) => {
-    logger.error(err);
+    logger.logException(err);
     process.exitCode = 1;
     await handle_termination();
 });

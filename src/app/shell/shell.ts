@@ -148,7 +148,7 @@ export class BoopProcess extends EventEmitter {
 
     /**
      * Returns a promise that completes when the process exits. Rejects with the exitcode if it is not `0`.
-     * @returns 
+     * @returns On Reject, returns the exitcode or null.
      */
     asPromise(): Promise<void> {
         return new Promise<void>((resolve, reject) => {

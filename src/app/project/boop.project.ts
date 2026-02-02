@@ -10,7 +10,7 @@ import { PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, 
 import { InstallRunner } from "../shell/installRunner.js";
 import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
-import logger from "../../logger.js";
+import logger, { BoopLogger, createProjectLogger } from "../../logger.js";
 import { downloadRemote } from "../shell/git.js";
 
 interface BoopProjectEvents {
@@ -90,7 +90,7 @@ export abstract class BoopProject extends EventEmitter {
         return this._config.repositoryURL;
     }
 
-    protected readonly log: winston.Logger;
+    protected readonly log: BoopLogger;
 
     public readonly environment: EnvFile;
     public readonly events: EventsFile;
@@ -104,20 +104,7 @@ export abstract class BoopProject extends EventEmitter {
         //
         this._installer = new InstallRunner(this.binDir);
         //
-        this.log = winston.createLogger({
-            format: winston.format.combine(
-                winston.format.timestamp(),
-                winston.format.errors(),
-                winston.format.metadata(),
-                winston.format.json()
-            ),
-            transports: [
-                new winston.transports.File({
-                    filename: join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME),
-                    level: "info"
-                })
-            ],
-        });
+        this.log = createProjectLogger(this.rootDir);
     }
 
     private _webhookLock: boolean = false;
@@ -190,15 +177,20 @@ export abstract class BoopProject extends EventEmitter {
 
     public async install(): Promise<void> {
         this.SharedLog("info", `Install process started.`);
+        // Stop project and installer if its running.
         await this.stop();
         if (this._installer.running) {
             await this._installer.kill();
         }
-
+        //
         try {
             await this._installer.loadConfiguration();
             this.emit("install", this._installer);
             await this._installer.run();
+        }
+        catch (err) {
+            this.log.logException(err);
+            throw err;
         }
         finally {
             if (this._installer.success == false) {
@@ -210,7 +202,12 @@ export abstract class BoopProject extends EventEmitter {
         }
     }
 
-    protected SharedLog(level: "info" | "error" | "warn", message: string, ...meta: any[]) {
+    protected SharedLog(level: "info" | "error" | "warn" | "exception", message: string | Error, ...meta: any[]) {
+        if (level === "exception" && message instanceof Error) {
+            this.log.logException(message);
+            logger.error(`'${this.name}': ${message.message}`);
+            return;
+        }
         this.log[level](message, ...meta);
         logger[level](`'${this.name}': ${message}`, ...meta);
     }
@@ -223,18 +220,18 @@ export abstract class BoopProject extends EventEmitter {
         if (this.deployed) {
             return;
         }
+        if (this.installing == true) {
+            throw new Error("Project is busy.");
+        }
         try {
-            if (this.installing == true) {
-                throw new Error("Project is busy.");
-            }
             await this._deploy();
             this.SharedLog("info", `Deployed.`);
         }
         catch (err) {
-            const error = new Error(`Project failed to deploy.`, { cause: err });
-            this.SharedLog("error", `Failed to deploy.`, error);
+            const error = new Error(`Failed to deploy project.`, { cause: err });
+            this.SharedLog("exception", error);
             this._router = null;
-            throw error;
+            throw err;
         }
         finally {
             this.emit("deploy", this.deployed);
@@ -255,9 +252,9 @@ export abstract class BoopProject extends EventEmitter {
             this.SharedLog("info", `Stopped.`);
         }
         catch (err) {
-            const error = new Error(`Project failed to stop.`, { cause: err });
-            this.SharedLog("error", `Failed to stop.`, error);
-            throw error;
+            const error = new Error(`Failed to stop project.`, { cause: err });
+            this.SharedLog("exception", error);
+            throw err;
         }
         finally {
             this._router = null;
@@ -266,7 +263,7 @@ export abstract class BoopProject extends EventEmitter {
     protected abstract _stop(): Promise<void>;
 
     /**
-     * Starts the project. Calls {@link stop} and {@link deploy} in a series.
+     * Starts the project. Calls {@link stop} and {@link deploy} in series.
      */
     public async restart(): Promise<void> {
         try {
@@ -275,7 +272,8 @@ export abstract class BoopProject extends EventEmitter {
             this.SharedLog("info", `Restarted.`);
         }
         catch (err) {
-            this.SharedLog("error", `Restart failed.`, err);
+            const error = new Error(`Failed to restart project.`, { cause: err });
+            this.SharedLog("exception", error);
             throw err;
         }
     }
@@ -293,7 +291,7 @@ export abstract class BoopProject extends EventEmitter {
                 time = Math.max(...files.map(el => Number(el.split("-")[1]!.split(".")[0])));
             }
             finally {
-                file = `workflow-${time}.json`
+                file = `workflow-${time}.json`;
             }
         }
         else {

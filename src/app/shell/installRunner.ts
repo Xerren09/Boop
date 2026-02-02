@@ -90,7 +90,7 @@ export class InstallRunner extends EventEmitter {
 
     public async loadConfiguration(): Promise<void> {
         if (this._running) {
-            throw new Error("InstallRunner instance already running.");
+            throw new Error("Installer instance already running.");
         }
         const buildFile = await getWorkflowFile(this.cwd);
         const buildConfig = await parseWorkflow(buildFile);
@@ -107,7 +107,7 @@ export class InstallRunner extends EventEmitter {
      */
     public async run(): Promise<void> {
         if (this._running) {
-            throw new Error("InstallRunner instance already running.");
+            throw new Error("Installer already running.");
         }
         this._running = true;
         this._startTime = Date.now();
@@ -120,6 +120,9 @@ export class InstallRunner extends EventEmitter {
                 this.emit(STEP_EVENT, this._currentStep);
                 await proc.asPromise();
                 stepIdx++;
+            }
+            catch (err) {
+                // This is just an exit code, the error later is more useful
             }
             finally {
                 this.emit(STEP_EXIT_EVENT, step);
@@ -137,9 +140,10 @@ export class InstallRunner extends EventEmitter {
         if (this.success == false) {
             const ret = {
                 step: stepIdx,
-                cmd: this.steps[stepIdx]?.cmd
+                cmd: this.steps[stepIdx].cmd,
+                exitCode: this.steps[stepIdx].process.exitCode ?? null
             }
-            throw new Error("InstallRunner failed to complete.", { cause: ret });
+            throw new Error("Installer failed to complete.", { cause: ret });
         }
     }
 
@@ -149,7 +153,7 @@ export class InstallRunner extends EventEmitter {
      */
     public asJSON() {
         if (this._running) {
-            throw new Error("InstallRunner is currently busy. Wait for the runner to complete before attempting to export.");
+            throw new Error("Installer is currently busy. Wait for the runner to complete before attempting to export.");
         }
         const workflow: InstallerLog = {
             time: this._endTime,
@@ -185,7 +189,7 @@ export class InstallRunner extends EventEmitter {
         this._running = false;
         this.emit("exit", false);
         if (errors.length != 0) {
-            throw new Error(`One or more installer steps failed to stop.`, { cause: errors });
+            throw new AggregateError(errors, `One or more installer steps failed to stop.`);
         }
     }
 
