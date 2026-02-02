@@ -14,6 +14,7 @@ import { apiRouter } from './app/routers/api.router.js';
 import { projectSelector } from './app/routers/selector.js';
 import { checkGitAvailable } from './app/shell/git.js';
 import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from './app/constants.js';
+import { cli } from './cli.js';
 
 const boopArgsOptions: ParseArgsOptionsConfig = {
     port: {
@@ -94,6 +95,10 @@ const BOOP = app.listen(port, async () => {
     console.log(`====\n`);
     await Manager.LoadAll();
     await Manager.DeployAll();
+    cli.once("close", () => {
+        handle_termination();
+    });
+    cli.prompt();
 });
 
 async function handle_termination() {
@@ -105,6 +110,7 @@ async function handle_termination() {
         process.exit(process.exitCode);
     });
     logger.end();
+    cli.close();
 }
 
 process.once('SIGINT', handle_termination);
