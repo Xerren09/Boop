@@ -4,6 +4,7 @@ import { ProcessOutput, type ProcessOutputLine } from "./processOutput.js";
 import treeKill from "tree-kill";
 import logger from "../../logger.js";
 import { stripVTControlCharacters } from "util";
+import { constants } from "os";
 
 /**
  * Spawns a new shell and runs the given command.
@@ -46,18 +47,28 @@ export class BoopProcess extends EventEmitter {
     private _startTime: number = 0;
     private _endTime: number = 0;
     private _wasKilled: boolean = false;
+    private _exitCode: number | null = null;
 
     public readonly Output: ProcessOutput;
 
     public get exitCode() : number | null {
-        return this._process.exitCode;
+        return this._exitCode;
     }
 
     /**
-     * Gets if the process has exited (exitcode set)
+     * Gets if the process terminated due to a signal.
+     * 
+     * If `true`, {@link exitCode} will be based on {@link https://nodejs.org/api/util.html#utilconvertprocesssignaltoexitcodesignalcode|convertProcessSignalToExitCode}.
+     */
+    public get signalExit(): boolean {
+        return this._process.signalCode != null;
+    }
+
+    /**
+     * Gets if the process has exited.
      */
     public get exited(): boolean {
-        return this.exitCode != null;
+        return this._exitCode != null;
     }
 
     /**
@@ -148,7 +159,10 @@ export class BoopProcess extends EventEmitter {
 
     private onExit = (exitCode: number | null, signal: string | null) => {
         this._endTime = Date.now();
-        this.emit("exit", exitCode);
+        //
+        this._exitCode = exitCode === null ? (128 + constants.signals[signal]) : exitCode;
+        //
+        this.emit("exit", this._exitCode);
         this._process.stdout?.removeListener("data", this.onStdout);
         this._process.stderr?.removeListener("data", this.onStderr);
         this._process.removeListener("error", this.onError);
@@ -158,6 +172,7 @@ export class BoopProcess extends EventEmitter {
             pid: this.pid,
             exitCode: exitCode,
             signal: signal,
+            ret: this._exitCode
         });
     }
 
