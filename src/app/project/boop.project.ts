@@ -1,11 +1,10 @@
-import { readdir } from "fs/promises";
 import { join } from "path";
 import { Router } from "express";
 import EventEmitter from "events";
 import * as express from "express";
 
 import type { WebhookEvent } from "../webhook.js";
-import { PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, PROJECTS_DIR } from "../constants.js";
+import { PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECTS_DIR } from "../constants.js";
 import { InstallRunner } from "../shell/installRunner.js";
 import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
@@ -178,7 +177,7 @@ export abstract class BoopProject extends EventEmitter {
         }
     }
 
-    protected async processWebhookEvent(): Promise<void> {
+    private async processWebhookEvent(): Promise<void> {
         try {
             if (this.installing) {
                 await this.installer.kill();
@@ -305,45 +304,6 @@ export abstract class BoopProject extends EventEmitter {
             this.SharedLog("exception", error);
             throw err;
         }
-    }
-
-    /**
-     * Gets the specified installation log for this project.
-     * @param time If not given, the last available timestamp is used and the latest log will be returned.
-     * @returns The full filepath string to the log file.
-     */
-    public async getInstallLog(time?: number): Promise<string | null> {
-        const files = await this.getInstallLogs();
-        let file: string | undefined = "";
-        if (time == undefined) {
-            try {
-                time = Math.max(...files.map(el => Number(el.replace("workflow-", "").replace(".json", ""))));
-            }
-            catch {
-                //
-            }
-            finally {
-                file = `workflow-${time}.json`;
-            }
-        }
-        else {
-            file = files.find(el => el == `workflow-${time}.json`);
-        }
-        if (file) {
-            return join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, file);
-        }
-        return null;
-    }
-
-    /**
-     * Gets a list of all installation log files for this project.
-     * @returns 
-     */
-    public async getInstallLogs() {
-        const installLogsDir = join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME);
-        const items = await readdir(installLogsDir);
-        const logs = items.filter(el => el.startsWith("workflow-") == true);
-        return logs;
     }
 }
 

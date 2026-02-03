@@ -1,9 +1,10 @@
 import { BoopProcess, shellExecuteAsync } from "./shell.js";
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import EventEmitter from "events";
-import path from "path";
-import { writeFile } from "fs/promises";
+import { join } from "path";
+import { readdir, writeFile } from "fs/promises";
 import type { ProcessOutputLine } from "./processOutput.js";
+import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../constants.js";
 
 const STEP_EVENT = "step";
 const STEP_EXIT_EVENT = "stepExit";
@@ -18,6 +19,11 @@ interface InstallRunnerEvents {
 export interface InstallerStep {
     cmd: string,
     process: null | BoopProcess
+}
+
+export const InstallLogFileRegex = new RegExp(/(?<=workflow-)(.*)(?=\.json)/);
+function makeFileName(time: number) {
+    return `workflow-${time}.json`;
 }
 
 export interface InstallerLog {
@@ -40,7 +46,7 @@ export interface InstallRunner {
 }
 
 export class InstallRunner extends EventEmitter {
-    private cwd: string;
+    private projectBinDir: string;
     private _currentStep: InstallerStep | null = null;
     private _running: boolean = false;
     private _endTime: number = 0;
@@ -85,14 +91,17 @@ export class InstallRunner extends EventEmitter {
 
     constructor(cwd: string) {
         super();
-        this.cwd = cwd;
+        this.projectBinDir = cwd;
     }
 
+    /**
+     * Loads the currently present build configuration from the project directory.
+     */
     public async loadConfiguration(): Promise<void> {
         if (this._running) {
             throw new Error("Installer instance already running.");
         }
-        const buildFile = await getWorkflowFile(this.cwd);
+        const buildFile = await getWorkflowFile(this.projectBinDir);
         const buildConfig = await parseWorkflow(buildFile);
         this.steps = buildConfig.build.map(el => ({
             cmd: el,
@@ -103,6 +112,8 @@ export class InstallRunner extends EventEmitter {
     /**
      * Starts the install runner with the loaded build config file. 
      * The promise will resolve when all steps have successfully completed, or reject if one of them fails.
+     * 
+     * Use {@link loadConfiguration} to load the current build file.
      * @returns 
      */
     public async run(): Promise<void> {
@@ -114,7 +125,7 @@ export class InstallRunner extends EventEmitter {
         let stepIdx = 0;
         for (const step of this.steps) {
             try {
-                const proc = shellExecuteAsync(step.cmd, this.cwd);
+                const proc = shellExecuteAsync(step.cmd, this.projectBinDir);
                 step.process = proc;
                 this._currentStep = step;
                 this.emit(STEP_EVENT, this._currentStep);
@@ -193,12 +204,48 @@ export class InstallRunner extends EventEmitter {
         }
     }
 
+    /**
+     * Gets the specified installation log for this project.
+     * @param time If not given, the last available timestamp is used and the latest log will be returned.
+     * @returns The full filepath string to the log file.
+     */
+    public async findLog(time?: number): Promise<string | null> {
+        const files = await this.getLogs();
+        let logFileName: string | undefined = "";
+        if (files.length == 0) {
+            return null;
+        }
+        if (time == undefined) {
+            const num = Math.max(...files.map(el => Number(InstallLogFileRegex.exec(el)[0])));
+            logFileName = makeFileName(num);
+        }
+        else {
+            const name: string = makeFileName(time);
+            logFileName = files.find(el => el === name);
+        }
+        if (logFileName) {
+            return join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, logFileName)
+        }
+        return null;
+    }
+
+    /**
+     * Gets a list of all installation log files for this project.
+     * @returns 
+     */
+    public async getLogs() {
+        const installLogsDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME);
+        const files = await readdir(installLogsDir);
+        const logs = files.filter(file => InstallLogFileRegex.test(file) == true);
+        return logs;
+    }
+
     private async saveFile() {
         if (this._running) {
             throw new Error("InstallRunner is currently busy. Wait for the runner to complete before attempting to export.");
         }
         const log = this.asJSON();
-        const file = path.join(this.cwd, "..", "logs", "install", `workflow-${this._endTime}.json`);
+        const file = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeFileName(this._endTime));
         await writeFile(file, log);       
     }
 }

@@ -6,6 +6,7 @@ import Manager from "../project/manager.js";
 import { ServiceProject } from "../project/service.project.js";
 import { ProjectStreamer } from "../project/projectStreamer.js";
 import { randomUUID } from "crypto";
+import { InstallLogFileRegex } from "../shell/installRunner.js";
 export const apiRouter = express.Router();
 //@ts-expect-error
 expressWs(apiRouter);
@@ -78,9 +79,9 @@ apiRouter.get("/projects/:projectName/logs", async (req, res) => {
     if (project == undefined) {
         return;
     }
-    const files = await project.getInstallLogs();
+    const files = await project.installer.getLogs();
     const ret = files.map(el => ({
-        time: Number(el.split("-")[1]!.split(".")[0]),
+        time: Number(InstallLogFileRegex.exec(el)[0]),
         name: el
     }));
     res.status(200).json(ret);
@@ -93,7 +94,7 @@ apiRouter.get("/projects/:projectName/log/:log", async (req, res) => {
     }
     const time = Number(req.params.log);
     if (isNaN(time) == false) {
-        const file = await project.getInstallLog(time);
+        const file = await project.installer.findLog(time);
         if (file == null) {
             res.status(404).send("No logfile found.");
         }
