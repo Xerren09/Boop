@@ -8,7 +8,7 @@ export type Environment = {
 export class EnvFile {
     private _file: string;
     private _env: Environment = {};
-    public get env(): Environment {
+    public get variables(): Environment {
         return { ...this._env }
     }
 

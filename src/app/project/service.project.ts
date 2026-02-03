@@ -40,7 +40,7 @@ export class ServiceProject extends BoopProject {
         return new Promise<void>((resolve, reject) => {
             if (this._process == undefined || this._process.exitCode != null) {
                 //
-                this._process = shellExecuteAsync(config.deploy.entry, this.binDir, this.environment.env as any);
+                this._process = shellExecuteAsync(config.deploy.entry, this.binDir, this.environment.variables as any);
                 //
                 this._process.once("startup", (err) => {
                     if (err) {

@@ -11,7 +11,6 @@ const httpProxyServer = httpProxy.createProxyServer({
  */
 export function createServiceRouter(route: string, port: number) {
     const router = express.Router();
-    //const redirectRoute = `/${route}/*`;
     router.use((req, res) => {
         // Remove the boop attachment route from the url so the Proxy Host gets the correct request
         req.url = req.url.replace(`/${route}`, "");

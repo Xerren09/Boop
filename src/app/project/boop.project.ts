@@ -2,11 +2,10 @@ import { readdir } from "fs/promises";
 import { join } from "path";
 import { Router } from "express";
 import EventEmitter from "events";
-import winston from "winston";
 import * as express from "express";
 
 import type { WebhookEvent } from "../webhook.js";
-import { PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, PROJECTS_DIR } from "../constants.js";
+import { PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, PROJECTS_DIR } from "../constants.js";
 import { InstallRunner } from "../shell/installRunner.js";
 import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
@@ -28,17 +27,16 @@ export interface BoopProject {
 
 export abstract class BoopProject extends EventEmitter {
     /**
-     * The root project directory where all the configuration files and project files are stored.
+     * The project's internal configuration (independent from the workflow config)
      */
-    public get rootDir(): string {
-        return join(PROJECTS_DIR, this.name);
-    };
-    /**
-     * The root project files directory where the actual project binaries are stored.
-     */
-    public get binDir(): string {
-        return join(this.rootDir, PROJECT_BIN_DIR_NAME);
-    };
+    private readonly _config: ProjectConfig;
+    private readonly _name: string;
+    private _webhookLock: boolean = false;
+    private _webhookQueue: WebhookEvent | undefined;
+    protected readonly log: BoopLogger;
+    protected _installer: InstallRunner;
+    protected _router: Router | null;
+
     protected get _eventsFilePath(): string {
         return join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_EVENTS_FILE_NAME);
     }
@@ -48,7 +46,21 @@ export abstract class BoopProject extends EventEmitter {
     protected get _projectFilePath(): string {
         return join(this.rootDir, PROJECT_FILE_NAME);
     }
-    private readonly _name: string;
+
+    /**
+     * The root project directory where all the configuration files and project files are stored.
+     */
+    public get rootDir(): string {
+        return join(PROJECTS_DIR, this.name);
+    };
+
+    /**
+     * The root project files directory where the actual project binaries are stored.
+     */
+    public get binDir(): string {
+        return join(this.rootDir, PROJECT_BIN_DIR_NAME);
+    };
+
     /**
      * The name of this project. Same as the repository's name.
      */
@@ -56,7 +68,6 @@ export abstract class BoopProject extends EventEmitter {
         return this._name;
     }
 
-    protected _installer: InstallRunner;
     public get installer() {
         return this._installer;
     }
@@ -73,46 +84,53 @@ export abstract class BoopProject extends EventEmitter {
      */
     public abstract get deployed(): boolean;
 
-    protected _router: Router | null;
+    /**
+     * The express router serving this project when deployed. Will be `null` if not deployed.
+     */
     public get router(): Router | null {
         return this._router;
     }
 
     /**
-     * The project's internal configuration (independent from the workflow config)
+     * The internal type of the project, which determines how it behaves. See {@link ProjectType}.
      */
-    private readonly _config: ProjectConfig;
-
     public get type(): ProjectType {
         return this._config.type;
     }
+
+    /**
+     * This project's GitHub repository's URL.
+     */
     public get remoteUrl(): string {
         return this._config.repositoryURL;
     }
 
-    protected readonly log: BoopLogger;
-
+    /**
+     * Environment variables set for this project. They will be passed to the launch process during {@link deploy}.
+     */
     public readonly environment: EnvFile;
-    public readonly events: EventsFile;
+
+    /**
+     * Contains the list of recent WebhookEvents this project received.
+     */
+    public readonly webhookEvents: EventsFile;
     
     constructor(config: ProjectConfig) {
         super();
         this._name = config.repositoryURL.substring(config.repositoryURL.lastIndexOf('/') + 1)
         this._config = config;
         this.environment = new EnvFile(this._envFilePath);
-        this.events = new EventsFile(this._eventsFilePath);
+        this.webhookEvents = new EventsFile(this._eventsFilePath);
         //
         this._installer = new InstallRunner(this.binDir);
         //
         this.log = createProjectLogger(this.rootDir);
     }
 
-    private _webhookLock: boolean = false;
-    private _webhookQueue: WebhookEvent | undefined;
-
     /**
      * Handles an incoming Webhook event.
-     * @param evt 
+     * @param evt The event that triggered the handler.
+     * @param res Optional `express.Response` event used to provide immediate configuration response (like if the branch is correct). Does not actually wait for completion of the handler.
      */
     public onWebhookEvent(evt: WebhookEvent, res?: express.Response | undefined) {
         if (this._config.acceptBranch != evt.repository.branch)
@@ -130,8 +148,8 @@ export abstract class BoopProject extends EventEmitter {
                 const msg = `Webhook event received and currently processing.`;
                 res.status(202).send(msg);
             }
-            this.events.add(evt);
-            this.events.save().then(() => {
+            this.webhookEvents.add(evt);
+            this.webhookEvents.save().then(() => {
                 //
                 const handler = () => {
                     this.processWebhookEvent().finally(() => {
@@ -170,11 +188,14 @@ export abstract class BoopProject extends EventEmitter {
             await this.install();
             await this.deploy();
         }
-        catch (e) {
-            this.log.error(e);
+        catch (error) {
+            this.SharedLog("exception", error);
         }
     }
 
+    /**
+     * Runs the project's installer with the currently available build file.
+     */
     public async install(): Promise<void> {
         this.SharedLog("info", `Install process started.`);
         // Stop project and installer if its running.
@@ -202,6 +223,14 @@ export abstract class BoopProject extends EventEmitter {
         }
     }
 
+    /**
+     * Logs an event to both the project's own logfile, and Boop's global one.
+     * @param level Directly maps to log level methods, except in the case of `exception` which logs `Error` objects.
+     * @param message The main contents of the log event.
+     * @param meta Any additional metadata to be saved with the event.
+     */
+    protected SharedLog(level: "exception", message: Error, ...meta: any[])
+    protected SharedLog(level: "info" | "error" | "warn", message: string, ...meta: any[])
     protected SharedLog(level: "info" | "error" | "warn" | "exception", message: string | Error, ...meta: any[]) {
         if (level === "exception" && message instanceof Error) {
             this.log.logException(message);
@@ -288,7 +317,10 @@ export abstract class BoopProject extends EventEmitter {
         let file: string | undefined = "";
         if (time == undefined) {
             try {
-                time = Math.max(...files.map(el => Number(el.split("-")[1]!.split(".")[0])));
+                time = Math.max(...files.map(el => Number(el.replace("workflow-", "").replace(".json", ""))));
+            }
+            catch {
+                //
             }
             finally {
                 file = `workflow-${time}.json`;

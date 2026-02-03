@@ -37,7 +37,7 @@ apiRouter.get("/projects", (_req, res) => {
         name: project.name,
         deployed: project.deployed,
         type: project.type,
-        lastEvent: project.events.lastEvent?.time || 0,
+        lastEvent: project.webhookEvents.lastEvent?.time || 0,
         remote: project.remoteUrl
     }));
     res.status(200).json(ret);
@@ -51,10 +51,10 @@ apiRouter.get("/projects/:projectName", (req, res) => {
     const ret = {
         name: project.name,
         deployed: project.deployed,
-        lastDeployed: project.events.lastEvent?.time || 0,
+        lastDeployed: project.webhookEvents.lastEvent?.time || 0,
         remote: project.remoteUrl,
         type: project.type,
-        events: project.events.events,
+        events: project.webhookEvents.events,
     }
     res.status(200).json(ret);
 });
@@ -176,7 +176,7 @@ apiRouter.get("/projects/:projectName/env", (req, res) => {
     if (project == undefined) {
         return;
     }
-    res.status(200).json(project.environment.env);
+    res.status(200).json(project.environment.variables);
 });
 
 apiRouter.post("/projects/:projectName/env", (req, res) => {

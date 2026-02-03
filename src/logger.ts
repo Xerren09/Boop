@@ -3,6 +3,11 @@ import { LOG_FILE, PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "./app/co
 import { join } from "path";
 
 export interface BoopLogger extends winston.Logger {
+    /**
+     * Logs an {@link Error} object with its `cause` property. Handles nested errors.
+     * @param exception 
+     * @returns 
+     */
     logException: (exception: Error) => void
 }
 
