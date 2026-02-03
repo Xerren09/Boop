@@ -13,6 +13,7 @@ import { downloadRemote } from "../shell/git.js";
 
 interface BoopProjectEvents {
     'deploy': (success: boolean) => void;
+    'stop': () => void;
     'install': (installer: InstallRunner) => void;
 }
 
@@ -285,6 +286,8 @@ export abstract class BoopProject extends EventEmitter {
             throw err;
         }
         finally {
+            // Always send stop because a failed stop is likely an invalid state; better safe than sorry.
+            this.emit("stop");
             this._router = null;
         }
     }
