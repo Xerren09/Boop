@@ -26,7 +26,7 @@ export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.Pro
 interface BoopProcessEvents {
     'output': (stream: "stdout" | "stderr", line: string) => void;
     'exit': (code: number | null) => void;
-    'startup': (err: any) => void;
+    'startup': (err?: any) => void;
 }
 
 export interface BoopProcess {
@@ -118,32 +118,47 @@ export class BoopProcess extends EventEmitter {
         this.emit("output", output.stream, output.line);
     }
 
-    private onError = (err: any) => {
-        if (this.exited == false) {
+    private onError = (err: Error) => {
+        if (this._startTime === 0) {
+            // failed to spawn
             this.emit("startup", err);
+            //
+            this._process.stdout?.removeListener("data", this.onStdout);
+            this._process.stderr?.removeListener("data", this.onStderr);
+            this._process.removeListener("exit", this.onExit);
+            this._process.removeListener("spawn", this.onSpawn);
         }
+        logger.debug(`Process error (${this.pid})`, {
+            pid: this.pid,
+            error: {
+                message: err.message,
+                cause: err.cause ?? null
+            }
+        });
     }
 
     private onSpawn = () => {
         this._startTime = Date.now();
-        this.emit("startup", null);
+        this.emit("startup");
         logger.debug(`Process started (${this.pid})`, {
             args: this._process.spawnargs.join(" "),
             pid: this.pid
         });
     }
 
-    private onExit = (exitCode: number) => {
+    private onExit = (exitCode: number | null, signal: string | null) => {
         this._endTime = Date.now();
         this.emit("exit", exitCode);
-        logger.debug(`Process exited (${this.pid})`, {
-            pid: this.pid,
-            exitCode: exitCode
-        });
         this._process.stdout?.removeListener("data", this.onStdout);
         this._process.stderr?.removeListener("data", this.onStderr);
         this._process.removeListener("error", this.onError);
         this._process.removeListener("spawn", this.onSpawn);
+        //
+        logger.debug(`Process exited (${this.pid})`, {
+            pid: this.pid,
+            exitCode: exitCode,
+            signal: signal,
+        });
     }
 
     /**
