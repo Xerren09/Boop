@@ -181,19 +181,26 @@ export class BoopProcess extends EventEmitter {
      * @returns On Reject, returns the exitcode or null.
      */
     asPromise(): Promise<void> {
+        // Resolve immediately if the process is dead
+        if (this.exited == true) {
+            return this.exitCode === 0 ? Promise.resolve() : Promise.reject(this.exitCode);
+        }
         return new Promise<void>((resolve, reject) => {
-            // Resolve immediately if the process is dead
-            if (this.exited == true) {
-                return this.exitCode === 0 ? resolve() : reject(this.exitCode);
-            }
-            this._process.once("exit", (code: number | null) => {
-                if (code == 0) {
+            const __exit = (code: number | null) => {
+                this._process?.removeListener("error", __error);
+                if (code === 0) {
                     resolve();
                 }
                 else {
                     reject(code);
                 }
-            });
+            }
+            const __error = (error?: Error) => {
+                this._process?.removeListener("exit", __exit);
+                reject(error);
+            }
+            this._process.once("exit", __exit);
+            this._process.once("error", __exit);
         });
     }
 
