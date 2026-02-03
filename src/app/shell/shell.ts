@@ -206,10 +206,13 @@ export class BoopProcess extends EventEmitter {
 
     /**
      * Attempts to kill the process and all its children.
-     * @param forced If set to `true`, `SIGKILL` will be sent to the process. Defaults to `false` (`SIGINT`).
+     * @param force If set to `true`, `SIGKILL` will be sent to the process. Defaults to `false` (`SIGTERM`).
      * @returns 
      */
-    async kill(forced: boolean = false): Promise<void> {
+    async kill(force: boolean = false): Promise<void> {
+        if (this._wasKilled || this.exited) {
+            return Promise.resolve();
+        }
         return new Promise((resolve, reject) => {
             if (this._process != undefined && this._process.pid !== undefined && this.exited == false) {
                 try {
@@ -219,22 +222,23 @@ export class BoopProcess extends EventEmitter {
                     // Process isnt running so there it nothing to stop, call this a win
                     return resolve();
                 }
-                const signal = forced === true ? 'SIGKILL' : 'SIGTERM';
+                const signal = force === true ? 'SIGKILL' : 'SIGTERM';
                 this._wasKilled = true;
                 treeKill(this._process.pid, signal, (err: any) => {
                     if (err) {
                         reject(new Error(`Process "${this._process.spawnargs}" (${this.pid}) could not be stopped.`, { cause: err }));
                         logger.debug(`Failed to kill process (${this.pid})`, {
                             pid: this.pid,
-                            forced: forced,
-                            error: err
+                            forced: force,
+                            error: err,
+                            args: this._process.spawnargs
                         });
                     }
                     else {
                         resolve();
                         logger.debug(`Killed process (${this.pid})`, {
                             pid: this.pid,
-                            forced: forced
+                            forced: force
                         });
                     }
                 });
