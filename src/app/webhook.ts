@@ -49,7 +49,7 @@ export async function webhookHandler(req: express.Request, res: express.Response
  */
 function parseWebhookEvent(req: express.Request): WebhookEvent {
     const webhookEvent: WebhookEvent = {
-        type: req.get('X-GitHub-Event') || "",
+        type: req.get('X-GitHub-Event') ?? "",
         time: Date.now(),
         repository: {
             url: req.body.repository.html_url,  // "https://github.com/Codertocat/Hello-World"
@@ -102,7 +102,7 @@ function isSignatureValid(req: express.Request): boolean {
     // Discard message if there is no signature
     if (signatureHash.length != 0) {
         const body: string = JSON.stringify(req.body);
-        const WEBHOOK_SECRET = process.env[ENV_SECRET] || "";
+        const WEBHOOK_SECRET = process.env[ENV_SECRET] ?? "";
         const signature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex");
         const trusted = Buffer.from(`sha256=${signature}`, 'ascii');
         const untrusted =  Buffer.from(signatureHash, 'ascii');
