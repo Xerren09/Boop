@@ -15,7 +15,7 @@ import { stripVTControlCharacters } from "util";
 export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.ProcessEnv): BoopProcess {
     const proc = spawn(command, {
         cwd: cwd,
-        env: env,
+        env: env ?? {},
         windowsHide: true,
         shell: true,
     });
