@@ -12,16 +12,19 @@ import { exec } from "child_process";
  * @returns 
  */
 export function downloadRemote(remoteUrl: string) {
+    if (URL.canParse(remoteUrl) == false) {
+        throw new Error(`'${remoteUrl}' is not a valid URL.`);
+    }
     return new Promise<void>(async (resolve, reject) => {
         const name = remoteUrl.substring(remoteUrl.lastIndexOf('/') + 1);
         const projectPath = join(PROJECTS_DIR, name);
         const projectBinPath = join(projectPath, PROJECT_BIN_DIR_NAME);
         // Pull by default
-        let command: string = `git pull ${remoteUrl}`;
+        let command: string = `git pull "${remoteUrl}"`;
         if (await pathExists(projectBinPath) == false) {
             // Clone if files don't exist
             await mkdir(projectBinPath);
-            command = `git clone ${remoteUrl} .`
+            command = `git clone "${remoteUrl}" .`
         }
         const proc = exec(command, {
             cwd: projectBinPath
