@@ -5,6 +5,7 @@ import treeKill from "tree-kill";
 import logger from "../../logger.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
+import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from "../constants.js";
 
 /**
  * Spawns a new shell and runs the given command.
@@ -14,13 +15,36 @@ import { constants } from "os";
  * @returns 
  */
 export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.ProcessEnv): BoopProcess {
-    const proc = spawn(command, {
-        cwd: cwd,
-        env: env ?? {},
-        windowsHide: true,
-        shell: true,
-    });
-    const ret: BoopProcess = new BoopProcess(proc);
+    let _proc: ChildProcess = null;
+    if (process.platform === "win32") {
+        // Windows always know where node is so we can just pass an empty env and it'll work
+        _proc = spawn(command, {
+            cwd: cwd,
+            env: env ?? {},
+            windowsHide: true,
+            shell: true,
+        });
+    }
+    else if (process.platform === "linux") {
+        _proc = spawn(command, {
+            cwd: cwd,
+            shell: true,
+            env: {
+                HOME: process.env.HOME,
+                PATH: process.env.PATH,
+                // NVM
+                NODE_PATH: process.env.NODE_PATH,
+                NVM_DIR: process.env.NVM_DIR ,
+                NVM_BIN: process.env.NVM_BIN,
+                // Passed ENV
+                ...env
+            }
+        });
+    }
+    else {
+        throw new Error("Unsupported platform.");
+    }
+    const ret: BoopProcess = new BoopProcess(_proc);
     return ret;
 }
 
