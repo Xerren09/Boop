@@ -5,7 +5,6 @@ import treeKill from "tree-kill";
 import logger from "../../logger.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
-import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from "../constants.js";
 
 /**
  * Spawns a new shell and runs the given command.
@@ -183,7 +182,7 @@ export class BoopProcess extends EventEmitter {
 
     private onExit = (exitCode: number | null, signal: string | null) => {
         this._endTime = Date.now();
-        //
+        // See https://github.com/nodejs/node/blob/7bd2fea78b32e848d7e5ecc40d400c832a2fedf2/lib/internal/util.js#L410
         this._exitCode = exitCode === null ? (128 + constants.signals[signal]) : exitCode;
         //
         this.emit("exit", this._exitCode);
