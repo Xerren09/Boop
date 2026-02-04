@@ -172,8 +172,8 @@ export class InstallRunner extends EventEmitter {
                 cmd: el.cmd,
                 output: el.process?.Output.output ?? [],
                 exitCode: el.process?.exitCode ?? null,
-                start: el.process.startTime,
-                end: el.process.exitTime
+                start: el.process?.startTime ?? -1,
+                end: el.process?.exitTime ?? -1
             }))
         };
         return JSON.stringify(workflow);
