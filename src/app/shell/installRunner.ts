@@ -195,10 +195,6 @@ export class InstallRunner extends EventEmitter {
                 errors.push(err);
             }
         }
-        this._endTime = Date.now();
-        this._currentStep = null;
-        this._running = false;
-        this.emit("exit", false);
         if (errors.length != 0) {
             throw new AggregateError(errors, `One or more installer steps failed to stop.`);
         }
