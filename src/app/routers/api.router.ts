@@ -218,8 +218,8 @@ apiRouter.post("/projects/:projectName/start", (req, res) => {
     }
     project.deploy().then(() => {
         res.sendStatus(200);
-    }).catch(() => {
-        res.sendStatus(500);
+    }).catch((err) => {
+        res.status(500).json(err);
     });
 });
 
@@ -262,10 +262,10 @@ apiRouter.post("/projects/:projectName/env", (req, res) => {
             return;
         }
         project.environment.set(req.body.key, req.body.value);
-        res.status(202);
+        res.sendStatus(202);
     }
     else {
-        res.status(400);
+        res.sendStatus(400);
     }
 });
 
@@ -276,9 +276,9 @@ apiRouter.delete("/projects/:projectName/env", (req, res) => {
             return;
         }
         project.environment.delete(req.body.key);
-        res.status(202);
+        res.sendStatus(202);
     }
     else {
-        res.status(400);
+        res.sendStatus(400);
     }
 });
