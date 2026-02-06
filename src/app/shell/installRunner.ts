@@ -5,6 +5,7 @@ import { join } from "path";
 import { readdir, writeFile } from "fs/promises";
 import type { ProcessOutputLine } from "./processOutput.js";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../constants.js";
+import { makeProjectOutputFileName, ProjectOutputLogfileRegex } from "../utilities.js";
 
 const STEP_EVENT = "step";
 const STEP_EXIT_EVENT = "stepExit";
@@ -19,11 +20,6 @@ interface InstallRunnerEvents {
 export interface InstallerStep {
     cmd: string,
     process: null | BoopProcess
-}
-
-export const InstallLogFileRegex = new RegExp(/(?<=workflow-)(.*)(?=\.json)/);
-function makeFileName(time: number) {
-    return `workflow-${time}.json`;
 }
 
 export interface InstallerLog {
@@ -202,22 +198,25 @@ export class InstallRunner extends EventEmitter {
 
     /**
      * Gets the specified installation log for this project.
-     * @param time If not given, the last available timestamp is used and the latest log will be returned.
+     * @param log If not given, the last available timestamp is used and the latest log will be returned.
      * @returns The full filepath string to the log file.
      */
-    public async findLog(time?: number): Promise<string | null> {
+    public async findLog(log?: string | number): Promise<string | null> {
         const files = await this.getLogs();
         let logFileName: string | undefined = "";
         if (files.length == 0) {
             return null;
         }
-        if (time == undefined) {
-            const num = Math.max(...files.map(el => Number(InstallLogFileRegex.exec(el)[0])));
-            logFileName = makeFileName(num);
+        if (log == undefined) {
+            const num = Math.max(...files.map(el => Number(ProjectOutputLogfileRegex.exec(el)[0])));
+            logFileName = makeProjectOutputFileName(num);
         }
-        else {
-            const name: string = makeFileName(time);
+        if (typeof log === "number") {
+            const name: string = makeProjectOutputFileName(log);
             logFileName = files.find(el => el === name);
+        }
+        else if (typeof log === "string") {
+            logFileName = files.find(el => el === log);
         }
         if (logFileName) {
             return join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, logFileName)
@@ -232,7 +231,7 @@ export class InstallRunner extends EventEmitter {
     public async getLogs() {
         const installLogsDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME);
         const files = await readdir(installLogsDir);
-        const logs = files.filter(file => InstallLogFileRegex.test(file) == true);
+        const logs = files.filter(file => ProjectOutputLogfileRegex.test(file) == true);
         return logs;
     }
 
@@ -241,7 +240,7 @@ export class InstallRunner extends EventEmitter {
             throw new Error("InstallRunner is currently busy. Wait for the runner to complete before attempting to export.");
         }
         const log = this.asJSON();
-        const file = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeFileName(this._endTime));
+        const file = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeProjectOutputFileName(this._endTime));
         await writeFile(file, log);       
     }
 }

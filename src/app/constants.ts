@@ -40,6 +40,10 @@ export const PROJECT_LOGS_DIR_NAME = "logs";
  */
 export const PROJECT_LOGS_INSTALL_DIR_NAME = "install";
 /**
+ * The name of a project's deploy logs directory. Used with {@link PROJECT_LOGS_DIR_NAME}
+ */
+export const PROJECT_LOGS_DEPLOY_DIR_NAME = "deploy";
+/**
  * The filename of a project's standard event log.
  */
 export const PROJECT_LOG_FILE_NAME = "project.log";

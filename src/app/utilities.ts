@@ -54,3 +54,17 @@ export async function pathExists(path: PathLike): Promise<boolean> {
         return false;
     }
 }
+
+/**
+ * Regex to match project install and deploy logs.
+ */
+export const ProjectOutputLogfileRegex = new RegExp(/(\d*)(?=\.json)/);
+
+/**
+ * Creates JSON file with the given timestamp as the name.
+ * @param time 
+ * @returns 
+ */
+export function makeProjectOutputFileName(time: number) {
+    return `${time}.json`
+}

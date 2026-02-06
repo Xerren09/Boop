@@ -2,6 +2,10 @@ import { shellExecuteAsync, type BoopProcess } from "../shell/shell.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js"
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import { createServiceRouter } from "../routers/service.router.js";
+import { readdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../constants.js";
+import { makeProjectOutputFileName, ProjectOutputLogfileRegex } from "../utilities.js";
 
 export class ServiceProject extends BoopProject {
     public override get deployed(): boolean {
@@ -86,6 +90,49 @@ export class ServiceProject extends BoopProject {
         }
         if (this._process.exited == false) {
             await this._process.kill();
+            //
+            const file = join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, `${Date.now()}.json`);
+            const data = JSON.stringify(this._process.Output.output)
+            await writeFile(file, data);
         }
+    }
+
+    /**
+     * Gets the specified deployment log for this project.
+     * @param log If not given, the last available timestamp is used and the latest log will be returned.
+     * @returns The full filepath string to the log file.
+     */
+    public async findLog(log?: string | number): Promise<string | null> {
+        const files = await this.getLogs();
+        let logFileName: string | undefined = "";
+        if (files.length == 0) {
+            return null;
+        }
+        if (log == undefined) {
+            const num = Math.max(...files.map(el => Number(ProjectOutputLogfileRegex.exec(el)[0])));
+            logFileName = makeProjectOutputFileName(num);
+        }
+        if (typeof log === "number") {
+            const name: string = makeProjectOutputFileName(log);
+            logFileName = files.find(el => el === name);
+        }
+        else if (typeof log === "string") {
+            logFileName = files.find(el => el === log);
+        }
+        if (logFileName) {
+            return join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, logFileName)
+        }
+        return null;
+    }
+
+    /**
+     * Gets a list of all deployment log files for this project.
+     * @returns 
+     */
+    public async getLogs() {
+        const installLogsDir = join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME);
+        const files = await readdir(installLogsDir);
+        const logs = files.filter(file => ProjectOutputLogfileRegex.test(file) == true);
+        return logs;
     }
 }

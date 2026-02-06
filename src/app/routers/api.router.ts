@@ -3,10 +3,12 @@ import cors from "cors";
 import { readFile } from "fs/promises";
 import expressWs from "express-ws";
 import Manager from "../project/manager.js";
-import { ServiceProject } from "../project/service.project.js";
 import { ProjectStreamer } from "../project/projectStreamer.js";
 import { randomUUID } from "crypto";
-import { InstallLogFileRegex } from "../shell/installRunner.js";
+import { join } from "path";
+import { PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../constants.js";
+import { ProjectOutputLogfileRegex } from "../utilities.js";
+import { ServiceProject } from "../project/service.project.js";
 export const apiRouter = express.Router();
 //@ts-expect-error
 expressWs(apiRouter);
@@ -74,60 +76,133 @@ apiRouter.delete("/projects/:projectName", async (req, res) => {
     }
 });
 
-apiRouter.get("/projects/:projectName/logs", async (req, res) => {
+apiRouter.get("/projects/:projectName/logs/project", async (req, res) => {
     const project = Manager.projects.find(item => item.name === req.params.projectName);
     if (project == undefined) {
         return;
     }
-    const files = await project.installer.getLogs();
-    const ret = files.map(el => ({
-        time: Number(InstallLogFileRegex.exec(el)[0]),
-        name: el
-    }));
+    const path = join(project.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME);
+    const ret = (await readFile(path)).toString().replace(/\r\n/g,'\n').split('\n');;
     res.status(200).json(ret);
 });
 
-apiRouter.get("/projects/:projectName/log/:log", async (req, res) => {
+apiRouter.get("/projects/:projectName/logs/webhook", async (req, res) => {
     const project = Manager.projects.find(item => item.name === req.params.projectName);
     if (project == undefined) {
         return;
     }
-    const time = Number(req.params.log);
-    if (isNaN(time) == false) {
-        const file = await project.installer.findLog(time);
+    const ret = project.webhookEvents.events;
+    res.status(200).json(ret);
+});
+
+apiRouter.get("/projects/:projectName/logs/deploy", async (req, res) => {
+    const project = Manager.projects.find(item => item.name === req.params.projectName);
+    if (project == undefined) {
+        return;
+    }
+    try {
+        if (project instanceof ServiceProject) {
+            const files = await project.getLogs();
+            const ret = files.map(el => ({
+                time: Number(ProjectOutputLogfileRegex.exec(el)[0]),
+                name: el
+            }));
+            res.status(200).json(ret);
+        }
+        else {
+            res.sendStatus(404);
+        }
+    }
+    catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+apiRouter.get("/projects/:projectName/logs/deploy/:log", async (req, res) => {
+    const project = Manager.projects.find(item => item.name === req.params.projectName);
+    if (project == undefined) {
+        return;
+    }
+    try {
+        if (project instanceof ServiceProject) {
+            const num = Number(req.params.log);
+            const file = await project.findLog(Number.isNaN(num) ? num : req.params.log);
+            if (file == null) {
+                res.status(404).send("No logfile found.");
+            }
+            else {
+                try {
+                    const text = await (await readFile(file)).toString();
+                    res.status(200).json(JSON.parse(text));
+                }
+                catch (error) {
+                    res.status(500).json(error)
+                }
+            }
+        }
+        else {
+            res.sendStatus(404);
+        }
+    }
+    catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+apiRouter.get("/projects/:projectName/logs/install", async (req, res) => {
+    const project = Manager.projects.find(item => item.name === req.params.projectName);
+    if (project == undefined) {
+        return;
+    }
+    try {
+        const files = await project.installer.getLogs();
+        const ret = files.map(el => ({
+            time: Number(ProjectOutputLogfileRegex.exec(el)[0]),
+            name: el
+        }));
+        res.status(200).json(ret);
+    }
+    catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
+    const project = Manager.projects.find(item => item.name === req.params.projectName);
+    if (project == undefined) {
+        return;
+    }
+    try {
+        const num = Number(req.params.log);
+        const file = await project.installer.findLog(Number.isNaN(num) ? num : req.params.log);
         if (file == null) {
             res.status(404).send("No logfile found.");
         }
         else {
-            try {
-                const text = await (await readFile(file)).toString();
-                res.status(200).json(JSON.parse(text));
-            }
-            catch (error) {
-                res.status(500).json(error)
-            }
+            const text = await (await readFile(file)).toString();
+            res.status(200).json(JSON.parse(text));
         }
     }
-    else {
-        res.status(400).send("Time parameter not valid.");
+    catch (err) {
+        res.status(500).json(err);
     }
 });
 
-const streamers: {handle: string, streamer: ProjectStreamer}[] = [];
+export const ProjectStreamerCollection: {handle: string, streamer: ProjectStreamer}[] = [];
 
 apiRouter.ws("/projects/:projectName/installer", (ws, req) => {
     const project = Manager.projects.find(item => item.name === req.params["projectName"]);
     if (project) {
         const handle = randomUUID();
-        streamers.push({
+        ProjectStreamerCollection.push({
             handle: handle,
             streamer: new ProjectStreamer(ws, project)
         });
         ws.once("close", () => {
-            const idx = streamers.findIndex(item => item.handle === handle);
+            const idx = ProjectStreamerCollection.findIndex(item => item.handle === handle);
             if (idx != -1) {
-                streamers[idx]?.streamer.dispose();
-                streamers.splice(idx, 1);
+                ProjectStreamerCollection[idx]?.streamer.dispose();
+                ProjectStreamerCollection.splice(idx, 1);
             }
         });
     }

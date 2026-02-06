@@ -1,4 +1,4 @@
-import { PROJECT_BIN_DIR_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, PROJECTS_DIR } from "../constants.js";
+import { PROJECT_BIN_DIR_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, PROJECTS_DIR } from "../constants.js";
 import { join } from "path";
 import logger from "../../logger.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js";
@@ -67,6 +67,7 @@ class ProjectManager {
             const projectFile = await createProjectFile(join(projectDir, PROJECT_FILE_NAME), remote, buildConfig);
             await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME));
             await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME));
+            await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME));
             const project = await InstantiateProject(projectFile);
             this._projects.push(project);
             logger.info(`Created new project '${project.name}' (${remote}).`);
