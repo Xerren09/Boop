@@ -47,6 +47,7 @@ export class InstallRunner extends EventEmitter {
     private _running: boolean = false;
     private _endTime: number = 0;
     private _startTime: number = 0;
+    private _referenceTime: number = -1;
 
     public steps: InstallerStep[] = [];
 
@@ -69,6 +70,15 @@ export class InstallRunner extends EventEmitter {
      */
     public get success(): boolean {
         return this.steps.map(el => (el.process != null && el.process.exitCode == 0)).every(el => el == true);
+    }
+
+    /**
+     * Returns the reference timestamp fr the event that triggered the runner, if set. 
+     * 
+     * Will be `-1` if not given during {@link run|run()}.
+     */
+    public get referenceTime(): number {
+        return this._referenceTime;
     }
 
     /**
@@ -112,12 +122,13 @@ export class InstallRunner extends EventEmitter {
      * Use {@link loadConfiguration} to load the current build file.
      * @returns 
      */
-    public async run(): Promise<void> {
+    public async run(referenceTime?: number): Promise<void> {
         if (this._running) {
             throw new Error("Installer already running.");
         }
         this._running = true;
         this._startTime = Date.now();
+        this._referenceTime = referenceTime ?? -1;
         let stepIdx = 0;
         for (const step of this.steps) {
             try {
@@ -240,7 +251,7 @@ export class InstallRunner extends EventEmitter {
             throw new Error("InstallRunner is currently busy. Wait for the runner to complete before attempting to export.");
         }
         const log = this.asJSON();
-        const file = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeProjectOutputFileName(this._endTime));
+        const file = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeProjectOutputFileName(this._referenceTime === -1 ? this._startTime : this._referenceTime));
         await writeFile(file, log);       
     }
 }

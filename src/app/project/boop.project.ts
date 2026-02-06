@@ -185,7 +185,7 @@ export abstract class BoopProject extends EventEmitter {
             }
             await this.stop();
             await downloadRemote(this.remoteUrl);
-            await this.install();
+            await this.install(this.webhookEvents.lastEvent.time);
             await this.deploy();
         }
         catch (error) {
@@ -195,8 +195,9 @@ export abstract class BoopProject extends EventEmitter {
 
     /**
      * Runs the project's installer with the currently available build file.
+     * @param referenceTime [Optional] The time of the event that triggered the install workflow.
      */
-    public async install(): Promise<void> {
+    public async install(referenceTime?: number): Promise<void> {
         this.SharedLog("info", `Install process started.`);
         // Stop project and installer if its running.
         await this.stop();
@@ -207,19 +208,13 @@ export abstract class BoopProject extends EventEmitter {
         try {
             await this._installer.loadConfiguration();
             this.emit("install", this._installer);
-            await this._installer.run();
+            await this._installer.run(referenceTime);
+            this.log.info(`Installer finished.`);
         }
         catch (err) {
-            this.log.logException(err);
-            throw err;
-        }
-        finally {
-            if (this._installer.success == false) {
-                this.log.error(`Installer failed. See "workflow-${this._installer.exitedAt}.json" for more info.`);
-            }
-            else {
-                this.log.info(`Installer finished.`);
-            }
+            const error = new Error(`Installer failed.`, { cause: err });
+            this.SharedLog("exception", error);
+            throw error;
         }
     }
 
@@ -260,7 +255,7 @@ export abstract class BoopProject extends EventEmitter {
             const error = new Error(`Failed to deploy project.`, { cause: err });
             this.SharedLog("exception", error);
             this._router = null;
-            throw err;
+            throw error;
         }
         finally {
             this.emit("deploy", this.deployed);
@@ -283,7 +278,7 @@ export abstract class BoopProject extends EventEmitter {
         catch (err) {
             const error = new Error(`Failed to stop project.`, { cause: err });
             this.SharedLog("exception", error);
-            throw err;
+            throw error;
         }
         finally {
             // Always send stop because a failed stop is likely an invalid state; better safe than sorry.
