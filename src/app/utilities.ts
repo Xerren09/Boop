@@ -56,15 +56,20 @@ export async function pathExists(path: PathLike): Promise<boolean> {
 }
 
 /**
- * Regex to match project install and deploy logs.
+ * Regex to match timestamped project install and deploy logs.
+ * 
+ * Use the `timeStamp` group to get the log's timestamp.
  */
-export const ProjectOutputLogfileRegex = new RegExp(/(\d*)(?=\.json)/);
+export const ProjectOutputLogfileRegex = new RegExp(/^(?<timeStamp>[\d+]{13,}).json$/);
 
 /**
  * Creates JSON file with the given timestamp as the name.
- * @param time 
+ * @param name 
  * @returns 
  */
-export function makeProjectOutputFileName(time: number) {
-    return `${time}.json`
+export function makeProjectOutputFileName(name: number) {
+    if (typeof name !== "number") {
+        console.warn("Log filename is not compliant and will be invisible to search methods; use 'Date.now()'-like timestamps in milliseconds. ");
+    }
+    return `${name}.json`
 }
