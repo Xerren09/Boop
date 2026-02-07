@@ -1,5 +1,5 @@
 import express from "express";
-import { join } from "path";
+import { dirname, join } from "path";
 
 /**
  * Creates a new Express Router that serves static files, for example for a web-app.
@@ -15,7 +15,7 @@ export function createAppRouter(route: string, rootPath: string, index: string) 
     // The route for file serving
     const filesRoute = `/${route}`;
     const indexPath = join(rootPath, index);
-    router.use(filesRoute, express.static(rootPath));
+    router.use(filesRoute, express.static(join(rootPath, dirname(index))));
     router.get(indexRoute, function (_req, res) {
         res.sendFile(indexPath);
     });
