@@ -5,8 +5,11 @@ import { ServiceProject } from "./service.project.js";
 
 type Deploy = {
     type: "deploy",
-    time: number,
-    cmd: string
+    success: boolean
+}
+
+type Stop = {
+    type: "stop"
 }
 
 type Installer = {
@@ -25,6 +28,12 @@ type InstallerStepStart = {
     type: "installerStep",
     cmd: string,
     time: number
+}
+
+type ProcessStart = {
+    type: "processStart",
+    time: number,
+    cmd: string
 }
 
 type ProcessExit = {
@@ -63,6 +72,7 @@ export class ProjectStreamer {
         //
         this._proj.on("install", this.onInstall);
         this._proj.on("deploy", this.onProjectDeploy);
+        this._proj.on("stop", this.onProjectStop);
     }
 
     private sendHistory = () => {
@@ -186,41 +196,50 @@ export class ProjectStreamer {
         this._ws.send(JSON.stringify(msg));
     }
 
-    private onProjectDeploy = (success: boolean) => {
+    private onProjectProcessExit = () => {
         if (this._proj instanceof ServiceProject) {
-            //
-            if (success) {
-                const message: Deploy = {
-                    type: "deploy",
-                    cmd: this._proj.process.childProcess.spawnargs.join(" "),
-                    time: this._proj.process.startTime
-                }
-                this._ws.send(JSON.stringify(message));
-                this._proj.process?.on("output", this.onProcessOutput);
-            }
-            else {
-                this._proj.process?.removeListener("output", this.onProcessOutput);
-                const second: ProcessExit = {
-                    type: "processExit",
-                    exitCode: this._proj.process?.exitCode ?? null,
-                    time: this._proj.process.exitTime
-                }
-                this._ws.send(JSON.stringify(second));
-            }
-        }
-        else {
-            const message: Deploy = {
-                type: "deploy",
-                cmd: "",
-                time: 0
+            const message: ProcessExit = {
+                type: "processExit",
+                exitCode: this._proj.process?.exitCode ?? null,
+                time: this._proj.process.exitTime
             }
             this._ws.send(JSON.stringify(message));
         }
     }
 
+    private onProjectDeploy = (success: boolean) => {
+        const deployMsg: Deploy = {
+            type: "deploy",
+            success: success
+        }
+        this._ws.send(JSON.stringify(deployMsg));
+        //
+        if (this._proj instanceof ServiceProject) {
+            //
+            if (success) {
+                const message: ProcessStart = {
+                    type: "processStart",
+                    cmd: this._proj.process.childProcess.spawnargs.join(" "),
+                    time: this._proj.process.startTime
+                }
+                this._ws.send(JSON.stringify(message));
+                this._proj.process?.on("output", this.onProcessOutput);
+                this._proj.process?.once("exit", this.onProjectProcessExit);
+            }
+        }
+    }
+
+    private onProjectStop = () => {
+        const stopMsg: Stop = {
+            type: "stop"
+        }
+        this._ws.send(JSON.stringify(stopMsg));
+    }
+
     public dispose() {
         this._proj.removeListener("install", this.onInstall);
         this._proj.removeListener("deploy", this.onProjectDeploy);
+        this._proj.removeListener("stop", this.onProjectStop);
         const installer = this._proj.installer;
         if (installer != undefined) {
             installer.removeListener("exit", this.onInstallerComplete);
@@ -232,6 +251,7 @@ export class ProjectStreamer {
         }
         if (this._proj instanceof ServiceProject) {
             this._proj.process?.removeListener("output", this.onProcessOutput);
+            this._proj.process?.removeListener("exit", this.onProjectProcessExit);
         }
     }
 }
