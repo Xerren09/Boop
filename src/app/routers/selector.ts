@@ -2,6 +2,8 @@ import type { NextFunction, Response, Request } from "express";
 import Manager from "../project/manager.js";
 import { ServiceProject } from "../project/service.project.js";
 
+const projectIdFromUrlSegments = /^\/*(?<projectID>[\w-]+)\/?/;
+
 /**
  * Selects the requested project's host and directs the request to it.
  * @param req 
@@ -9,8 +11,8 @@ import { ServiceProject } from "../project/service.project.js";
  * @param next 
  */
 export function projectSelector(req: Request, res: Response, next: NextFunction) {
-    const projectName = req.url.split("/")[1];
-    const project = Manager.projects.find(el => el.name == projectName);
+    const projectName = projectIdFromUrlSegments.exec(req.url)?.groups?.projectID ?? "";
+    const project = Manager.Find(projectName);
     if (project) {
         if (project.router) {
             project.router(req, res, next);
