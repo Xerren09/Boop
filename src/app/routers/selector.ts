@@ -31,14 +31,13 @@ export function projectSelector(req: Request, res: Response, next: NextFunction)
                 
                 <ul>
                     <li>Make sure the project is deployed.</li>
-                    <li>Ensure the <code>PORT</code> environment variable is set in the project&#39;s config.yaml file (<a href="https://github.com/Xerren09/Boop#project-configuration">example</a>).</li>
+                    <li>Ensure the <code>PORT</code> environment variable is set in the project&#39;s config.yaml file (<a href="https://github.com/Xerren09/Boop#project-configuration">See how to configure a project build file</a>).</li>
                     <li>Or through the Boop web UI at <a href="http://${req.host}/boop/${projectName}">${projectName}</a>, in the &quot;Environment&quot; tab.</li>
                 </ul>
 
                 <p>If you have set the <code>PORT</code> variable, make sure your application is using it correctly on startup.</p>
                 ` : ""
             }
-            <p>For App projects:</p>
 
             ${
                 (project instanceof ServiceProject) == false ? `
@@ -47,6 +46,7 @@ export function projectSelector(req: Request, res: Response, next: NextFunction)
                 
                 <ul>
                     <li>Make sure the project is deployed.</li>
+                    <li>Ensure the <code>entry</code> property of the config.yaml file points to the app's index file and it is a valid path.</li>
                 </ul>
                 ` : ""
             }
@@ -54,6 +54,14 @@ export function projectSelector(req: Request, res: Response, next: NextFunction)
         }
     }
     else {
-        next();
+        res.status(404).send(`
+        <h1>404 - Resource not found.</h1>
+
+        <p>Can&#39;t find the requested resource (${req.url}); it does not point to any known projects.</p>
+
+        <p>Project routers are prefixed with the project's url compliant name; for example the project called "example-project" will be available at "/example-project/".</p>
+
+        <p>If you are trying to access an SPA, ensure that it is built with its base path set to the project's name, or resources will not resolve correctly.</p>
+        `);
     }
 }
