@@ -1,8 +1,7 @@
 import express from "express";
-import httpProxy from "http-proxy"
-const httpProxyServer = httpProxy.createProxyServer({
-    ws: true,
-});
+import cors from "cors";
+import httpProxy from "http-proxy-3";
+const httpProxyServer = httpProxy.createProxyServer();
 
 /**
  * Creates a Proxy Host that redirects the request to the target server
@@ -11,6 +10,7 @@ const httpProxyServer = httpProxy.createProxyServer({
  */
 export function createServiceRouter(route: string, port: number) {
     const router = express.Router();
+    router.use(cors());
     router.use((req, res) => {
         // Remove the boop attachment route from the url so the Proxy Host gets the correct request
         req.url = req.url.replace(`/${route}`, "");
