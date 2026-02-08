@@ -79,11 +79,11 @@ const BOOP = app.listen(port, async () => {
     console.log(`| __ -|  |  |  |  |   __|__|`);
     console.log(`|_____|_____|_____|__|  |__|`);
     console.log(`Tiny CI/CD server for GitHub webhooks!\n`);
-    if (secret == "") {
-        logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
-    }
-    if (process.env[ENV_DISABLE_WEBHOOK_SECURITY] !== undefined) {
+    if (process.env[ENV_DISABLE_WEBHOOK_SECURITY] === "true") {
         logger.warn("Webhook security disabled; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
+    }
+    else if (secret == "") {
+        logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
     }
     console.log(`====`);
     console.log(`Boop listening on port`, styleText("blueBright", `${port}`));
