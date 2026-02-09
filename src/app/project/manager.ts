@@ -174,7 +174,7 @@ class ProjectManager {
                 }
                 if (project instanceof ServiceProject) {
                     if (force === true) {
-                        await project.process.kill(force);
+                        await project.process.kill(true, force);
                     }
                     else {
                         await project.stop();

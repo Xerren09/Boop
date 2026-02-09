@@ -229,10 +229,11 @@ export class BoopProcess extends EventEmitter {
 
     /**
      * Attempts to kill the process and all its children.
+     * @param entireProcessTree If set to `true`, will attempt to kill all child processes as well as the main process. Defaults to `true`.
      * @param force If set to `true`, `SIGKILL` will be sent to the process. Defaults to `false` (`SIGTERM`).
      * @returns 
      */
-    async kill(force: boolean = false): Promise<void> {
+    async kill(entireProcessTree: boolean = true, force: boolean = false): Promise<void> {
         if (this._wasKilled || this.exited) {
             return Promise.resolve();
         }
@@ -247,24 +248,35 @@ export class BoopProcess extends EventEmitter {
                 }
                 const signal = force === true ? 'SIGKILL' : 'SIGTERM';
                 this._wasKilled = true;
-                treeKill(this._process.pid, signal, (err: any) => {
-                    if (err) {
-                        reject(new Error(`Process "${this._process.spawnargs}" (${this.pid}) could not be stopped.`, { cause: err }));
-                        logger.debug(`Failed to kill process (${this.pid})`, {
-                            pid: this.pid,
-                            forced: force,
-                            error: err,
-                            args: this._process.spawnargs
-                        });
+                if (entireProcessTree === true) {
+                    treeKill(this._process.pid, signal, (err: any) => {
+                        if (err) {
+                            reject(new Error(`Process "${this._process.spawnargs}" (${this.pid}) could not be stopped.`, { cause: err }));
+                            logger.debug(`Failed to kill process (${this.pid})`, {
+                                pid: this.pid,
+                                forced: force,
+                                error: err,
+                                args: this._process.spawnargs
+                            });
+                        }
+                        else {
+                            resolve();
+                            logger.debug(`Killed process (${this.pid})`, {
+                                pid: this.pid,
+                                forced: force
+                            });
+                        }
+                    });
+                }
+                else {
+                    try {
+                        const result = this._process.kill(signal);
+                        result ? resolve() : reject();
                     }
-                    else {
-                        resolve();
-                        logger.debug(`Killed process (${this.pid})`, {
-                            pid: this.pid,
-                            forced: force
-                        });
+                    catch (err) {
+                        reject(err);
                     }
-                });
+                }
             }
             else {
                 resolve();

@@ -189,14 +189,14 @@ export class InstallRunner extends EventEmitter {
     /**
      * Stops all steps' processes.
      */
-    public async kill(forced?: boolean): Promise<void> {
+    public async kill(force?: boolean): Promise<void> {
         if (this.running == false) {
             return;
         }
         const errors: Error[] = [];
         for (const step of this.steps) {
             try {
-                await step.process?.kill(forced);
+                await step.process?.kill(true, force);
             }
             catch (err){
                 errors.push(err);
