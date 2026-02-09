@@ -30,7 +30,8 @@ apiRouter.get("/status", (_req, res) => {
         projects: Manager.projects.length,
         uptime: Math.floor(process.uptime()) * 1000,
         nodeVer: process.version,
-        system: process.platform
+        system: process.platform,
+        arch: process.arch
     };
     res.status(200).json(ret);
 });
