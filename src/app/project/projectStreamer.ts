@@ -2,6 +2,7 @@ import WebSocket from "ws"
 import type { BoopProject } from "./boop.project.js";
 import type { InstallerStep, InstallRunner } from "../shell/installRunner.js";
 import { ServiceProject } from "./service.project.js";
+import { IDisposable } from "../utilities.js";
 
 type Deploy = {
     type: "deploy",
@@ -50,11 +51,18 @@ type ProcessOutput = {
     }[]
 }
 
-export class ProjectStreamer {
+export const ProjectStreamerCollection: ProjectStreamer[] = [];
+
+export class ProjectStreamer implements IDisposable {
     private _ws: WebSocket;
     private _proj: BoopProject;
+    private _disposed: boolean = false;
 
     private currentInstallerStep: InstallerStep | undefined;
+
+    public get disposed() {
+        return this._disposed;
+    }
 
     public get project() {
         return this._proj;
@@ -236,7 +244,11 @@ export class ProjectStreamer {
         this._ws.send(JSON.stringify(stopMsg));
     }
 
-    public dispose() {
+    public [Symbol.dispose]() {
+        if (this._disposed) {
+            throw new Error("Project streamer already disposed");
+        }
+        this._disposed = true;
         this._proj.removeListener("install", this.onInstall);
         this._proj.removeListener("deploy", this.onProjectDeploy);
         this._proj.removeListener("stop", this.onProjectStop);
@@ -252,6 +264,10 @@ export class ProjectStreamer {
         if (this._proj instanceof ServiceProject) {
             this._proj.process?.removeListener("output", this.onProcessOutput);
             this._proj.process?.removeListener("exit", this.onProjectProcessExit);
+        }
+        if (this._ws.readyState === this._ws.CONNECTING || this._ws.readyState === this._ws.OPEN) {
+            // 1001: resource shutting down
+            this._ws.close(1001, "disposed");
         }
     }
 }

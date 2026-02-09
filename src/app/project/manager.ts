@@ -8,6 +8,7 @@ import { pathExists } from "../utilities.js";
 import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow, WorkflowConfig } from "../workflow.js";
 import { InstantiateProject } from "./instantiate.js";
+import { ProjectStreamerCollection } from "./projectStreamer.js";
 
 class ProjectManager {
     private _projects: BoopProject[] = [];
@@ -92,6 +93,12 @@ class ProjectManager {
             const project = (typeof (target) == "string") ? this.projects.find(item => item.name == target) : target;
             if (project == undefined) {
                 throw new Error(`Project does not exist.`);
+            }
+            const streamers = ProjectStreamerCollection.filter(streamer => streamer.project == project);
+            for (const streamer of streamers) {
+                if (streamer.disposed == false) {
+                    streamer[Symbol.dispose]();
+                }
             }
             if (await pathExists(project.rootDir) == false) {
                 throw new Error(`Project directory '${project.rootDir}' does not exist.`);

@@ -4,7 +4,6 @@ import { readFile } from "fs/promises";
 import expressWs from "express-ws";
 import Manager from "../project/manager.js";
 import { ProjectStreamer } from "../project/projectStreamer.js";
-import { randomUUID } from "crypto";
 import { join } from "path";
 import { PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../constants.js";
 import { ProjectOutputLogfileRegex } from "../utilities.js";
@@ -29,6 +28,7 @@ apiRouter.get("/status", (_req, res) => {
     const ret = {
         projects: Manager.projects.length,
         uptime: Math.floor(process.uptime()) * 1000,
+        uptime: Math.floor(process.uptime()),
         nodeVer: process.version,
         system: process.platform,
         arch: process.arch
@@ -189,21 +189,13 @@ apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
     }
 });
 
-export const ProjectStreamerCollection: {handle: string, streamer: ProjectStreamer}[] = [];
-
 apiRouter.ws("/projects/:projectName/installer", (ws, req) => {
     const project = Manager.projects.find(item => item.name === req.params["projectName"]);
     if (project) {
-        const handle = randomUUID();
-        ProjectStreamerCollection.push({
-            handle: handle,
-            streamer: new ProjectStreamer(ws, project)
-        });
+        const streamer = new ProjectStreamer(ws, project)
         ws.once("close", () => {
-            const idx = ProjectStreamerCollection.findIndex(item => item.handle === handle);
-            if (idx != -1) {
-                ProjectStreamerCollection[idx]?.streamer.dispose();
-                ProjectStreamerCollection.splice(idx, 1);
+            if (streamer.disposed === false) {
+                streamer[Symbol.dispose]();
             }
         });
     }
