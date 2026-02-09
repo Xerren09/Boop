@@ -54,11 +54,11 @@ apiRouter.get("/projects/:projectName", (req, res) => {
     }
     const ret = {
         name: project.name,
-        deployed: project.deployed,
-        lastDeployed: project.webhookEvents.lastEvent?.time || 0,
         remote: project.remoteUrl,
         type: project.type,
-        events: project.webhookEvents.events,
+        deployed: project.deployed,
+        lastEvent: project.webhookEvents.lastEvent ?? null,
+        localPort: project.environment.get("port") ?? null
     }
     res.status(200).json(ret);
 });
