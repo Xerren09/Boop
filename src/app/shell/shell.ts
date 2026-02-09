@@ -72,8 +72,8 @@ export class BoopProcess extends EventEmitter {
     private _wasKilled: boolean = false;
     private _exitCode: number | null = null;
 
-    public readonly Output: ProcessOutput;
 
+    public readonly output: ProcessOutput;
     public get exitCode() : number | null {
         return this._exitCode;
     }

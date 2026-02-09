@@ -92,7 +92,7 @@ export class ServiceProject extends BoopProject {
             await this._process.kill();
             //
             const file = join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, `${Date.now()}.json`);
-            const data = JSON.stringify(this._process.Output.output)
+            const data = JSON.stringify(this._process.output.lines)
             await writeFile(file, data);
         }
     }

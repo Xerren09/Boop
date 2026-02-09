@@ -90,7 +90,7 @@ export class ProjectStreamer {
             // Send full step output
             const stepOutput: ProcessOutput = {
                 type: "processOutput",
-                output: step.process.Output.output
+                output: step.process.output.lines
             };
             this._ws.send(JSON.stringify(stepOutput));
             // Send step complete
@@ -103,7 +103,7 @@ export class ProjectStreamer {
             if (this._proj instanceof ServiceProject) {
                 const deployOutput: ProcessOutput = {
                     type: "processOutput",
-                    output: this._proj.process.Output.output
+                    output: this._proj.process.output.lines
                 };
                 this._ws.send(JSON.stringify(deployOutput));
             }
@@ -118,7 +118,7 @@ export class ProjectStreamer {
             // Send step output history up to current point
             const stepOutput: ProcessOutput = {
                 type: "processOutput",
-                output: this._proj.installer.currentStep.process.Output.output
+                output: this._proj.installer.currentStep.process.output.lines
             };
             this._ws.send(JSON.stringify(stepOutput));
         }

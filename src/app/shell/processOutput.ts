@@ -7,7 +7,7 @@ export type ProcessOutputLine = {
 
 export class ProcessOutput {
     private _output: ProcessOutputLine[] = [];
-    public get output(): ProcessOutputLine[] {
+    public get lines(): ProcessOutputLine[] {
         return [...this._output];
     }
 

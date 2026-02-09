@@ -177,7 +177,7 @@ export class InstallRunner extends EventEmitter {
             time: this._endTime,
             log: this.steps.map(el => ({
                 cmd: el.cmd,
-                output: el.process?.Output.output ?? [],
+                output: el.process?.output.lines ?? [],
                 exitCode: el.process?.exitCode ?? null,
                 start: el.process?.startTime ?? -1,
                 end: el.process?.exitTime ?? -1
