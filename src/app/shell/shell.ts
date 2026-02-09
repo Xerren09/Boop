@@ -5,13 +5,14 @@ import treeKill from "tree-kill";
 import logger from "../../logger.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
+import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from "../constants.js";
 
 /**
  * Spawns a new shell and runs the given command.
  * @param command This command will be passed to the shell for execution.
- * @param cwd 
- * @param env 
- * @returns 
+ * @param cwd The working directory from which the process is spawned.
+ * @param env The environment variables that will be visible to the process. On Windows these will be directly passed, while on Linux they will be merged with `process.env`.
+ * @returns A {@link BoopProcess} wrapper that provides additional functions on top of {@link ChildProcess}.
  */
 export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.ProcessEnv): BoopProcess {
     let _proc: ChildProcess = null;
@@ -25,17 +26,16 @@ export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.Pro
         });
     }
     else if (process.platform === "linux") {
+        const __env = { ...process.env };
+        // Get rid of Boop specific variables
+        delete __env[ENV_SECRET]; // Don't leak the secret
+        delete __env[ENV_PORT];
+        delete __env[ENV_DISABLE_WEBHOOK_SECURITY];
         _proc = spawn(command, {
             cwd: cwd,
             shell: true,
             env: {
-                HOME: process.env.HOME,
-                PATH: process.env.PATH,
-                // NVM
-                NODE_PATH: process.env.NODE_PATH,
-                NVM_DIR: process.env.NVM_DIR ,
-                NVM_BIN: process.env.NVM_BIN,
-                // Passed ENV
+                ...__env,
                 ...env
             }
         });
