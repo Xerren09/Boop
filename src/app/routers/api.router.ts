@@ -39,10 +39,10 @@ apiRouter.get("/status", (_req, res) => {
 apiRouter.get("/projects", (_req, res) => {
     const ret = Manager.projects.map(project => ({
         name: project.name,
-        deployed: project.deployed,
+        remote: project.remoteUrl,
         type: project.type,
-        lastEvent: project.webhookEvents.lastEvent?.time || 0,
-        remote: project.remoteUrl
+        deployed: project.deployed,
+        lastEventTime: project.webhookEvents.lastEvent?.time ?? 0,
     }));
     res.status(200).json(ret);
 });
