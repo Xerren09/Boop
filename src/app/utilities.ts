@@ -73,3 +73,17 @@ export function makeProjectOutputFileName(name: number) {
     }
     return `${name}.json`
 }
+
+export interface IDisposable extends Disposable {
+    /**
+     * The `disposed` property indicates if the object was disposed of via \[{@link Symbol.dispose}]().
+     */
+    get disposed(): boolean;
+}
+
+export interface IAsyncDisposable extends AsyncDisposable{
+    /**
+     * The `disposed` property indicates if the object was disposed of via \[{@link Symbol.asyncDispose}]().
+     */
+    get disposed(): boolean;
+}

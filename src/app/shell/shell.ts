@@ -1,10 +1,11 @@
 import { ChildProcess, spawn } from "child_process";
-import EventEmitter from "events";
+import EventEmitter, { once } from "events";
 import { ProcessOutput, type ProcessOutputLine } from "./processOutput.js";
 import treeKill from "tree-kill";
 import logger from "../../logger.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
+import { IAsyncDisposable, IDisposable } from "../utilities.js";
 import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from "../constants.js";
 
 /**
@@ -62,9 +63,9 @@ export interface BoopProcess {
 }
 
 /**
- * A single use wrapper for a ChildProcess spawned via {@link shellExecuteAsync}.
+ * A single use wrapper for a {@link ChildProcess} spawned via {@link shellExecuteAsync}.
  */
-export class BoopProcess extends EventEmitter {
+export class BoopProcess extends EventEmitter implements IAsyncDisposable {
 
     private _process: ChildProcess;
     private _startTime: number = 0;
@@ -72,8 +73,23 @@ export class BoopProcess extends EventEmitter {
     private _wasKilled: boolean = false;
     private _exitCode: number | null = null;
 
+    private _abortController: AbortController = new AbortController();
+
+    private _disposed: boolean = false;
+    get disposed(): boolean {
+        return this._disposed;
+    }
 
     public readonly output: ProcessOutput;
+
+    /**
+     * The exit code of the process, if it has finished.
+     * 
+     * The value may be different from the {@link childProcess}'s exitCode if it exited due to a signal.
+     * See {@link signalExit} and {@link https://nodejs.org/api/util.html#utilconvertprocesssignaltoexitcodesignalcode|convertProcessSignalToExitCode}.
+     * 
+     * If the instance was disposed, the value will be `-1`.
+     */
     public get exitCode() : number | null {
         return this._exitCode;
     }
@@ -95,7 +111,7 @@ export class BoopProcess extends EventEmitter {
     }
 
     /**
-     * Gets if the process was sent a kill signal using {@link kill}. 
+     * Gets if the process was sent a kill signal using {@link kill}(). 
      * 
      * Does not necessarily guarantee that the process was actually terminated.
      */
@@ -114,16 +130,23 @@ export class BoopProcess extends EventEmitter {
         return this._process;
     }
 
+    /**
+     * The timestamp when the process started. Will be `0` if the process never spawned.
+     */
     public get startTime() {
         return this._startTime;
     }
+
+    /**
+     * The timestamp when the process exited. Will be `0` if the process is still running, or if \[{@link Symbol.asyncDispose}]() was called.
+     */
     public get exitTime() {
         return this._endTime;
     }
 
     constructor(proc: ChildProcess) {
         super();
-        this.Output = new ProcessOutput();
+        this.output = new ProcessOutput();
         this._process = proc;
         this._process.once("error", this.onError);
         this._process.once("spawn", this.onSpawn);
@@ -138,7 +161,7 @@ export class BoopProcess extends EventEmitter {
             stream: "stdout",
             line: line
         };
-        this.Output.addLine("stdout", line);
+        this.output.addLine("stdout", line);
         this.emit("output", output.stream, output.line);
     }
 
@@ -148,7 +171,7 @@ export class BoopProcess extends EventEmitter {
             stream: "stderr",
             line: line
         };
-        this.Output.addLine("stderr", line);
+        this.output.addLine("stderr", line);
         this.emit("output", output.stream, output.line);
     }
 
@@ -201,30 +224,31 @@ export class BoopProcess extends EventEmitter {
 
     /**
      * Returns a promise that completes when the process exits. Rejects with the exitcode if it is not `0`.
-     * @returns On Reject, returns the exitcode or null.
+     * @returns On Reject, returns the `exitCode: number`, or `Error` if aborted.
      */
-    asPromise(): Promise<void> {
+    async asPromise(): Promise<void> {
         // Resolve immediately if the process is dead
         if (this.exited == true) {
             return this.exitCode === 0 ? Promise.resolve() : Promise.reject(this.exitCode);
         }
-        return new Promise<void>((resolve, reject) => {
-            const __exit = (code: number | null) => {
-                this._process?.removeListener("error", __error);
-                if (code === 0) {
-                    resolve();
-                }
-                else {
-                    reject(code);
-                }
+        try {
+            await Promise.race([
+                once(this._process, "exit", { signal: this._abortController.signal }),
+                once(this._process, "error", { signal: this._abortController.signal })]
+            );
+            if (this._process.exitCode === 0) {
+                return;
             }
-            const __error = (error?: Error) => {
-                this._process?.removeListener("exit", __exit);
-                reject(error);
+            else {
+                return Promise.reject(this._process.exitCode);
             }
-            this._process.once("exit", __exit);
-            this._process.once("error", __exit);
-        });
+        }
+        catch (err) {
+            if (this._abortController.signal.aborted) {
+                throw new Error("Disposed.");
+            }
+            return Promise.reject(err);
+        }
     }
 
     /**
@@ -282,5 +306,24 @@ export class BoopProcess extends EventEmitter {
                 resolve();
             }
         });
+    }
+
+    async [Symbol.asyncDispose]() {
+        if (this._disposed) {
+            throw new Error("Already disposed");
+        }
+        this._disposed = true;
+        // Remove event listeners first so the later cleanup doesn't trigger them.
+        this._process.removeListener("error", this.onError);
+        this._process.removeListener("spawn", this.onSpawn);
+        this._process.stdout?.removeListener("data", this.onStdout);
+        this._process.stderr?.removeListener("data", this.onStderr);
+        this._process.removeListener("exit", this.onExit);
+        // Abort all asPromise instances with a rejection.
+        this._abortController.abort("dispose");
+        // Special case for dispose.
+        this._exitCode = -1;
+        // Use our own kill instead of the normal one because we want everything gone.
+        await this.kill(true, true);
     }
 }
