@@ -136,7 +136,7 @@ export class InstallRunner extends EventEmitter {
                 step.process = proc;
                 this._currentStep = step;
                 this.emit(STEP_EVENT, this._currentStep);
-                await proc.asPromise();
+                await proc.waitForExit();
                 stepIdx++;
             }
             catch (err) {

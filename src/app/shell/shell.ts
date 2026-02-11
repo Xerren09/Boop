@@ -5,7 +5,7 @@ import treeKill from "tree-kill";
 import logger from "../../logger.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
-import { IAsyncDisposable, IDisposable } from "../utilities.js";
+import { IAsyncDisposable } from "../utilities.js";
 import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from "../constants.js";
 
 /**
@@ -73,7 +73,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
     private _wasKilled: boolean = false;
     private _exitCode: number | null = null;
 
-    private _abortController: AbortController = new AbortController();
+    private _disposeController: AbortController = new AbortController();
 
     private _disposed: boolean = false;
     get disposed(): boolean {
@@ -224,19 +224,26 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
 
     /**
      * Returns a promise that completes when the process exits. Rejects with the exitcode if it is not `0`.
+     * @param cancel Optional `AbortSignal` used to cancel the promise.
      * @returns On Reject, returns the `exitCode: number`, or `Error` if aborted.
      */
-    async asPromise(): Promise<void> {
+    async waitForExit(cancel?: AbortSignal): Promise<void> {
+        this._disposeController.signal.throwIfAborted();
         // Resolve immediately if the process is dead
         if (this.exited == true) {
             return this.exitCode === 0 ? Promise.resolve() : Promise.reject(this.exitCode);
         }
         try {
+            const _signals = [this._disposeController.signal];
+            if (cancel !== undefined) {
+                _signals.push(cancel);
+            }
+            const _abortSignal = AbortSignal.any(_signals)
             await Promise.race([
-                once(this._process, "exit", { signal: this._abortController.signal }),
-                once(this._process, "error", { signal: this._abortController.signal })]
+                once(this._process, "exit", { signal: _abortSignal }),
+                once(this._process, "error", { signal: _abortSignal })]
             );
-            if (this._process.exitCode === 0) {
+            if (this._process.exitCode === 0 || this._process.signalCode !== null) {
                 return;
             }
             else {
@@ -244,8 +251,11 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
             }
         }
         catch (err) {
-            if (this._abortController.signal.aborted) {
+            if (this._disposeController.signal.aborted) {
                 throw new Error("Disposed.");
+            }
+            if (cancel.aborted) {
+                throw new Error("Cancelled.");
             }
             return Promise.reject(err);
         }
@@ -258,6 +268,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
      * @returns 
      */
     async kill(entireProcessTree: boolean = true, force: boolean = false): Promise<void> {
+        this._disposeController.signal.throwIfAborted();
         if (this._wasKilled || this.exited) {
             return Promise.resolve();
         }
@@ -320,7 +331,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
         this._process.stderr?.removeListener("data", this.onStderr);
         this._process.removeListener("exit", this.onExit);
         // Abort all asPromise instances with a rejection.
-        this._abortController.abort("dispose");
+        this._disposeController.abort("dispose");
         // Special case for dispose.
         this._exitCode = -1;
         // Use our own kill instead of the normal one because we want everything gone.
