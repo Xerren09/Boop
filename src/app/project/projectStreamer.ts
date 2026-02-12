@@ -6,11 +6,11 @@ import { IDisposable } from "../utilities.js";
 
 type Deploy = {
     type: "deploy",
-    success: boolean
+    success: boolean,
 }
 
 type Stop = {
-    type: "stop"
+    type: "stop",
 }
 
 type Installer = {
@@ -22,12 +22,6 @@ type Installer = {
 type InstallerResult = {
     type: "installerResult",
     success: boolean,
-    time: number
-}
-
-type InstallerStepStart = {
-    type: "installerStep",
-    cmd: string,
     time: number
 }
 
@@ -72,6 +66,8 @@ export class ProjectStreamer implements IDisposable {
         this._ws = ws;
         this._proj = proj;
         this.wsInit();
+        //
+        ProjectStreamerCollection.push(this);
     }
 
     private wsInit() {
@@ -162,8 +158,8 @@ export class ProjectStreamer implements IDisposable {
     }
 
     private onInstallerStepChange = (step: InstallerStep, messageOnly?: boolean) => {
-        const msg: InstallerStepStart = {
-            type: "installerStep",
+        const msg: ProcessStart = {
+            type: "processStart",
             cmd: step.cmd,
             time: step.process.startTime
         };
@@ -173,12 +169,10 @@ export class ProjectStreamer implements IDisposable {
         }
         this.currentInstallerStep = step;
         step.process?.on("output", this.onProcessOutput);
-        step.process?.once("exit", (_code) => {
-            step.process?.removeListener("output", this.onProcessOutput);
-        });
     }
 
     private onInstallerStepComplete = (step: InstallerStep, messageOnly?: boolean) => {
+        step.process?.removeListener("output", this.onProcessOutput);
         const msg: ProcessExit = {
             type: "processExit",
             exitCode: step.process.exitCode,
@@ -218,7 +212,7 @@ export class ProjectStreamer implements IDisposable {
     private onProjectDeploy = (success: boolean) => {
         const deployMsg: Deploy = {
             type: "deploy",
-            success: success
+            success: success,
         }
         this._ws.send(JSON.stringify(deployMsg));
         //
@@ -227,7 +221,7 @@ export class ProjectStreamer implements IDisposable {
             if (success) {
                 const message: ProcessStart = {
                     type: "processStart",
-                    cmd: this._proj.process.childProcess.spawnargs.join(" "),
+                    cmd: this._proj.process.childProcess.spawnargs?.join(" ") ?? "",
                     time: this._proj.process.startTime
                 }
                 this._ws.send(JSON.stringify(message));
@@ -239,7 +233,7 @@ export class ProjectStreamer implements IDisposable {
 
     private onProjectStop = () => {
         const stopMsg: Stop = {
-            type: "stop"
+            type: "stop",
         }
         this._ws.send(JSON.stringify(stopMsg));
     }
