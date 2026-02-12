@@ -51,7 +51,7 @@ export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.Pro
 interface BoopProcessEvents {
     'output': (stream: "stdout" | "stderr", line: string) => void;
     'exit': (code: number | null) => void;
-    'startup': (err?: any) => void;
+    'start': (err?: any) => void;
 }
 
 export interface BoopProcess {
@@ -177,9 +177,9 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
 
     private onError = (err: Error) => {
         if (this._startTime === 0) {
-            // failed to spawn
-            this.emit("startup", err);
             //
+            // Failed to spawn sprocess
+            this.emit("start", err);
             this._process.stdout?.removeListener("data", this.onStdout);
             this._process.stderr?.removeListener("data", this.onStderr);
             this._process.removeListener("exit", this.onExit);

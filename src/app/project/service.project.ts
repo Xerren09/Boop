@@ -46,7 +46,7 @@ export class ServiceProject extends BoopProject {
                 //
                 this._process = shellExecuteAsync(config.deploy.entry, this.binDir, this.environment.variables as any);
                 //
-                this._process.once("startup", (err) => {
+                this._process.once("start", (err) => {
                     if (err) {
                         reject(err);
                     }
