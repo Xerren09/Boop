@@ -10,6 +10,7 @@ import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
 import logger, { BoopLogger, createProjectLogger } from "../../logger.js";
 import { downloadRemote } from "../shell/git.js";
+import { getProjectNameFromRemote } from "../utilities.js";
 
 interface BoopProjectEvents {
     'deploy': (success: boolean) => void;
@@ -117,7 +118,7 @@ export abstract class BoopProject extends EventEmitter {
     
     constructor(config: ProjectConfig) {
         super();
-        this._name = config.repositoryURL.substring(config.repositoryURL.lastIndexOf('/') + 1)
+        this._name = getProjectNameFromRemote(config.repositoryURL);
         this._config = config;
         this.environment = new EnvFile(this._envFilePath);
         this.webhookEvents = new EventsFile(this._eventsFilePath);

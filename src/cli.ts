@@ -6,6 +6,7 @@ import { ENV_PORT } from "./app/constants.js";
 import { AppProject } from "./app/project/app.project.js";
 import { createInterface } from "node:readline/promises";
 import { CompleterResult } from "node:readline";
+import { getProjectNameFromRemote } from "./app/utilities.js";
 
 interface CLICommand {
     command: string,
@@ -190,7 +191,7 @@ async function add(command: string, args: string[]) {
         throw new Error(`Invalid URL, '${args[0]}' is a not valid github repository.`);;
     }
     const remote = args[0];
-    const name = remote.substring(remote.lastIndexOf('/') + 1);
+    const name = getProjectNameFromRemote(remote);
     const fresh = await Manager.Create(name, remote);
     await fresh.install();
     await fresh.deploy();

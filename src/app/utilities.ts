@@ -55,12 +55,24 @@ export async function pathExists(path: PathLike): Promise<boolean> {
     }
 }
 
+const RemoteURLNameRegex = /\/*(?<projectID>[\w-]+)$/;
+
+/**
+ * Gets the project's name from the GitHub remote url.
+ * @param url 
+ * @returns The project's name or null if not found.
+ */
+export function getProjectNameFromRemote(url: string) {
+    const res = RemoteURLNameRegex.exec(url);
+    return res?.groups?.projectID ?? null;
+}
+
 /**
  * Regex to match timestamped project install and deploy logs.
  * 
  * Use the `timeStamp` group to get the log's timestamp.
  */
-export const ProjectOutputLogfileRegex = new RegExp(/^(?<timeStamp>[\d+]{13,}).json$/);
+export const ProjectOutputLogfileRegex = /^(?<timeStamp>[\d+]{13,}).json$/;
 
 /**
  * Creates JSON file with the given timestamp as the name.

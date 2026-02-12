@@ -1,6 +1,6 @@
 import { join } from "path";
 import { PROJECT_BIN_DIR_NAME, PROJECTS_DIR } from "../constants.js";
-import { pathExists } from "../utilities.js";
+import { getProjectNameFromRemote, pathExists } from "../utilities.js";
 import { mkdir } from "fs/promises";
 import { exec } from "child_process";
 
@@ -16,7 +16,7 @@ export function downloadRemote(remoteUrl: string) {
         throw new Error(`'${remoteUrl}' is not a valid URL.`);
     }
     return new Promise<void>(async (resolve, reject) => {
-        const name = remoteUrl.substring(remoteUrl.lastIndexOf('/') + 1);
+        const name = getProjectNameFromRemote(remoteUrl);
         const projectPath = join(PROJECTS_DIR, name);
         const projectBinPath = join(projectPath, PROJECT_BIN_DIR_NAME);
         // Pull by default
