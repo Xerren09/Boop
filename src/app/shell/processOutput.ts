@@ -1,4 +1,4 @@
-import { MAX_TERMINAL_HISTORY } from "../constants.js";
+import { MAX_TERMINAL_HISTORY } from "../../constants.js";
 
 export type ProcessOutputLine = {
     stream: "stdout" | "stderr",

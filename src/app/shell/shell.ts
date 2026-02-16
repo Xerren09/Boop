@@ -6,7 +6,7 @@ import logger from "../../logger.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
 import { IAsyncDisposable } from "../utilities.js";
-import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from "../constants.js";
+import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from "../../constants.js";
 
 /**
  * Spawns a new shell and runs the given command.

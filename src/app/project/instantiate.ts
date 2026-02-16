@@ -4,7 +4,7 @@ import { ProjectConfig, BoopProject } from "./boop.project.js";
 import { ServiceProject } from "./service.project.js";
 import { pathExists } from "../utilities.js";
 import { join } from "path";
-import { PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../constants.js";
+import { PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 
 /**
  * Creates and initialises a new {@link BoopProject}.

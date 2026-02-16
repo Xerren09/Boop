@@ -2,7 +2,7 @@ import Manager from "./app/project/manager.js";
 import { styleText } from "node:util";
 import { BoopProject } from "./app/project/boop.project.js";
 import { ServiceProject } from "./app/project/service.project.js";
-import { ENV_PORT } from "./app/constants.js";
+import { ENV_PORT } from "./constants.js";
 import { AppProject } from "./app/project/app.project.js";
 import { createInterface } from "node:readline/promises";
 import { CompleterResult } from "node:readline";

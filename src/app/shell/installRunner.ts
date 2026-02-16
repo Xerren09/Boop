@@ -4,7 +4,7 @@ import EventEmitter from "events";
 import { join } from "path";
 import { readdir, writeFile } from "fs/promises";
 import type { ProcessOutputLine } from "./processOutput.js";
-import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../constants.js";
+import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
 import { makeProjectOutputFileName, ProjectOutputLogfileRegex } from "../utilities.js";
 
 const STEP_EVENT = "step";

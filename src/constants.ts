@@ -1,12 +1,17 @@
 import { join } from "path";
+import { resolve__dirname } from "./app/utilities.js";
+
+// HACK: this is bad but what can you do.
+export const BOOP_BASE_DIR = join(resolve__dirname(import.meta.url), "..");
+
 /**
  * Path leading to the `projects` folder, where repositories are downloaded.
  */
-export const PROJECTS_DIR = join(process.cwd(), "/projects");
+export const PROJECTS_DIR = join(BOOP_BASE_DIR, "/projects");
 /**
  * Path to Boop's main log file.
  */
-export const LOG_FILE = join(process.cwd(), "/boop.log");
+export const LOG_FILE = join(BOOP_BASE_DIR, "/boop.log");
 /**
  * The name of the in-repo configuration file Boop uses to install and run the project.
  */

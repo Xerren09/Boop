@@ -1,5 +1,5 @@
 import { join } from "path";
-import { PROJECT_BIN_DIR_NAME, PROJECTS_DIR } from "../constants.js";
+import { PROJECT_BIN_DIR_NAME, PROJECTS_DIR } from "../../constants.js";
 import { getProjectNameFromRemote, pathExists } from "../utilities.js";
 import { mkdir } from "fs/promises";
 import { exec } from "child_process";

@@ -13,7 +13,7 @@ import { uiRouter } from './app/routers/ui.router.js';
 import { apiRouter } from './app/routers/api.router.js';
 import { projectSelector } from './app/routers/selector.js';
 import { checkGitAvailable } from './app/shell/git.js';
-import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from './app/constants.js';
+import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from './constants.js';
 import { cli } from './cli.js';
 
 const boopArgsOptions: ParseArgsOptionsConfig = {

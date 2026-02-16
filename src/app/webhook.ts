@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as express from "express";
 import ProjectManager from "./project/manager.js";
-import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_SECRET, INVALID_WEBHOOK_SIGNATURE, NOT_A_WEBHOOK } from "./constants.js";
+import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_SECRET, INVALID_WEBHOOK_SIGNATURE, NOT_A_WEBHOOK } from "../constants.js";
 import logger from "../logger.js";
 
 /**

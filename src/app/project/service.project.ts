@@ -4,7 +4,7 @@ import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import { createServiceRouter } from "../routers/service.router.js";
 import { readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../constants.js";
+import { PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import { makeProjectOutputFileName, ProjectOutputLogfileRegex } from "../utilities.js";
 
 export class ServiceProject extends BoopProject {

@@ -5,7 +5,7 @@ import expressWs from "express-ws";
 import Manager from "../project/manager.js";
 import { ProjectStreamer } from "../project/projectStreamer.js";
 import { join } from "path";
-import { PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../constants.js";
+import { PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import { ProjectOutputLogfileRegex } from "../utilities.js";
 import { ServiceProject } from "../project/service.project.js";
 export const apiRouter = express.Router();
@@ -27,7 +27,6 @@ apiRouter.use("/projects/:projectName", (req, res, next) => {
 apiRouter.get("/status", (_req, res) => {
     const ret = {
         projects: Manager.projects.length,
-        uptime: Math.floor(process.uptime()) * 1000,
         uptime: Math.floor(process.uptime()),
         nodeVer: process.version,
         system: process.platform,

@@ -4,7 +4,7 @@ import EventEmitter from "events";
 import * as express from "express";
 
 import type { WebhookEvent } from "../webhook.js";
-import { PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECTS_DIR } from "../constants.js";
+import { PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECTS_DIR } from "../../constants.js";
 import { InstallRunner } from "../shell/installRunner.js";
 import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
