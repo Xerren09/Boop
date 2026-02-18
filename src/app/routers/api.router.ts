@@ -6,7 +6,6 @@ import Manager from "../project/manager.js";
 import { ProjectStreamer } from "../project/projectStreamer.js";
 import { join } from "path";
 import { PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
-import { ProjectOutputLogfileRegex } from "../utilities.js";
 import { ServiceProject } from "../project/service.project.js";
 export const apiRouter = express.Router();
 //@ts-expect-error
@@ -103,11 +102,7 @@ apiRouter.get("/projects/:projectName/logs/deploy", async (req, res) => {
     try {
         if (project instanceof ServiceProject) {
             const files = await project.getLogs();
-            const ret = files.map(el => ({
-                time: Number(ProjectOutputLogfileRegex.exec(el).groups.timestamp),
-                name: el
-            }));
-            res.status(200).json(ret);
+            res.status(200).json(files);
         }
         else {
             res.sendStatus(404);
@@ -156,11 +151,7 @@ apiRouter.get("/projects/:projectName/logs/install", async (req, res) => {
     }
     try {
         const files = await project.installer.getLogs();
-        const ret = files.map(el => ({
-            time: Number(ProjectOutputLogfileRegex.exec(el).groups.timestamp),
-            name: el
-        }));
-        res.status(200).json(ret);
+        res.status(200).json(files);
     }
     catch (err) {
         res.status(500).json(err);
