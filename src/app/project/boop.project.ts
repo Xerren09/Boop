@@ -10,7 +10,7 @@ import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
 import logger, { BoopLogger, createProjectLogger } from "../../logger.js";
 import { downloadRemote } from "../shell/git.js";
-import { getProjectNameFromRemote } from "../utilities.js";
+import { getProjectNameFromRemote, IAsyncDisposable } from "../utilities.js";
 
 interface BoopProjectEvents {
     'deploy': (success: boolean) => void;
@@ -26,7 +26,7 @@ export interface BoopProject {
     removeAllListeners<EventType extends keyof BoopProjectEvents>(event?: EventType): this;
 }
 
-export abstract class BoopProject extends EventEmitter {
+export abstract class BoopProject extends EventEmitter implements IAsyncDisposable {
     /**
      * The project's internal configuration (independent from the workflow config)
      */
@@ -37,6 +37,7 @@ export abstract class BoopProject extends EventEmitter {
     protected readonly log: BoopLogger;
     protected _installer: InstallRunner;
     protected _router: Router | null;
+    private _disposed: boolean = false;
 
     protected get _eventsFilePath(): string {
         return join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_EVENTS_FILE_NAME);
@@ -46,6 +47,10 @@ export abstract class BoopProject extends EventEmitter {
     }
     protected get _projectFilePath(): string {
         return join(this.rootDir, PROJECT_FILE_NAME);
+    }
+
+    get disposed(): boolean {
+        return this._disposed;
     }
 
     /**
@@ -303,6 +308,12 @@ export abstract class BoopProject extends EventEmitter {
             this.SharedLog("exception", error);
             throw err;
         }
+    }
+
+    async [Symbol.asyncDispose](): Promise<void> {
+        this._webhookQueue = null;
+        await this.installer.kill(true);
+        await this.stop();
     }
 }
 
