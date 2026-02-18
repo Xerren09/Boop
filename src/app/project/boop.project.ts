@@ -33,7 +33,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     private readonly _config: ProjectConfig;
     private readonly _name: string;
     private _webhookLock: boolean = false;
-    private _webhookQueue: WebhookEvent | undefined;
+    private _webhookQueue: WebhookEvent | null;
     protected readonly log: BoopLogger;
     protected _installer: InstallRunner;
     protected _router: Router | null;
@@ -135,49 +135,51 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
 
     /**
      * Handles an incoming Webhook event.
+     * 
+     * WARN: this is designed to consume errors and will not throw.
      * @param evt The event that triggered the handler.
      * @param res Optional `express.Response` event used to provide immediate configuration response (like if the branch is correct). Does not actually wait for completion of the handler.
      */
-    public onWebhookEvent(evt: WebhookEvent, res?: express.Response | undefined) {
+    public async onWebhookEvent(evt: WebhookEvent, res?: express.Response | undefined) {
+        // TODO: validate webhook.id and don't process things twice
         if (this._config.acceptBranch != evt.repository.branch)
         {
             const msg = `Event refused; wrong branch (accepts "${this._config.acceptBranch}" but got "${evt.repository.branch}").`;
+            // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/422
             res?.status(422).send(msg);
             this.log.warn(msg);
             return;
         }
         if (this._webhookLock == false) {
-            //
             this._webhookLock = true;
-            this.log.info("Processing webhook event.");
+            this.log.info(`Processing webhook event '${evt.id}'`);
             if (res !== undefined) {
                 const msg = `Webhook event received and currently processing.`;
+                // We can't wait for the event to be completed, but at this point its good to run so send 202 ACCEPTED
                 res.status(202).send(msg);
             }
-            this.webhookEvents.add(evt);
-            this.webhookEvents.save().then(() => {
-                //
-                const handler = () => {
-                    this.processWebhookEvent().finally(() => {
-                        this._webhookLock = false;
-                        if (this._webhookQueue != undefined) {
-                            this.log.info("Webhook event processed; processing queue.");
-                            this.onWebhookEvent(this._webhookQueue);
-                            this._webhookQueue = undefined;
-                        }
-                        this.log.info("Webhook event processed.");
-                    });
+            try {
+                this.webhookEvents.add(evt);
+                await this.webhookEvents.save();
+                await this.processWebhookEvent(evt.id);
+                this.log.info("Webhook event processed.");
+            }
+            catch (err) {
+                this.log.error(`Error while processing webhook event '${evt.id}'`);
+            }
+            finally {
+                // Clear webhook queue
+                this._webhookLock = false;
+                if (this._webhookQueue != null) {
+                    this.log.info(`Processing next event in queue '${this._webhookQueue.id}'`);
+                    const nextEvt = this._webhookQueue;
+                    this._webhookQueue = null;
+                    this.onWebhookEvent(nextEvt);
                 }
-                if (this.installing) {
-                    this.once("deploy", handler);
-                }
-                else {
-                    handler();
-                }
-            });
+            }
         }
         else {
-            this.log.warn(`Webhook processor is busy; event added to queue${ this._webhookQueue != undefined ? `(discarding "${this._webhookQueue.time}")` : ""}.`);
+            this.log.warn(`Webhook processor is busy; event added to queue${ this._webhookQueue != null ? `(discarding "${this._webhookQueue.id}")` : ""}.`);
             this._webhookQueue = evt;
             if (res) {
                 res.status(202).send(`Webhook event accepted into queue. If another event is received before the current one completes, this one will be discarded in favour of the new event.`);
@@ -185,7 +187,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         }
     }
 
-    private async processWebhookEvent(): Promise<void> {
+    private async processWebhookEvent(ref: string): Promise<void> {
         await this.stop();
         try {
             await downloadRemote(this.remoteUrl);
@@ -195,15 +197,15 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             this.log.logException(err);
             throw err;
         }
-        await this.install(this.webhookEvents.lastEvent.time);
+        await this.install(ref);
         await this.deploy();
     }
 
     /**
      * Runs the project's installer with the currently available build file.
-     * @param referenceTime [Optional] The time of the event that triggered the install workflow.
+     * @param eventRef [Optional] The ID of the event that triggered the install workflow.
      */
-    public async install(referenceTime?: number): Promise<void> {
+    public async install(eventRef?: string): Promise<void> {
         this.log.info(`Install process started.`);
         // Stop project and installer if its running.
         await this.stop();
@@ -214,7 +216,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         try {
             await this._installer.loadConfiguration();
             this.emit("install", this._installer);
-            await this._installer.run(referenceTime);
+            await this._installer.run(eventRef);
             this.log.info(`Installer finished.`);
         }
         catch (err) {

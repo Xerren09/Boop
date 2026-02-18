@@ -24,6 +24,7 @@ export interface InstallerStep {
 
 export interface InstallerLog {
     time: number,
+    ref?: string | null,
     log: {
         cmd: string,
         output: ProcessOutputLine[],
@@ -47,7 +48,7 @@ export class InstallRunner extends EventEmitter {
     private _running: boolean = false;
     private _endTime: number = 0;
     private _startTime: number = 0;
-    private _referenceTime: number = -1;
+    private _eventReference: string | null = null;
 
     public steps: InstallerStep[] = [];
 
@@ -73,12 +74,12 @@ export class InstallRunner extends EventEmitter {
     }
 
     /**
-     * Returns the reference timestamp fr the event that triggered the runner, if set. 
+     * Returns the webhook event ID that triggered the runner, if set. 
      * 
-     * Will be `-1` if not given during {@link run|run()}.
+     * Will be `null` if not given during {@link run|run()}.
      */
-    public get referenceTime(): number {
-        return this._referenceTime;
+    public get eventTrigger(): string | null {
+        return this._eventReference;
     }
 
     /**
@@ -122,13 +123,13 @@ export class InstallRunner extends EventEmitter {
      * Use {@link loadConfiguration} to load the current build file.
      * @returns 
      */
-    public async run(referenceTime?: number): Promise<void> {
+    public async run(eventReference?: string): Promise<void> {
         if (this._running) {
             throw new Error("Installer already running.");
         }
         this._running = true;
         this._startTime = Date.now();
-        this._referenceTime = referenceTime ?? -1;
+        this._eventReference = eventReference ?? null;
         let stepIdx = 0;
         for (const step of this.steps) {
             try {
@@ -175,6 +176,7 @@ export class InstallRunner extends EventEmitter {
         }
         const workflow: InstallerLog = {
             time: this._endTime,
+            ref: this._eventReference,
             log: this.steps.map(el => ({
                 cmd: el.cmd,
                 output: el.process?.output.lines ?? [],
@@ -235,7 +237,7 @@ export class InstallRunner extends EventEmitter {
             throw new Error("InstallRunner is currently busy. Wait for the runner to complete before attempting to export.");
         }
         const log = this.asJSON();
-        const file = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeProjectOutputFileName(this._referenceTime === -1 ? this._startTime : this._referenceTime));
+        const file = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeProjectOutputFileName(this._startTime, this._eventReference));
         await writeFile(file, log);       
     }
 }
