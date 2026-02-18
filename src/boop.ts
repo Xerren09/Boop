@@ -110,14 +110,21 @@ const BOOP = app.listen(port, async () => {
 
 async function handle_termination() {
     console.log(`\n====`);
-    logger.info("Boop shutting down...");
-    await Manager.StopAll();
+    console.info("Preparing to shut down...");
+    try {
+        await Manager.StopAll();
+    }
+    catch (err) {
+        logger.logException(err);
+        logger.warn("Not all project shut down. This might mean some processes will be left alive after Boop shuts down...");
+    }
     logger.on('finish', (info) => {
         BOOP.close();
         process.exit(process.exitCode);
     });
     logger.end();
     cli.close();
+    console.info("Boop going to rest...");
 }
 
 process.once('SIGINT', handle_termination);
