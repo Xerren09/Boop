@@ -6,6 +6,7 @@ import { writeFile } from "fs/promises";
 import type { ProcessOutputLine } from "./processOutput.js";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
 import { getAllProjectOutputFiles, makeProjectOutputFileName, searchProjectOutputFile } from "../utilities.js";
+import logger from "../../logger.js";
 
 const STEP_EVENT = "step";
 const STEP_EXIT_EVENT = "stepExit";
@@ -131,36 +132,53 @@ export class InstallRunner extends EventEmitter {
         this._startTime = Date.now();
         this._eventReference = eventReference ?? null;
         let stepIdx = 0;
-        for (const step of this.steps) {
+        for (; stepIdx < this.steps.length; stepIdx++) {
+            const step = this.steps[stepIdx];
             try {
-                const proc = shellExecuteAsync(step.cmd, this.projectBinDir);
+                await using proc = shellExecuteAsync(step.cmd, this.projectBinDir);
                 step.process = proc;
                 this._currentStep = step;
                 this.emit(STEP_EVENT, this._currentStep);
                 await proc.waitForExit();
-                stepIdx++;
             }
             catch (err) {
-                // This is just an exit code, the error later is more useful
+                // Consume errors on purpose. run() is like a container method so we only really care about the whole process,
+                // not individual steps. Any specific error is up to the user to handle and sort out, so they'll be packaged
+                // into the error in the end.
+                console.log(err);
+                if (err instanceof Error) {
+                    if (err.message === "Disposed") {
+                        logger.warn(`Installer failed because step process was disposed of independently.`, { step: stepIdx, cmd: this.steps[stepIdx].cmd, projectContext: this.projectBinDir });
+                    }
+                }
             }
             finally {
                 this.emit(STEP_EXIT_EVENT, step);
-                if (step.process == null || step.process.exitCode != 0) {
+                if (step.process == null || step.process?.exitCode != 0) {
                     break;
                 }
-            }
+            }   
         }
         this._endTime = Date.now();
         this._currentStep = null;
         this._running = false;
         //
         this.emit(EXIT_EVENT, this.success);
-        await this.saveFile();
+        //
+        try {
+            await this.saveLog();
+        }
+        catch (err) {
+            logger.logException(new Error("Installer log could not be saved", { cause: err }));
+        }
+        // Throw a wrapped error if the installer didn't complete with success. 
+        // This will be a lot more useful than throwing whatever happens on its own.
         if (this.success == false) {
             const ret = {
+                project: this.projectBinDir,
                 step: stepIdx,
                 cmd: this.steps[stepIdx].cmd,
-                exitCode: this.steps[stepIdx].process.exitCode ?? null
+                exitCode: this.steps[stepIdx].process?.exitCode ?? null
             }
             throw new Error("Installer failed to complete.", { cause: ret });
         }
@@ -232,7 +250,7 @@ export class InstallRunner extends EventEmitter {
         return await getAllProjectOutputFiles(logsDir);
     }
 
-    private async saveFile() {
+    private async saveLog() {
         if (this._running) {
             throw new Error("InstallRunner is currently busy. Wait for the runner to complete before attempting to export.");
         }
