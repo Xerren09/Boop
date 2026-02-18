@@ -71,7 +71,7 @@ class ProjectManager {
             await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME));
             const project = await InstantiateProject(projectFile);
             this._projects.push(project);
-            logger.info(`Created new project '${project.name}' (${remote}).`);
+            logger.info(`Created new project (${remote}): ${projectDir}.`);
             return project;
         }
         catch (error) {
@@ -89,31 +89,33 @@ class ProjectManager {
      * Deletes a given project, including configuration, logs, and binaries.
      */
     public async Delete(target: string | BoopProject): Promise<void> {
+        const project = (typeof (target) == "string") ? this.Find(target) : target;
+        if (project == undefined) {
+            throw new Error(`Project does not exist.`);
+        }
         try {
-            const project = (typeof (target) == "string") ? this.projects.find(item => item.name == target) : target;
-            if (project == undefined) {
-                throw new Error(`Project does not exist.`);
-            }
+            // Remove project from the list before we delete it so if it fails it doesn't stay available in an invalid state
+            const idx = this._projects.indexOf(project);
+            this._projects.splice(idx, 1);
+            //
             const streamers = ProjectStreamerCollection.filter(streamer => streamer.project == project);
             for (const streamer of streamers) {
                 if (streamer.disposed == false) {
                     streamer[Symbol.dispose]();
                 }
             }
-            if (await pathExists(project.rootDir) == false) {
-                throw new Error(`Project directory '${project.rootDir}' does not exist.`);
-            }
-            await project.installer.kill();
-            await project.stop();
-            // Remove project from the list before we delete it so if it fails it doesn't stay available in an invalid state
-            const idx = this._projects.indexOf(project);
-            this._projects.splice(idx, 1);
+            await project[Symbol.asyncDispose]();
             //
-            await rm(project.rootDir, { recursive: true, force: true });
+            if (await pathExists(project.rootDir)) {
+                await rm(project.rootDir, { recursive: true, force: true });
+            }
+            else {
+                logger.warn(`Project directory '${project.rootDir}' does not exist: this project only exists in memory.`);
+            }
             logger.info(`Deleted project '${project.name}'.`);
         }
         catch (err) {
-            const error = new Error(`Failed to delete project '${(typeof (target) == "string") ? target : target.name}'`, { cause: err });
+            const error = new Error(`Failed to delete project '${project.name}'`, { cause: err });
             logger.logException(error);
             throw error;
         }
@@ -154,13 +156,15 @@ class ProjectManager {
             if (project.deployed == false) {
                 try {
                     await project.deploy();
+                    console.info(`Deployed project '${project.name}' deployed.`);
                 }
                 catch (err) {
                     errors.push(err);
+                    console.error(`Failed to deploy project '${project.name}'.`);
                 }
             }
             else {
-                console.info(`Project '${project.name}' is already deployed.`);
+                console.info(`Project '${project.name}' already deployed.`);
             }
         }
         logger.info(`Deployed ${this._projects.length - errors.length}/${this._projects.length} projects.`);
@@ -190,8 +194,10 @@ class ProjectManager {
                 else {
                     await project.stop();
                 }
+                logger.info(`Stopped project '${project.name}'`);
             }
             catch (err) {
+                logger.error(`Failed to stop project '${project.name}'`);
                 errors.push(err);
             }
         }
