@@ -19,17 +19,23 @@ export async function webhookHandler(req: express.Request, res: express.Response
             //
             const project = ProjectManager.projects.find(el => el.name == webhookEvent.repository.name);
             if (project) {
+                // Designed to not throw so no need to await try
                 project.onWebhookEvent(webhookEvent, res);
             }
             else {
                 // Project doesn't yet exists on this machine; create it
                 logger.info(`First time setup started for ${webhookEvent.repository.name}.`);
                 res.status(202).send(`Accepted, creating Boop project.`);
-                ProjectManager.Create(webhookEvent.repository.name, webhookEvent.repository.url).then((fresh) => {
+                try {
+                    const fresh = await ProjectManager.Create(webhookEvent.repository.name, webhookEvent.repository.url);
                     fresh.onWebhookEvent(webhookEvent);
-                }).catch(err => {
+                }
+                catch (err) {
                     // If Create throws we can't handle it any better than it already does on its own; catch and ignore the re-throw.
-                });
+                    // This is because github only waits a few seconds for a webhook response, so we can only do immediate checks
+                    // and a proper error return would probably be too drawn out before res gets dropped.
+                    // See https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks#respond-within-10-seconds
+                }
             }
         }
         else {
