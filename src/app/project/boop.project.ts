@@ -179,24 +179,24 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         else {
             this.log.warn(`Webhook processor is busy; event added to queue${ this._webhookQueue != undefined ? `(discarding "${this._webhookQueue.time}")` : ""}.`);
             this._webhookQueue = evt;
-            const msg = `Webhook event accepted into queue. If another event is received before the current one completes, this one will be discarded in favour of the new event.`;
-            res?.status(202).send(msg);
+            if (res) {
+                res.status(202).send(`Webhook event accepted into queue. If another event is received before the current one completes, this one will be discarded in favour of the new event.`);
+            }
         }
     }
 
     private async processWebhookEvent(): Promise<void> {
+        await this.stop();
         try {
-            if (this.installing) {
-                await this.installer.kill();
-            }
-            await this.stop();
             await downloadRemote(this.remoteUrl);
-            await this.install(this.webhookEvents.lastEvent.time);
-            await this.deploy();
         }
-        catch (error) {
-            this.SharedLog("exception", error);
+        catch (err) {
+            // All other methods do an internal project log except this one, since its outside of the project scope.
+            this.log.logException(err);
+            throw err;
         }
+        await this.install(this.webhookEvents.lastEvent.time);
+        await this.deploy();
     }
 
     /**
@@ -204,7 +204,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * @param referenceTime [Optional] The time of the event that triggered the install workflow.
      */
     public async install(referenceTime?: number): Promise<void> {
-        this.SharedLog("info", `Install process started.`);
+        this.log.info(`Install process started.`);
         // Stop project and installer if its running.
         await this.stop();
         if (this._installer.running) {
@@ -219,7 +219,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         }
         catch (err) {
             const error = new Error(`Installer failed.`, { cause: err });
-            this.SharedLog("exception", error);
+            this.log.logException(error);
             throw error;
         }
     }
@@ -251,16 +251,16 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             return;
         }
         if (this.installing == true) {
-            throw new Error("Project is busy.");
+            throw new Error("Project installer is currently running.");
         }
         try {
             await this._deploy();
-            this.SharedLog("info", `Deployed.`);
+            this.log.info(`Deployed.`);
         }
         catch (err) {
-            const error = new Error(`Failed to deploy project.`, { cause: err });
-            this.SharedLog("exception", error);
             this._router = null;
+            const error = new Error(`Failed to deploy project.`, { cause: err });
+            this.log.logException(error);
             throw error;
         }
         finally {
@@ -279,11 +279,11 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         }
         try {
             await this._stop();
-            this.SharedLog("info", `Stopped.`);
+            this.log.info(`Stopped.`);
         }
         catch (err) {
             const error = new Error(`Failed to stop project.`, { cause: err });
-            this.SharedLog("exception", error);
+            this.log.logException(error);
             throw error;
         }
         finally {
@@ -291,7 +291,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             this.emit("stop");
             this._router = null;
         }
-    }
+    }    
     protected abstract _stop(): Promise<void>;
 
     /**
@@ -301,12 +301,12 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         try {
             await this.stop();
             await this.deploy();
-            this.SharedLog("info", `Restarted.`);
+            this.log.info(`Restarted.`);
         }
         catch (err) {
             const error = new Error(`Failed to restart project.`, { cause: err });
-            this.SharedLog("exception", error);
-            throw err;
+            this.log.logException(error);
+            throw error;
         }
     }
 
