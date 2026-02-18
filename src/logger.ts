@@ -38,33 +38,46 @@ logger["logException"] = logException;
 export default logger as BoopLogger;
 
 export function createProjectLogger(projectRoot: string): BoopLogger {
-    const logger = winston.createLogger({
-        format: winston.format.combine(
-            winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
-            winston.format.errors(),
-            winston.format.metadata(),
-            winston.format.json()
-        ),
+    const _logger = winston.createLogger({
         transports: [
             new winston.transports.File({
                 filename: join(projectRoot, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME),
+                format: winston.format.combine(
+                    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
+                    winston.format.errors(),
+                    winston.format.metadata(),
+                    winston.format.json()
+                )
             })
         ],
     });
-    logger["logException"] = logException;
-    return logger as BoopLogger;
+    if (process.env["NODE_ENV"] == "true") {
+        _logger.add(new winston.transports.Console({
+            format: winston.format.combine(
+                winston.format.colorize(),
+                winston.format.simple()
+            ),
+            level: "silly"
+        }))
+    }
+    _logger["logException"] = logException;
+    return _logger as BoopLogger;
 }
 
 function logException(this: winston.Logger, exception: Error) {
-    this.error(exception.message);
     if (exception instanceof AggregateError) {
+        this.error(exception.message);
         for (let index = 0; index < exception.errors.length; index++) {
             const error = exception.errors[index];
             this.debug(`Exception [${index}]:`, { exception: parseError(error)});
         }
     }
-    else {
+    else if (exception instanceof Error) {
+        this.error(exception.message);
         this.debug("Exception:", { exception: parseError(exception)});
+    }
+    else {
+        this.error(exception);
     }
 }
 
