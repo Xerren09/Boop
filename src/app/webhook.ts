@@ -55,6 +55,7 @@ export async function webhookHandler(req: express.Request, res: express.Response
  */
 function parseWebhookEvent(req: express.Request): WebhookEvent {
     const webhookEvent: WebhookEvent = {
+        id: req.get('X-GitHub-Delivery') ?? "",
         type: req.get('X-GitHub-Event') ?? "",
         time: Date.now(),
         repository: {
@@ -118,6 +119,7 @@ function isSignatureValid(req: express.Request): boolean {
 }
 
 export interface WebhookEvent {
+    id: string;
     type: string;  // "ping"
     time: number,
     repository: {
