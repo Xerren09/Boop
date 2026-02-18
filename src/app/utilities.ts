@@ -73,7 +73,7 @@ export function getProjectNameFromRemote(url: string) {
  * Use the `reference` group to get the log's webhook event reference (commit ID that triggered the action).
  * Use the `timestamp` group to get the log's timestamp.
  */
-export const ProjectOutputLogfileRegex = /^((?<reference>[\w+]{7,})?-)?(?<timestamp>[\d+]{13,}).json$/;
+export const ProjectOutputLogfileRegex = /^(?<timestamp>[\d+]{13,})(-(?<reference>[^\W_]{8}[-]?(?:[^\W_]{4}[-]?){3}[^\W_]{12}))?.json$/;
 
 /**
  * Creates JSON file with the given timestamp as the name.
@@ -85,7 +85,7 @@ export function makeProjectOutputFileName(time: number, ref?: string) {
     if (typeof time !== "number") {
         console.warn("Log filename is not compliant and will be invisible to search methods; use 'Date.now()'-like timestamps in milliseconds. ");
     }
-    return `${(ref == undefined || ref == null) ? "" : `${ref}-`}${time}.json`
+    return `${time}${(ref == undefined || ref == null) ? "" : `-${ref}`}.json`
 }
 
 /**
