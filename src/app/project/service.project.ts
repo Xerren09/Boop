@@ -109,7 +109,7 @@ export class ServiceProject extends BoopProject {
             return null;
         }
         if (log == undefined) {
-            const num = Math.max(...files.map(el => Number(ProjectOutputLogfileRegex.exec(el)[0])));
+            const num = Math.max(...files.map(el => Number(ProjectOutputLogfileRegex.exec(el).groups.timestamp ?? "")));
             logFileName = makeProjectOutputFileName(num);
         }
         if (typeof log === "number") {

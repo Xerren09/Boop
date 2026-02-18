@@ -104,7 +104,7 @@ apiRouter.get("/projects/:projectName/logs/deploy", async (req, res) => {
         if (project instanceof ServiceProject) {
             const files = await project.getLogs();
             const ret = files.map(el => ({
-                time: Number(ProjectOutputLogfileRegex.exec(el)[0]),
+                time: Number(ProjectOutputLogfileRegex.exec(el).groups.timestamp),
                 name: el
             }));
             res.status(200).json(ret);
@@ -157,7 +157,7 @@ apiRouter.get("/projects/:projectName/logs/install", async (req, res) => {
     try {
         const files = await project.installer.getLogs();
         const ret = files.map(el => ({
-            time: Number(ProjectOutputLogfileRegex.exec(el)[0]),
+            time: Number(ProjectOutputLogfileRegex.exec(el).groups.timestamp),
             name: el
         }));
         res.status(200).json(ret);

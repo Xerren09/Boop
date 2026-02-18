@@ -70,20 +70,22 @@ export function getProjectNameFromRemote(url: string) {
 /**
  * Regex to match timestamped project install and deploy logs.
  * 
- * Use the `timeStamp` group to get the log's timestamp.
+ * Use the `reference` group to get the log's webhook event reference (commit ID that triggered the action).
+ * Use the `timestamp` group to get the log's timestamp.
  */
-export const ProjectOutputLogfileRegex = /^(?<timeStamp>[\d+]{13,}).json$/;
+export const ProjectOutputLogfileRegex = /^((?<reference>[\w+]{7,})?-)?(?<timestamp>[\d+]{13,}).json$/;
 
 /**
  * Creates JSON file with the given timestamp as the name.
- * @param name 
+ * @param time The timestamp for the logfile.
+ * @param ref The webhook event reference (commit ID that triggered the action).
  * @returns 
  */
-export function makeProjectOutputFileName(name: number) {
-    if (typeof name !== "number") {
+export function makeProjectOutputFileName(time: number, ref?: string) {
+    if (typeof time !== "number") {
         console.warn("Log filename is not compliant and will be invisible to search methods; use 'Date.now()'-like timestamps in milliseconds. ");
     }
-    return `${name}.json`
+    return `${ref ?? ""}${ref === undefined ? "" : "-"}${time}.json`
 }
 
 export interface IDisposable extends Disposable {
