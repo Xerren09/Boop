@@ -90,8 +90,18 @@ const BOOP = app.listen(port, async () => {
     console.log(`Webhook listener available at`, styleText("blueBright", `http://localhost:${port}/boop/webhook`));
     console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
     console.log(`====\n`);
-    await Manager.LoadAll();
-    await Manager.DeployAll();
+    try {
+        await Manager.LoadAll();
+    }
+    catch (err) {
+        logger.logException(err);
+    }
+    try {
+        await Manager.DeployAll();
+    }
+    catch (err) {
+        logger.logException(err);
+    }
     cli.once("close", () => {
         handle_termination();
     });
