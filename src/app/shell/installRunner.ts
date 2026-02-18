@@ -2,10 +2,10 @@ import { BoopProcess, shellExecuteAsync } from "./shell.js";
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import EventEmitter from "events";
 import { join } from "path";
-import { readdir, writeFile } from "fs/promises";
+import { writeFile } from "fs/promises";
 import type { ProcessOutputLine } from "./processOutput.js";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
-import { makeProjectOutputFileName, ProjectOutputLogfileRegex } from "../utilities.js";
+import { getAllProjectOutputFiles, makeProjectOutputFileName, searchProjectOutputFile } from "../utilities.js";
 
 const STEP_EVENT = "step";
 const STEP_EXIT_EVENT = "stepExit";
@@ -187,7 +187,7 @@ export class InstallRunner extends EventEmitter {
     }
 
     /**
-     * Stops all steps' processes.
+     * Stops all steps' and their child processes.
      */
     public async kill(force?: boolean): Promise<void> {
         if (this.running == false) {
@@ -214,21 +214,7 @@ export class InstallRunner extends EventEmitter {
      */
     public async findLog(log?: string | number): Promise<string | null> {
         const files = await this.getLogs();
-        let logFileName: string | undefined = "";
-        if (files.length == 0) {
-            return null;
-        }
-        if (log == undefined) {
-            const num = Math.max(...files.map(el => Number(ProjectOutputLogfileRegex.exec(el).groups.timestamp)));
-            logFileName = makeProjectOutputFileName(num);
-        }
-        if (typeof log === "number") {
-            const name: string = makeProjectOutputFileName(log);
-            logFileName = files.find(el => el === name);
-        }
-        else if (typeof log === "string") {
-            logFileName = files.find(el => el === log);
-        }
+        const logFileName = searchProjectOutputFile(files, log);
         if (logFileName) {
             return join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, logFileName)
         }
@@ -240,10 +226,8 @@ export class InstallRunner extends EventEmitter {
      * @returns 
      */
     public async getLogs() {
-        const installLogsDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME);
-        const files = await readdir(installLogsDir);
-        const logs = files.filter(file => ProjectOutputLogfileRegex.test(file) == true);
-        return logs;
+        const logsDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME);
+        return await getAllProjectOutputFiles(logsDir);
     }
 
     private async saveFile() {

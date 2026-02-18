@@ -2,10 +2,10 @@ import { shellExecuteAsync, type BoopProcess } from "../shell/shell.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js"
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import { createServiceRouter } from "../routers/service.router.js";
-import { readdir, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
-import { makeProjectOutputFileName, ProjectOutputLogfileRegex } from "../utilities.js";
+import { getAllProjectOutputFiles, searchProjectOutputFile } from "../utilities.js";
 import { once } from "node:events";
 
 export class ServiceProject extends BoopProject {
@@ -96,23 +96,9 @@ export class ServiceProject extends BoopProject {
      */
     public async findLog(log?: string | number): Promise<string | null> {
         const files = await this.getLogs();
-        let logFileName: string | undefined = "";
-        if (files.length == 0) {
-            return null;
-        }
-        if (log == undefined) {
-            const num = Math.max(...files.map(el => Number(ProjectOutputLogfileRegex.exec(el).groups.timestamp ?? "")));
-            logFileName = makeProjectOutputFileName(num);
-        }
-        if (typeof log === "number") {
-            const name: string = makeProjectOutputFileName(log);
-            logFileName = files.find(el => el === name);
-        }
-        else if (typeof log === "string") {
-            logFileName = files.find(el => el === log);
-        }
-        if (logFileName) {
-            return join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, logFileName)
+        const file = searchProjectOutputFile(files, log);
+        if (file) {
+            return join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, file)
         }
         return null;
     }
@@ -123,8 +109,6 @@ export class ServiceProject extends BoopProject {
      */
     public async getLogs() {
         const installLogsDir = join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME);
-        const files = await readdir(installLogsDir);
-        const logs = files.filter(file => ProjectOutputLogfileRegex.test(file) == true);
-        return logs;
+        return await getAllProjectOutputFiles(installLogsDir);
     }
 }

@@ -1,6 +1,6 @@
 import { R_OK, W_OK } from "constants";
 import { PathLike } from "fs";
-import { access } from "fs/promises";
+import { access, readdir } from "fs/promises";
 import net from "net";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
@@ -85,7 +85,43 @@ export function makeProjectOutputFileName(time: number, ref?: string) {
     if (typeof time !== "number") {
         console.warn("Log filename is not compliant and will be invisible to search methods; use 'Date.now()'-like timestamps in milliseconds. ");
     }
-    return `${ref ?? ""}${ref === undefined ? "" : "-"}${time}.json`
+    return `${(ref == undefined || ref == null) ? "" : `${ref}-`}${time}.json`
+}
+
+/**
+ * Searches a list of output files based on the criteria.
+ * @param files The list of filenames to search through.
+ * @param searchFor A filename, timestamp, or `undefined`. If not given, the latest timestamped file will be returned, if any.
+ * @returns The filename of the result, or `null` is no matches were found.
+ */
+export function searchProjectOutputFile(files: string[], searchFor: string | number | undefined) {
+    let logFileName: string | null = null;
+    if (files.length == 0) {
+        return null;
+    }
+    if (searchFor == undefined) {
+        const num = Math.max(...files.map(el => Number(ProjectOutputLogfileRegex.exec(el).groups.timestamp)));
+        logFileName = makeProjectOutputFileName(num);
+    }
+    else if (typeof searchFor === "number") {
+        const name: string = makeProjectOutputFileName(searchFor);
+        logFileName = files.find(el => el === name);
+    }
+    else if (typeof searchFor === "string") {
+        logFileName = files.find(el => el === searchFor);
+    }
+    return logFileName;
+}
+
+/**
+ * Gets the list of all valid project output files in a given directory.
+ * @param dir 
+ * @returns 
+ */
+export async function getAllProjectOutputFiles(dir: string) {
+    const files = await readdir(dir);
+    const logs = files.filter(file => ProjectOutputLogfileRegex.test(file) == true);
+    return logs;
 }
 
 export interface IDisposable extends Disposable {
