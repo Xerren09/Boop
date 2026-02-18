@@ -3,6 +3,7 @@ import { PROJECT_BIN_DIR_NAME, PROJECTS_DIR } from "../../constants.js";
 import { getProjectNameFromRemote, pathExists } from "../utilities.js";
 import { mkdir } from "fs/promises";
 import { exec } from "child_process";
+import { once } from "events";
 
 /**
  * Downloads the project's files from the specified remote.
@@ -11,50 +12,38 @@ import { exec } from "child_process";
  * @param remoteUrl 
  * @returns 
  */
-export function downloadRemote(remoteUrl: string) {
+export async function downloadRemote(remoteUrl: string) {
     if (URL.canParse(remoteUrl) == false) {
         throw new Error(`'${remoteUrl}' is not a valid URL.`);
     }
-    return new Promise<void>(async (resolve, reject) => {
-        const name = getProjectNameFromRemote(remoteUrl);
-        const projectPath = join(PROJECTS_DIR, name);
-        const projectBinPath = join(projectPath, PROJECT_BIN_DIR_NAME);
-        // Pull by default
-        let command: string = `git pull "${remoteUrl}"`;
-        if (await pathExists(projectBinPath) == false) {
-            // Clone if files don't exist
-            await mkdir(projectBinPath);
-            command = `git clone "${remoteUrl}" .`
-        }
-        const proc = exec(command, {
-            cwd: projectBinPath
-        });
-        proc.once("exit", (code) => {
-            if (code == 0) {
-                resolve();
-            }
-            else {
-                reject(code);
-            }
-        });
-    });   
+    const name = getProjectNameFromRemote(remoteUrl);
+    const projectPath = join(PROJECTS_DIR, name);
+    const projectBinPath = join(projectPath, PROJECT_BIN_DIR_NAME);
+    // Pull by default
+    let command: string = `git pull "${remoteUrl}"`;
+    if (await pathExists(projectBinPath) == false) {
+        // Clone if files don't exist
+        await mkdir(projectBinPath);
+        command = `git clone "${remoteUrl}" .`
+    }
+    const proc = exec(command, {
+        cwd: projectBinPath
+    });
+    const [code, signal] = await once(proc, "exit");
+    if (code !== 0) {
+        throw new Error(`Failed to sync from remote via '${command}': ${code ?? signal}`, { cause: {code, signal} });
+    }   
 }
 
 /**
  * Checks if git is installed on the host system.
  * @returns 
  */
-export function checkGitAvailable() {
-    return new Promise<void>((resolve, reject) => {
-        const proc = exec(`git --version`);
-        proc.once("exit", (code) => {
-            if (code == 0) {
-                resolve();
-            }
-            else {
-                reject();
-            }
-        });
-    });
+export async function checkGitAvailable() {
+    const proc = exec(`git --version`);
+    const [code, signal] = await once(proc, "exit");
+    if (code !== 0) {
+        throw new Error(`Git not installed.`, { cause: {code, signal} });
+    }   
 }
 
