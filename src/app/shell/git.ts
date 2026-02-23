@@ -12,7 +12,7 @@ import { once } from "events";
  * @param remoteUrl 
  * @returns 
  */
-export async function downloadRemote(remoteUrl: string) {
+export async function downloadRemote(remoteUrl: string, cancel?: AbortSignal) {
     if (URL.canParse(remoteUrl) == false) {
         throw new Error(`'${remoteUrl}' is not a valid URL.`);
     }
@@ -27,7 +27,8 @@ export async function downloadRemote(remoteUrl: string) {
         command = `git clone "${remoteUrl}" .`
     }
     const proc = exec(command, {
-        cwd: projectBinPath
+        cwd: projectBinPath,
+        signal: cancel
     });
     const [code, signal] = await once(proc, "exit");
     if (code !== 0) {
