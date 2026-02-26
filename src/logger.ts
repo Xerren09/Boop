@@ -47,11 +47,12 @@ export function createProjectLogger(projectRoot: string): BoopLogger {
                     winston.format.errors(),
                     winston.format.metadata(),
                     winston.format.json()
-                )
+                ),
+                level: "silly"
             })
         ],
     });
-    if (process.env["NODE_ENV"] == "true") {
+    if (process.env["NODE_ENV"] == "development") {
         _logger.add(new winston.transports.Console({
             format: winston.format.combine(
                 winston.format.colorize(),
