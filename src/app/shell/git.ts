@@ -30,6 +30,7 @@ export async function downloadRemote(remoteUrl: string, cancel?: AbortSignal) {
         cwd: projectBinPath,
         signal: cancel
     });
+    // This is a shell so shouldn't throw
     const [code, signal] = await once(proc, "exit");
     if (code !== 0) {
         throw new Error(`Failed to sync from remote via '${command}': ${code ?? signal}`, { cause: {code, signal} });
