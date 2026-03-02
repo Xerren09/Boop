@@ -205,13 +205,20 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * Runs the project's installer with the currently available build file.
      * @param eventRef [Optional] The ID of the event that triggered the install workflow.
      */
-    public async install(eventRef?: string): Promise<void> {
+    public async install(eventRef?: string, cancel?: AbortSignal): Promise<void> {
         this.log.info(`Install process started.`);
         // Stop project and installer if its running.
         await this.stop();
         if (this._installer.running) {
-            await this._installer.kill();
+            await this._installer.kill(true);
         }
+        //
+        const cancelFunc = async () => {
+            if (this._installer.running) {
+                await this._installer.kill(true);
+            }
+        }
+        cancel?.addEventListener("abort", cancelFunc);
         //
         try {
             await this._installer.loadConfiguration();
@@ -220,9 +227,12 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             this.log.info(`Installer finished.`);
         }
         catch (err) {
-            const error = new Error(`Installer failed.`, { cause: err });
+            const error = new Error(`Installer failed.`, { cause: cancel.aborted ? "Cancelled" : err });
             this.log.logException(error);
             throw error;
+        }
+        finally {
+            cancel?.removeEventListener("abort", cancelFunc);
         }
     }
 
@@ -313,6 +323,9 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     }
 
     async [Symbol.asyncDispose](): Promise<void> {
+        if (this._disposed) {
+            return;
+        }
         this._webhookQueue = null;
         await this.installer.kill(true);
         await this.stop();
