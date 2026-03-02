@@ -18,7 +18,7 @@ import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from "../../consta
 export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.ProcessEnv): BoopProcess {
     let _proc: ChildProcess = null;
     if (process.platform === "win32") {
-        // Windows always know where node is so we can just pass an empty env and it'll work
+        // Windows always knows where node is so we can just pass an empty env and it'll work
         _proc = spawn(command, {
             cwd: cwd,
             env: env ?? {},
@@ -61,6 +61,10 @@ export interface BoopProcess {
     removeListener<EventType extends keyof BoopProcessEvents>(event: EventType, listener: BoopProcessEvents[EventType]): this;
     removeAllListeners<EventType extends keyof BoopProcessEvents>(event?: EventType): this;
 }
+
+/*
+    TODO: add output streaming to file option
+*/
 
 /**
  * A single use wrapper for a {@link ChildProcess} spawned via {@link shellExecuteAsync}, 
@@ -292,11 +296,21 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
                     // Process isnt running so there it nothing to stop, call this a win
                     return resolve();
                 }
-                const signal = force === true ? 'SIGKILL' : 'SIGTERM';
+                const __signal = force === true ? 'SIGKILL' : 'SIGTERM';
                 this._wasKilled = true;
                 if (entireProcessTree === true) {
-                    treeKill(this._process.pid, signal, (err: any) => {
+                    treeKill(this._process.pid, __signal, (err?: KillError) => {
                         if (err) {
+                            if (process.platform === "win32") {
+                                if (err?.code === 128) {
+                                    // https://stackoverflow.com/questions/18682681/what-are-exit-codes-from-the-taskkill-utility
+                                    // 128 is "no task found" in windows, meaning our process exited before kill went through
+                                    return resolve();
+                                }
+                            }
+                            if (this.exited) {
+                                return resolve();
+                            }
                             reject(new Error(`Process "${this._process.spawnargs}" (${this.pid}) could not be stopped.`, { cause: err }));
                             logger.debug(`Failed to kill process (${this.pid})`, {
                                 pid: this.pid,
@@ -316,7 +330,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
                 }
                 else {
                     try {
-                        const result = this._process.kill(signal);
+                        const result = this._process.kill(__signal);
                         result ? resolve() : reject();
                     }
                     catch (err) {
@@ -332,7 +346,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
 
     async [Symbol.asyncDispose]() {
         if (this.disposed) {
-            throw new Error("Already disposed");
+            return;
         }
         // Special case for dispose.
         if (this._exitCode === null) {
@@ -354,4 +368,10 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
             this._process.removeListener("exit", this.onExit);
         }
     }
+}
+
+// https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+interface KillError extends Error {
+    code: number | null,
+    signal: string | null
 }
