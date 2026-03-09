@@ -10,7 +10,7 @@ import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
 import logger, { BoopLogger, createProjectLogger } from "../../logger.js";
 import { downloadRemote } from "../shell/git.js";
-import { getProjectNameFromRemote, IAsyncDisposable } from "../utilities.js";
+import { getProjectNameFromRemote, IAsyncDisposable, isDevEnv } from "../utilities.js";
 
 interface BoopProjectEvents {
     'deploy': (success: boolean) => void;
@@ -141,13 +141,20 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * @param res Optional `express.Response` event used to provide immediate configuration response (like if the branch is correct). Does not actually wait for completion of the handler.
      */
     public async onWebhookEvent(evt: WebhookEvent, res?: express.Response | undefined) {
-        // TODO: validate webhook.id and don't process things twice
+        if (isDevEnv() == false) {
+            if (this.webhookEvents.exists(evt.id)) {
+                const msg = `Event refused; repeat delivery.`;
+                res?.status(400).send(msg);
+                this.log.warn(msg, { event: evt.id });
+                return;
+            }
+        }
         if (this._config.acceptBranch != evt.repository.branch)
         {
             const msg = `Event refused; wrong branch (accepts "${this._config.acceptBranch}" but got "${evt.repository.branch}").`;
             // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/422
             res?.status(422).send(msg);
-            this.log.warn(msg);
+            this.log.warn(msg, { event: evt.id });
             return;
         }
         if (this._webhookLock == false) {
