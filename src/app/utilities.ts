@@ -124,6 +124,10 @@ export async function getAllProjectOutputFiles(dir: string) {
     return logs;
 }
 
+export function isDevEnv(): boolean {
+    return process.env["NODE_ENV"] == "development";
+}
+
 export interface IDisposable extends Disposable {
     /**
      * The `disposed` property indicates if the object was disposed of via \[{@link Symbol.dispose}]().

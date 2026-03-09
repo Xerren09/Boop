@@ -1,6 +1,7 @@
 import winston from "winston";
 import { LOG_FILE, PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "./constants.js";
 import { join } from "path";
+import { isDevEnv } from "./app/utilities.js";
 
 export interface BoopLogger extends winston.Logger {
     /**
@@ -52,7 +53,7 @@ export function createProjectLogger(projectRoot: string): BoopLogger {
             })
         ],
     });
-    if (process.env["NODE_ENV"] == "development") {
+    if (isDevEnv()) {
         _logger.add(new winston.transports.Console({
             format: winston.format.combine(
                 winston.format.colorize(),
