@@ -45,6 +45,7 @@ export interface InstallRunner {
 
 export class InstallRunner extends EventEmitter {
     private projectBinDir: string;
+    private _runLock: boolean = false;
     private _currentStep: InstallerStep | null = null;
     private _running: boolean = false;
     private _endTime: number = 0;
@@ -124,13 +125,19 @@ export class InstallRunner extends EventEmitter {
      * Use {@link loadConfiguration} to load the current build file.
      * @returns 
      */
-    public async run(eventReference?: string): Promise<void> {
-        if (this._running) {
+    public async run(eventReference?: string, cancel?: AbortSignal): Promise<void> {
+        if (this._running || this._runLock) {
             throw new Error("Installer already running.");
         }
+        this._runLock = true;
+        cancel?.throwIfAborted();
         this._running = true;
         this._startTime = Date.now();
         this._eventReference = eventReference ?? null;
+        const cancelHandler = () => {
+            this.kill(true);
+        };
+        cancel?.addEventListener("abort", cancelHandler);
         let stepIdx = 0;
         for (; stepIdx < this.steps.length; stepIdx++) {
             const step = this.steps[stepIdx];
@@ -159,6 +166,7 @@ export class InstallRunner extends EventEmitter {
                 }
             }   
         }
+        cancel?.removeEventListener("abort", cancelHandler);
         this._endTime = Date.now();
         this._currentStep = null;
         this._running = false;
@@ -171,8 +179,9 @@ export class InstallRunner extends EventEmitter {
         catch (err) {
             logger.logException(new Error("Installer log could not be saved", { cause: err }));
         }
-        // Throw a wrapped error if the installer didn't complete with success. 
+        // Throw a wrapped error if the installer didn't complete with success.
         // This will be a lot more useful than throwing whatever happens on its own.
+        this._runLock = false;
         if (this.success == false) {
             const ret = {
                 project: this.projectBinDir,
