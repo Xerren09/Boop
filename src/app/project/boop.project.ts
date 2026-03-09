@@ -196,15 +196,19 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
 
     private async processWebhookEvent(ref: string): Promise<void> {
         await this.stop();
+        const cancel = this._webhookProcessCancellationController.signal;
         try {
-            await downloadRemote(this.remoteUrl);
+            await downloadRemote(this.remoteUrl, cancel);
         }
         catch (err) {
             // All other methods do an internal project log except this one, since its outside of the project scope.
-            this.log.logException(err);
+            if (cancel.aborted == false) {
+                // Supress error if aborted
+                this.log.logException(err);
+            }
             throw err;
         }
-        await this.install(ref);
+        await this.install(ref, cancel);
         await this.deploy();
     }
 
