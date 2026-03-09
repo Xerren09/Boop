@@ -34,6 +34,8 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     private readonly _name: string;
     private _webhookLock: boolean = false;
     private _webhookQueue: WebhookEvent | null;
+    private _webhookProcess: Promise<void> | null;
+    private _webhookProcessCancellationController = new AbortController();
     protected readonly log: BoopLogger;
     protected _installer: InstallRunner;
     protected _router: Router | null;
@@ -157,39 +159,59 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             this.log.warn(msg, { event: evt.id });
             return;
         }
+        else if (this._webhookLock) {
+            this.log.warn(`Webhook processor is busy; event added to queue${ this._webhookQueue != null ? ` (discarding "${this._webhookQueue.id}")` : ""}.`);
+            res?.status(202).send(`Webhook event accepted into queue. If another event is received before the current one completes, this one will be discarded in favour of the new event.`);
+            if (this._webhookQueue != null) {
+                // There is an event already in queue, drop it and replace with the new one
+                this._webhookQueue = evt;
+                return;
+            }
+            else {
+                this._webhookQueue = evt;
+            }
+        }
+        else {
+            // We can't wait for the event to be completed, but at this point its good to run so send 202 ACCEPTED
+            res?.status(202).send(`Webhook event received and will be processed shortly.`);
+        }
+        //
+        if (this._webhookLock == true) {
+            this._webhookProcessCancellationController.abort("cancel");
+            try {
+                await this._webhookProcess;
+            }
+            catch {
+                // Expect fault here since we're killing the previous one
+            }
+        }
         if (this._webhookLock == false) {
             this._webhookLock = true;
-            this.log.info(`Processing webhook event '${evt.id}'`);
-            if (res !== undefined) {
-                const msg = `Webhook event received and currently processing.`;
-                // We can't wait for the event to be completed, but at this point its good to run so send 202 ACCEPTED
-                res.status(202).send(msg);
+            if (this._webhookProcessCancellationController.signal.aborted) {
+                this._webhookProcessCancellationController = new AbortController();
             }
+            const event = this._webhookQueue ?? evt;
+            this._webhookQueue = null;
+            this.log.info(`Processing webhook event '${event.id}'`, { event: event.id });
             try {
-                this.webhookEvents.add(evt);
+                this.webhookEvents.add(event);
                 await this.webhookEvents.save();
-                await this.processWebhookEvent(evt.id);
+                // Save the promise so we can wait it to end if a new request comes in
+                this._webhookProcess = this.processWebhookEvent(event.id);
+                await this._webhookProcess;
                 this.log.info("Webhook event processed.");
             }
             catch (err) {
-                this.log.error(`Error while processing webhook event '${evt.id}'`);
+                if (this._webhookProcessCancellationController.signal.aborted) {
+                    this.log.info(`Cancelled processing webhook event '${event.id}'.`, { event: event.id, cancelledBy: this._webhookQueue.id });
+                }
+                else {
+                    this.log.error(`Error while processing webhook event '${event.id}'.`, { event: event.id });
+                }
             }
             finally {
                 // Clear webhook queue
                 this._webhookLock = false;
-                if (this._webhookQueue != null) {
-                    this.log.info(`Processing next event in queue '${this._webhookQueue.id}'`);
-                    const nextEvt = this._webhookQueue;
-                    this._webhookQueue = null;
-                    this.onWebhookEvent(nextEvt);
-                }
-            }
-        }
-        else {
-            this.log.warn(`Webhook processor is busy; event added to queue${ this._webhookQueue != null ? `(discarding "${this._webhookQueue.id}")` : ""}.`);
-            this._webhookQueue = evt;
-            if (res) {
-                res.status(202).send(`Webhook event accepted into queue. If another event is received before the current one completes, this one will be discarded in favour of the new event.`);
             }
         }
     }
