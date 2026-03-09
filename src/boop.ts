@@ -88,6 +88,7 @@ const BOOP = app.listen(port, async () => {
     console.log(`====`);
     console.log(`Boop listening on port`, styleText("blueBright", `${port}`));
     console.log(`Webhook listener available at`, styleText("blueBright", `http://localhost:${port}/boop/webhook`));
+    // TODO: check if web is compiled
     console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
     console.log(`====\n`);
     try {
