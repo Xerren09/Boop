@@ -219,27 +219,16 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         if (this._installer.running) {
             await this._installer.kill(true);
         }
-        //
-        const cancelFunc = async () => {
-            if (this._installer.running) {
-                await this._installer.kill(true);
-            }
-        }
-        cancel?.addEventListener("abort", cancelFunc);
-        //
         try {
             await this._installer.loadConfiguration();
             this.emit("install", this._installer);
-            await this._installer.run(eventRef);
+            await this._installer.run(eventRef, cancel);
             this.log.info(`Installer finished.`);
         }
         catch (err) {
             const error = new Error(`Installer failed.`, { cause: cancel.aborted ? "Cancelled" : err });
             this.log.logException(error);
             throw error;
-        }
-        finally {
-            cancel?.removeEventListener("abort", cancelFunc);
         }
     }
 
