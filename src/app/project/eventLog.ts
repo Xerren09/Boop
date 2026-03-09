@@ -24,6 +24,10 @@ export class EventsFile {
         this._file = file;
     }
 
+    public exists(id: string): boolean {
+        return this.events.findIndex(el => el.id == id) != -1;
+    }
+
     public async load() {
         if (await pathExists(this._file)) {
             const text = (await readFile(this._file)).toString('utf8');
