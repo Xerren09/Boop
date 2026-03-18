@@ -122,6 +122,9 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * Contains the list of recent WebhookEvents this project received.
      */
     public readonly webhookEvents: EventsFile;
+
+    public abstract get deployedAt(): number;
+    public abstract get stoppedAt(): number;
     
     constructor(config: ProjectConfig) {
         super();

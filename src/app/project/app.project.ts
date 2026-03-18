@@ -4,6 +4,14 @@ import { createAppRouter } from "../routers/app.router.js";
 import path from "path";
 
 export class AppProject extends BoopProject {
+    private _stopTime: number = -1;
+    private _startTime: number = -1;
+    public get deployedAt(): number {
+        return this._startTime;
+    }
+    public get stoppedAt(): number {
+        return this._stopTime;
+    }
     public override get deployed(): boolean {
         return this._router != undefined;
     }
@@ -24,9 +32,10 @@ export class AppProject extends BoopProject {
         const entryPoint = (await parseWorkflow(await getWorkflowFile(this.binDir))).deploy.entry;
         this._indexPath = path.join(this.binDir, entryPoint);
         this._router = createAppRouter(this.name, this.binDir, entryPoint);
+        this._startTime = Date.now();
     }
 
     protected async _stop(): Promise<void> {
-        return null;
+        this._stopTime = Date.now();
     }
 }

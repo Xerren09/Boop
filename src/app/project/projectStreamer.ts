@@ -7,10 +7,12 @@ import { IDisposable } from "../utilities.js";
 type Deploy = {
     type: "deploy",
     success: boolean,
+    time: number
 }
 
 type Stop = {
     type: "stop",
+    time: number
 }
 
 type Installer = {
@@ -213,6 +215,7 @@ export class ProjectStreamer implements IDisposable {
         const deployMsg: Deploy = {
             type: "deploy",
             success: success,
+            time: this._proj.deployedAt
         }
         this._ws.send(JSON.stringify(deployMsg));
         //
@@ -234,6 +237,7 @@ export class ProjectStreamer implements IDisposable {
     private onProjectStop = () => {
         const stopMsg: Stop = {
             type: "stop",
+            time: this._proj.stoppedAt
         }
         this._ws.send(JSON.stringify(stopMsg));
     }

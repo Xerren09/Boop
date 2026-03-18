@@ -21,6 +21,13 @@ export class ServiceProject extends BoopProject {
         return this._process;
     }
 
+    public get deployedAt(): number {
+        return this._process?.startTime ?? -1;
+    }
+    public get stoppedAt(): number {
+        return this._process?.exitTime ?? -1;
+    }
+
     constructor(config: ProjectConfig){
         super(config);
     }
