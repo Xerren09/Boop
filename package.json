@@ -8,7 +8,7 @@
         "build:app": "tsc --build",
         "build": "npm run build:app && npm run build:ui",
         "start": "node ./bin/boop.js",
-        "prepublish": "npm run build"
+        "prepublishOnly": "npm run build"
     },
     "type": "module",
     "files": [
