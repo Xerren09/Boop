@@ -69,10 +69,10 @@ export class ServiceProject extends BoopProject {
         this._process.once("exit", (code) => {
             this._router = null;
             if (this._process.wasKilled == false) {
-                this.log.info(`Project process exited (${this._process?.pid}).`, { code: code });
+                this.log.warn(`Project process exited (${this._process?.pid}).`, { code: code });
             }
             else {
-                this.log.warn(`Project process exited (${this._process?.pid}).`, { code: code });
+                this.log.info(`Project process exited (${this._process?.pid}).`, { code: code });
             }
         });
     }
