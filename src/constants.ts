@@ -52,8 +52,6 @@ export const PROJECT_LOGS_DEPLOY_DIR_NAME = "deploy";
  * The filename of a project's standard event log.
  */
 export const PROJECT_LOG_FILE_NAME = "project.log";
-export const INVALID_WEBHOOK_SIGNATURE = "Unauthorized webhook request, signature invalid.";
-export const NOT_A_WEBHOOK = "Invalid.";
 /**
  * The maximum number of process output entries to keep as output history.
  */

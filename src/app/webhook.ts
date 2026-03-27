@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as express from "express";
 import ProjectManager from "./project/manager.js";
-import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_SECRET, INVALID_WEBHOOK_SIGNATURE, NOT_A_WEBHOOK } from "../constants.js";
+import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_SECRET } from "../constants.js";
 import logger from "../logger.js";
 
 /**
@@ -39,12 +39,13 @@ export async function webhookHandler(req: express.Request, res: express.Response
             }
         }
         else {
-            logger.error(INVALID_WEBHOOK_SIGNATURE);
-            res.status(401).send(INVALID_WEBHOOK_SIGNATURE);
+            const err = "Unauthorized webhook request, signature invalid.";
+            logger.error(err);
+            res.status(401).send(err);
         }
     }
     else {
-        res.status(400).send(NOT_A_WEBHOOK);
+        res.status(400).send("Invalid.");
     }
 }
 
