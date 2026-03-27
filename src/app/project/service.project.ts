@@ -57,6 +57,9 @@ export class ServiceProject extends BoopProject {
             throw err[0]; // handled in Stop() proper
         }
         this.log.debug(`Project process started (${this._process?.pid}).`);
+        //
+        this._process.redirectToFile(join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, `${this.deployedAt}.log`));
+        //
         const port = Number(this.environment.get("PORT") ?? -1);
         // Even if no port is specified, the project might have a hardcoded one. 
         // This is a misconfiguration, but not a fatal error.
@@ -89,10 +92,6 @@ export class ServiceProject extends BoopProject {
         }
         if (this._process.exited == false) {
             await this._process.kill(true);
-            //
-            const file = join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, `${Date.now()}.json`);
-            const data = JSON.stringify(this._process.output.lines)
-            await writeFile(file, data);
         }
     }
 

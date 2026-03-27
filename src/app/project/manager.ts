@@ -8,7 +8,7 @@ import { pathExists } from "../utilities.js";
 import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow, WorkflowConfig } from "../workflow.js";
 import { InstantiateProject } from "./instantiate.js";
-import { ProjectStreamerCollection } from "./projectStreamer.js";
+import { InstallStreamerCollection } from "./install.streamer.ts";
 
 class ProjectManager {
     private _projects: BoopProject[] = [];
@@ -98,7 +98,7 @@ class ProjectManager {
             const idx = this._projects.indexOf(project);
             this._projects.splice(idx, 1);
             //
-            const streamers = ProjectStreamerCollection.filter(streamer => streamer.project == project);
+            const streamers = InstallStreamerCollection.filter(streamer => streamer.project == project);
             for (const streamer of streamers) {
                 if (streamer.disposed == false) {
                     streamer[Symbol.dispose]();

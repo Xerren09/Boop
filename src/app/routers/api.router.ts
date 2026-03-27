@@ -3,10 +3,10 @@ import cors from "cors";
 import { readFile } from "fs/promises";
 import expressWs from "express-ws";
 import Manager from "../project/manager.js";
-import { ProjectStreamer } from "../project/projectStreamer.js";
 import { join } from "path";
 import { PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import { ServiceProject } from "../project/service.project.js";
+import { InstallStreamer } from "../project/install.streamer.ts";
 export const apiRouter = express.Router();
 //@ts-expect-error
 expressWs(apiRouter);
@@ -158,6 +158,7 @@ apiRouter.get("/projects/:projectName/logs/install", async (req, res) => {
     }
 });
 
+// TODO: Load individual step output files too
 apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
     const project = Manager.projects.find(item => item.name === req.params.projectName);
     if (project == undefined) {
@@ -182,7 +183,7 @@ apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
 apiRouter.ws("/projects/:projectName/installer", (ws, req) => {
     const project = Manager.projects.find(item => item.name === req.params["projectName"]);
     if (project) {
-        const streamer = new ProjectStreamer(ws, project)
+        const streamer = new InstallStreamer(ws, project)
         ws.once("close", () => {
             if (streamer.disposed === false) {
                 streamer[Symbol.dispose]();

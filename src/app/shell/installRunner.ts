@@ -2,8 +2,7 @@ import { BoopProcess, shellExecuteAsync } from "./shell.js";
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import EventEmitter from "events";
 import { join } from "path";
-import { writeFile } from "fs/promises";
-import type { ProcessOutputLine } from "./processOutput.js";
+import { mkdir, writeFile } from "fs/promises";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
 import { getAllProjectOutputFiles, makeProjectOutputFileName, searchProjectOutputFile } from "../utilities.js";
 import logger from "../../logger.js";
@@ -26,9 +25,9 @@ export interface InstallerStep {
 export interface InstallerLog {
     time: number,
     ref?: string | null,
-    log: {
+    steps: {
         cmd: string,
-        output: ProcessOutputLine[],
+        log: string,
         exitCode: number | null,
         start: number,
         end: number
@@ -122,7 +121,7 @@ export class InstallRunner extends EventEmitter {
      * Starts the install runner with the loaded build config file. 
      * The promise will resolve when all steps have successfully completed, or reject if one of them fails.
      * 
-     * Use {@link loadConfiguration} to load the current build file.
+     * Use {@link loadConfiguration} to load the latest build file.
      * @returns 
      */
     public async run(eventReference?: string, cancel?: AbortSignal): Promise<void> {
@@ -138,6 +137,14 @@ export class InstallRunner extends EventEmitter {
             this.kill(true);
         };
         cancel?.addEventListener("abort", cancelHandler);
+        //
+        const logDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, `${this._startTime}${(eventReference == undefined || eventReference == null) ? "" : `-${eventReference}`}`);
+        try {
+            await mkdir(logDir);
+        }
+        catch (err) {
+            throw new Error("Installer log directory could not be created", {cause: err});
+        }
         let stepIdx = 0;
         for (; stepIdx < this.steps.length; stepIdx++) {
             const step = this.steps[stepIdx];
@@ -145,6 +152,8 @@ export class InstallRunner extends EventEmitter {
                 await using proc = shellExecuteAsync(step.cmd, this.projectBinDir);
                 step.process = proc;
                 this._currentStep = step;
+                const file = join(logDir, `${stepIdx}.log`);
+                await proc.redirectToFile(file);
                 this.emit(STEP_EVENT, this._currentStep);
                 await proc.waitForExit();
             }
@@ -174,7 +183,7 @@ export class InstallRunner extends EventEmitter {
         this.emit(EXIT_EVENT, this.success);
         //
         try {
-            await this.saveLog();
+            await this.saveLog(logDir, this._startTime, eventReference);
         }
         catch (err) {
             logger.logException(new Error("Installer log could not be saved", { cause: err }));
@@ -191,28 +200,6 @@ export class InstallRunner extends EventEmitter {
             }
             throw new Error("Installer failed to complete.", { cause: ret });
         }
-    }
-
-    /**
-     * Returns the whole install process as a json. Will fail if the runner is currently running.
-     * @returns 
-     */
-    public asJSON() {
-        if (this._running) {
-            throw new Error("Installer is currently busy. Wait for the runner to complete before attempting to export.");
-        }
-        const workflow: InstallerLog = {
-            time: this._endTime,
-            ref: this._eventReference,
-            log: this.steps.map(el => ({
-                cmd: el.cmd,
-                output: el.process?.output.lines ?? [],
-                exitCode: el.process?.exitCode ?? null,
-                start: el.process?.startTime ?? -1,
-                end: el.process?.exitTime ?? -1
-            }))
-        };
-        return JSON.stringify(workflow);
     }
 
     /**
@@ -259,12 +246,22 @@ export class InstallRunner extends EventEmitter {
         return await getAllProjectOutputFiles(logsDir);
     }
 
-    private async saveLog() {
+    private async saveLog(dir: string, time: number, ref?: string) {
         if (this._running) {
             throw new Error("InstallRunner is currently busy. Wait for the runner to complete before attempting to export.");
         }
-        const log = this.asJSON();
-        const file = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeProjectOutputFileName(this._startTime, this._eventReference));
-        await writeFile(file, log);       
+        const log: InstallerLog = {
+            time: time,
+            ref: ref,
+            steps: this.steps.map((el, idx) => ({
+                cmd: el.cmd,
+                log: `${idx}.log`,
+                exitCode: el.process?.exitCode ?? null,
+                start: el.process?.startTime ?? -1,
+                end: el.process?.exitTime ?? -1
+            }))
+        };
+        const file = join(dir, `result.json`);
+        await writeFile(file, JSON.stringify(log));       
     }
 }

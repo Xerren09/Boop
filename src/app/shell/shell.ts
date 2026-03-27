@@ -1,12 +1,13 @@
 import { ChildProcess, spawn } from "child_process";
 import EventEmitter, { once } from "events";
-import { ProcessOutput, type ProcessOutputLine } from "./processOutput.js";
 import treeKill from "tree-kill";
 import logger from "../../logger.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
 import { IAsyncDisposable } from "../utilities.js";
 import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from "../../constants.js";
+import { FileHandle, open, constants as fsConstants } from "fs/promises";
+import { Readable, Transform } from "stream";
 
 /**
  * Spawns a new shell and runs the given command.
@@ -23,7 +24,7 @@ export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.Pro
             cwd: cwd,
             env: env ?? {},
             windowsHide: true,
-            shell: true,
+            shell: true
         });
     }
     else if (process.platform === "linux") {
@@ -49,7 +50,6 @@ export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.Pro
 }
 
 interface BoopProcessEvents {
-    'output': (stream: "stdout" | "stderr", line: string) => void;
     'exit': (code: number | null) => void;
     'start': (err?: any) => void;
 }
@@ -61,10 +61,6 @@ export interface BoopProcess {
     removeListener<EventType extends keyof BoopProcessEvents>(event: EventType, listener: BoopProcessEvents[EventType]): this;
     removeAllListeners<EventType extends keyof BoopProcessEvents>(event?: EventType): this;
 }
-
-/*
-    TODO: add output streaming to file option
-*/
 
 /**
  * A single use wrapper for a {@link ChildProcess} spawned via {@link shellExecuteAsync}, 
@@ -84,7 +80,23 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
         return this._disposeController.signal.aborted;
     }
 
-    public readonly output: ProcessOutput;
+    private _filehandle: FileHandle | null;
+    /**
+     * The filehandle of the destination file the {@link output} stream is redirected to using {@link redirectToFile}.
+     * 
+     * The handle is automatically closed when the process ends or is disposed of.
+     */
+    public get fileHandle() {
+        return this._filehandle;
+    }
+
+    private _output: Transform;
+    /**
+     * The combined output stream of STDOUT and STDERR.
+     */
+    public get output() {
+        return this._output as Readable;
+    }
 
     /**
      * The exit code of the process, if it has exited.
@@ -152,33 +164,18 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
 
     constructor(proc: ChildProcess) {
         super();
-        this.output = new ProcessOutput();
         this._process = proc;
         this._process.once("error", this.onError);
         this._process.once("spawn", this.onSpawn);
-        this._process.stdout?.on("data", this.onStdout);
-        this._process.stderr?.on("data", this.onStderr);
+        this._output = new Transform({
+            transform(chunk, encoding, callback) {
+                this.push(stripVTControlCharacters(chunk.toString()));
+                callback();
+            },
+        });
+        this._process.stdout?.pipe(this._output);
+        this._process.stderr?.pipe(this._output);
         this._process.once("exit", this.onExit);
-    }
-
-    private onStdout = (msg: any) => {
-        const line = stripVTControlCharacters(msg.toString());
-        const output: ProcessOutputLine = {
-            stream: "stdout",
-            line: line
-        };
-        this.output.addLine("stdout", line);
-        this.emit("output", output.stream, output.line);
-    }
-
-    private onStderr = (msg: any) => {
-        const line = stripVTControlCharacters(msg.toString());
-        const output: ProcessOutputLine = {
-            stream: "stderr",
-            line: line
-        };
-        this.output.addLine("stderr", line);
-        this.emit("output", output.stream, output.line);
     }
 
     private onError = (err: Error) => {
@@ -190,10 +187,9 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
             this.emit("start", err);
             // Do cleanup
             this._spawnFailed = true;
-            this._process.stdout?.removeListener("data", this.onStdout);
-            this._process.stderr?.removeListener("data", this.onStderr);
             this._process.removeListener("exit", this.onExit);
             this._process.removeListener("spawn", this.onSpawn);
+            this._filehandle?.close();
         }
         // Will be an error for send() most likely
         logger.debug(`Process error (${this.pid})`, {
@@ -220,10 +216,10 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
         this._exitCode = exitCode === null ? (128 + constants.signals[signal]) : exitCode;
         //
         this.emit("exit", this._exitCode);
-        this._process.stdout?.removeListener("data", this.onStdout);
-        this._process.stderr?.removeListener("data", this.onStderr);
         this._process.removeListener("error", this.onError);
         this._process.removeListener("spawn", this.onSpawn);
+        //
+        this._filehandle?.close();
         //
         logger.debug(`Process exited (${this.pid})`, {
             pid: this.pid,
@@ -231,6 +227,19 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
             signal: signal,
             ret: this._exitCode
         });
+    }
+
+    /**
+     * Creates a file with a writestream to write the {@link ouput} stream into. The filehandle 
+     * @param filePath Path to the destination file. If it doesn't exist, the file will be automatically created.
+     * @returns The filehandle of the destination file. Also available via {@link fileHandle}.
+     */
+    public async redirectToFile(filePath: string): Promise<FileHandle> {
+        this._filehandle = await open(filePath, fsConstants.O_RDWR | fsConstants.O_CREAT);
+        // This will be closed automatically on process exit when the handle gets closed
+        const stream = this._filehandle.createWriteStream();
+        this._output.pipe(stream);
+        return this.fileHandle;
     }
 
     /**
@@ -363,9 +372,11 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
             // Remove event listeners
             this._process.removeListener("error", this.onError);
             this._process.removeListener("spawn", this.onSpawn);
-            this._process.stdout?.removeListener("data", this.onStdout);
-            this._process.stderr?.removeListener("data", this.onStderr);
             this._process.removeListener("exit", this.onExit);
+            // Clean up output stream
+            this._process.stdout?.unpipe(this._output);
+            this._process.stderr?.unpipe(this._output);
+            this._output.destroy();
         }
     }
 }
