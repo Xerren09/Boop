@@ -5,7 +5,7 @@ import logger from "../../logger.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
 import { IAsyncDisposable } from "../utilities.js";
-import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from "../../constants.js";
+import { ENV_DISABLE_WEBHOOK_SECURITY_KEY, ENV_PORT_KEY, ENV_SECRET_KEY } from "../../constants.js";
 import { FileHandle, open, constants as fsConstants } from "fs/promises";
 import { Readable, Transform } from "stream";
 
@@ -30,9 +30,9 @@ export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.Pro
     else if (process.platform === "linux") {
         const __env = { ...process.env };
         // Get rid of Boop specific variables
-        delete __env[ENV_SECRET]; // Don't leak the secret
-        delete __env[ENV_PORT];
-        delete __env[ENV_DISABLE_WEBHOOK_SECURITY];
+        delete __env[ENV_SECRET_KEY]; // Don't leak the secret
+        delete __env[ENV_PORT_KEY];
+        delete __env[ENV_DISABLE_WEBHOOK_SECURITY_KEY];
         _proc = spawn(command, {
             cwd: cwd,
             shell: true,

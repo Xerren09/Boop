@@ -176,7 +176,7 @@ async function status(command: string, args: string[]) {
 function projectStatusReadout(project: BoopProject) {
     console.log(`${project.name}:`, styleText(project.deployed ? "greenBright" : "redBright", `${project.deployed ? "deployed" : "stopped"}`));
     console.log(`\tType:`, `${project.type}`);
-    console.log(`\tRouter:`, styleText("blueBright", project.deployed ? `http://localhost:${process.env[ENV_PORT]}/${project.name}` : '---'));
+    console.log(`\tRouter:`, styleText("blueBright", project.deployed ? `http://localhost:${ENV_PORT}/${project.name}` : '---'));
     if (project instanceof ServiceProject) {
         console.log(`\tDirect:`, styleText("blueBright", project.deployed ? `http://localhost:${project.environment.get("port")}/` : '---'));
     }

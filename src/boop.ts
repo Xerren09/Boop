@@ -13,7 +13,7 @@ import { uiRouter } from './app/routers/ui.router.js';
 import { apiRouter } from './app/routers/api.router.js';
 import { projectSelector } from './app/routers/selector.js';
 import { checkGitAvailable } from './app/shell/git.js';
-import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_SECRET } from './constants.js';
+import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_PORT_KEY, ENV_SECRET, ENV_SECRET_KEY } from './constants.js';
 import { cli } from './cli.js';
 
 const boopArgsOptions: ParseArgsOptionsConfig = {
@@ -35,11 +35,11 @@ catch {
 }
 
 // Port flag:
-const port = Number((args.values.port as string) ?? process.env[ENV_PORT] ?? 8004);
-process.env[ENV_PORT] = `${port}`;
+const port = Number((args.values.port as string) ?? ENV_PORT ?? 8004);
+process.env[ENV_PORT_KEY] = `${port}`;
 // Secret flag:
-const secret = args.values.secret ?? process.env[ENV_SECRET] ?? "";
-process.env[ENV_SECRET] = `${secret}`
+const secret = args.values.secret ?? ENV_SECRET ?? "";
+process.env[ENV_SECRET_KEY] = `${secret}`
 const app = express();
 expressWs(app);
 app.use(express.json());
@@ -79,7 +79,7 @@ const BOOP = app.listen(port, async () => {
     console.log(`| __ -|  |  |  |  |   __|__|`);
     console.log(`|_____|_____|_____|__|  |__|`);
     console.log(`Tiny CI/CD server for GitHub webhooks!\n`);
-    if (process.env[ENV_DISABLE_WEBHOOK_SECURITY] === "true") {
+    if (ENV_DISABLE_WEBHOOK_SECURITY) {
         logger.warn("Webhook security disabled; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
     }
     else if (secret == "") {

@@ -1,11 +1,9 @@
 import WebSocket from "ws"
 import type { BoopProject } from "./boop.project.js";
 import type { InstallerStep, InstallRunner } from "../shell/installRunner.js";
-import { ServiceProject } from "./service.project.js";
 import { IDisposable } from "../utilities.js";
 import { join } from "node:path";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.ts";
-import { createReadStream } from "node:fs";
 import { open } from "node:fs/promises";
 import { once } from "node:events";
 

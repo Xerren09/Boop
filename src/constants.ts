@@ -52,10 +52,15 @@ export const PROJECT_LOGS_DEPLOY_DIR_NAME = "deploy";
  * The filename of a project's standard event log.
  */
 export const PROJECT_LOG_FILE_NAME = "project.log";
-/**
- * The maximum number of process output entries to keep as output history.
- */
-export const MAX_TERMINAL_HISTORY = 9001;
-export const ENV_DISABLE_WEBHOOK_SECURITY = "DISABLE_WEBHOOK_SECURITY";
-export const ENV_PORT = "PORT";
-export const ENV_SECRET = "SECRET";
+
+
+export const ENV_PORT_KEY = "PORT";
+export const ENV_SECRET_KEY = "SECRET";
+export const ENV_DISABLE_WEBHOOK_SECURITY_KEY = "DISABLE_WEBHOOK_SECURITY";
+export const DEBUG_ENV_BYPASS_GIT_PULL_KEY = "BYPASS_GIT_PULL";
+
+
+export const ENV_PORT = Number(process.env[ENV_PORT_KEY]);
+export const ENV_SECRET = process.env[ENV_SECRET_KEY] ?? undefined;
+export const ENV_DISABLE_WEBHOOK_SECURITY = process.env[ENV_DISABLE_WEBHOOK_SECURITY_KEY].toLowerCase() === "true";
+export const DEBUG_ENV_BYPASS_GIT_PULL = process.env[DEBUG_ENV_BYPASS_GIT_PULL_KEY].toLowerCase() === "true";
