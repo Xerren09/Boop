@@ -1,5 +1,7 @@
 import { join } from "path";
 import { resolve__dirname } from "./app/utilities.js";
+import { config } from "dotenv";
+config({ quiet: true });
 
 // HACK: this is bad but what can you do.
 export const BOOP_BASE_DIR = join(resolve__dirname(import.meta.url), "..");
@@ -53,14 +55,16 @@ export const PROJECT_LOGS_DEPLOY_DIR_NAME = "deploy";
  */
 export const PROJECT_LOG_FILE_NAME = "project.log";
 
+//
+// ENVIRONMENT VARIABLES
+//
 
 export const ENV_PORT_KEY = "PORT";
 export const ENV_SECRET_KEY = "SECRET";
 export const ENV_DISABLE_WEBHOOK_SECURITY_KEY = "DISABLE_WEBHOOK_SECURITY";
 export const DEBUG_ENV_BYPASS_GIT_PULL_KEY = "BYPASS_GIT_PULL";
 
-
-export const ENV_PORT = Number(process.env[ENV_PORT_KEY]);
-export const ENV_SECRET = process.env[ENV_SECRET_KEY] ?? undefined;
-export const ENV_DISABLE_WEBHOOK_SECURITY = process.env[ENV_DISABLE_WEBHOOK_SECURITY_KEY].toLowerCase() === "true";
-export const DEBUG_ENV_BYPASS_GIT_PULL = process.env[DEBUG_ENV_BYPASS_GIT_PULL_KEY].toLowerCase() === "true";
+export const ENV_PORT = Number(process.env[ENV_PORT_KEY]) || null;
+export const ENV_SECRET = process.env[ENV_SECRET_KEY] ?? null;
+export const ENV_DISABLE_WEBHOOK_SECURITY = process.env[ENV_DISABLE_WEBHOOK_SECURITY_KEY]?.toLowerCase() === "true";
+export const DEBUG_ENV_BYPASS_GIT_PULL = process.env[DEBUG_ENV_BYPASS_GIT_PULL_KEY]?.toLowerCase() === "true";
