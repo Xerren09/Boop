@@ -28,13 +28,13 @@ export async function InstantiateProject(config: ProjectConfig | string): Promis
             ret = new ServiceProject(projectConfig);
             break;
     }
-    if (await pathExists(join(ret.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_EVENTS_FILE_NAME))) {
+    if (await pathExists(join(ret.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_EVENTS_FILE_NAME))) {
         await ret.webhookEvents.load();
     }
     else {
         await ret.webhookEvents.save();
     }
-    if (await pathExists(join(ret.rootDir, PROJECT_ENV_FILE_NAME))) {
+    if (await pathExists(join(ret.projectDir, PROJECT_ENV_FILE_NAME))) {
         await ret.environment.load();
     }
     else {

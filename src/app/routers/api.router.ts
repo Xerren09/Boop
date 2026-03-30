@@ -80,7 +80,7 @@ apiRouter.get("/projects/:projectName/logs/project", async (req, res) => {
     if (project == undefined) {
         return;
     }
-    const path = join(project.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME);
+    const path = join(project.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME);
     const ret = (await readFile(path)).toString().replace(/\r\n/g,'\n').split('\n');;
     res.status(200).json(ret);
 });

@@ -41,14 +41,14 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     protected _router: Router | null;
     private _disposed: boolean = false;
 
-    protected get _eventsFilePath(): string {
-        return join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_EVENTS_FILE_NAME);
+    protected get webhookEventsFile(): string {
+        return join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_EVENTS_FILE_NAME);
     }
-    protected get _envFilePath(): string {
-        return join(this.rootDir, PROJECT_ENV_FILE_NAME);
+    protected get environmentFile(): string {
+        return join(this.projectDir, PROJECT_ENV_FILE_NAME);
     }
-    protected get _projectFilePath(): string {
-        return join(this.rootDir, PROJECT_FILE_NAME);
+    protected get projectFile(): string {
+        return join(this.projectDir, PROJECT_FILE_NAME);
     }
 
     get disposed(): boolean {
@@ -58,7 +58,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     /**
      * The root project directory where all the configuration files and project files are stored.
      */
-    public get rootDir(): string {
+    public get projectDir(): string {
         return join(PROJECTS_DIR, this.name);
     };
 
@@ -66,7 +66,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * The root project files directory where the actual project binaries are stored.
      */
     public get binDir(): string {
-        return join(this.rootDir, PROJECT_BIN_DIR_NAME);
+        return join(this.projectDir, PROJECT_BIN_DIR_NAME);
     };
 
     /**
@@ -130,12 +130,12 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         super();
         this._name = getProjectNameFromRemote(config.repositoryURL);
         this._config = config;
-        this.environment = new EnvFile(this._envFilePath);
-        this.webhookEvents = new EventsFile(this._eventsFilePath);
+        this.environment = new EnvFile(this.environmentFile);
+        this.webhookEvents = new EventsFile(this.webhookEventsFile);
         //
         this._installer = new InstallRunner(this.binDir);
         //
-        this.log = createProjectLogger(this.rootDir);
+        this.log = createProjectLogger(this.projectDir);
     }
 
     /**

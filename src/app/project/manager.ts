@@ -106,11 +106,11 @@ class ProjectManager {
             }
             await project[Symbol.asyncDispose]();
             //
-            if (await pathExists(project.rootDir)) {
-                await rm(project.rootDir, { recursive: true, force: true });
+            if (await pathExists(project.projectDir)) {
+                await rm(project.projectDir, { recursive: true, force: true });
             }
             else {
-                logger.warn(`Project directory '${project.rootDir}' does not exist: this project only exists in memory.`);
+                logger.warn(`Project directory '${project.projectDir}' does not exist: this project only exists in memory.`);
             }
             logger.info(`Deleted project '${project.name}'.`);
         }
@@ -141,7 +141,7 @@ class ProjectManager {
                 errors.push(err);
             }
         }
-        logger.info(`Loaded ${projects.length}/${this._projects.length} projects.`);
+        logger.info(`Loaded ${this._projects.length}/${projects.length} projects.`);
         if (errors.length != 0) {
             throw new AggregateError(errors, `One or more projects could not be loaded.`);
         }

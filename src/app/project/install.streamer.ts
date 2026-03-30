@@ -81,7 +81,7 @@ export class InstallStreamer implements IDisposable {
             }
             // Send step notification
             this.onInstallerStepChange(step, true);
-            const logPath = join(this._proj.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, `${installerTime}-${installerRef}`, `${index}.log`);
+            const logPath = join(this._proj.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, `${installerTime}-${installerRef}`, `${index}.log`);
             await using handle = await open(logPath);
             await using reader = handle.createReadStream();
             const handler = (data: string | Buffer) => {

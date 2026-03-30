@@ -58,7 +58,7 @@ export class ServiceProject extends BoopProject {
         }
         this.log.debug(`Project process started (${this._process?.pid}).`);
         //
-        this._process.redirectToFile(join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, `${this.deployedAt}.log`));
+        this._process.redirectToFile(join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, `${this.deployedAt}.log`));
         //
         const port = Number(this.environment.get("PORT") ?? -1);
         // Even if no port is specified, the project might have a hardcoded one. 
@@ -104,7 +104,7 @@ export class ServiceProject extends BoopProject {
         const files = await this.getLogs();
         const file = searchProjectOutputFile(files, log);
         if (file) {
-            return join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, file)
+            return join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, file)
         }
         return null;
     }
@@ -114,7 +114,7 @@ export class ServiceProject extends BoopProject {
      * @returns 
      */
     public async getLogs() {
-        const installLogsDir = join(this.rootDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME);
+        const installLogsDir = join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME);
         return await getAllProjectOutputFiles(installLogsDir);
     }
 }
