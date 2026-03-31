@@ -12,6 +12,7 @@ const STEP_EXIT_EVENT = "stepExit";
 const EXIT_EVENT = "exit";
 
 interface InstallRunnerEvents {
+    'start': (eventReference?: string) => void;
     'exit': (success: boolean) => void;
     'step': (step: InstallerStep) => void;
     'stepExit': (step: InstallerStep) => void;
@@ -137,6 +138,8 @@ export class InstallRunner extends EventEmitter {
             this.kill(true);
         };
         cancel?.addEventListener("abort", cancelHandler);
+        //
+        this.emit("start", eventReference);
         //
         const logDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, `${this._startTime}${(eventReference == undefined || eventReference == null) ? "" : `-${eventReference}`}`);
         try {
