@@ -6,7 +6,8 @@ import Manager from "../project/manager.js";
 import { join } from "path";
 import { PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import { ServiceProject } from "../project/service.project.js";
-import { InstallStreamer } from "../project/install.streamer.ts";
+import { InstallStreamer } from "../project/install.streamer.js";
+import { InstallerLog } from "../shell/installRunner.js";
 export const apiRouter = express.Router();
 //@ts-expect-error
 expressWs(apiRouter);

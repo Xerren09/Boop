@@ -8,7 +8,7 @@ import { pathExists } from "../utilities.js";
 import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow, WorkflowConfig } from "../workflow.js";
 import { InstantiateProject } from "./instantiate.js";
-import { InstallStreamerCollection } from "./install.streamer.ts";
+import { InstallStreamerCollection } from "./install.streamer.js";
 
 class ProjectManager {
     private _projects: BoopProject[] = [];
