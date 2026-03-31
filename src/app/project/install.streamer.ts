@@ -1,11 +1,11 @@
 import WebSocket from "ws"
 import type { BoopProject } from "./boop.project.js";
 import type { InstallerStep, InstallRunner } from "../shell/installRunner.js";
-import { IDisposable } from "../utilities.js";
+import { IDisposable, isNodeAbortException } from "../utilities.js";
 import { join } from "node:path";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.ts";
-import { open } from "node:fs/promises";
 import { once } from "node:events";
+import { createReadStream } from "node:fs";
 
 type InstallerStart = {
     type: "installerStart",
@@ -42,6 +42,7 @@ export class InstallStreamer implements IDisposable {
     private _ws: WebSocket;
     private _proj: BoopProject;
     private _disposed: boolean = false;
+    private _disposeController: AbortController = new AbortController();
 
     private currentInstallerStep: InstallerStep | null;
 
@@ -82,20 +83,23 @@ export class InstallStreamer implements IDisposable {
             // Send step notification
             this.onInstallerStepChange(step, true);
             const logPath = join(this._proj.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, `${installerTime}-${installerRef}`, `${index}.log`);
-            await using handle = await open(logPath);
-            await using reader = handle.createReadStream();
-            const handler = (data: string | Buffer) => {
-                const stepOutput: ProcessOutput = {
-                    type: "processOutput",
-                    output: data.toString()
-                };
-                this._ws.send(JSON.stringify(stepOutput));
+            try {
+                await using reader = createReadStream(logPath, { signal: this._disposeController.signal });
+                reader.on("data", this.onProcessOutput);
+                reader.once("close", () => {
+                    reader.removeAllListeners();
+                })
+                await once(reader, "close");
             }
-            reader.on("data", handler);
-            await once(reader, "close");
-            reader.removeListener("data", handler);
-            if (step.process.exited == true) {
-                this.onInstallerStepComplete(step, true);
+            catch (err) {
+                if (isNodeAbortException(err instanceof SuppressedError ? err.suppressed : err)) {
+                    break;
+                }
+            }
+            finally {
+                if (step.process.exited == true) {
+                    this.onInstallerStepComplete(step, true);
+                }
             }
         }
         if (installer.running == false) {
@@ -175,7 +179,9 @@ export class InstallStreamer implements IDisposable {
             type: "processOutput",
             output: chunk.toString()
         };
-        this._ws.send(JSON.stringify(msg));
+        if (this._ws.readyState == WebSocket.OPEN) {
+            this._ws.send(JSON.stringify(msg));
+        }
     }
 
     public [Symbol.dispose]() {
@@ -183,6 +189,7 @@ export class InstallStreamer implements IDisposable {
             throw new Error("Install streamer already disposed");
         }
         this._disposed = true;
+        this._disposeController.abort();
         this._proj.removeListener("install", this.onInstall);
         const installer = this._proj.installer;
         if (installer != undefined) {

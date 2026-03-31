@@ -4,7 +4,7 @@ import EventEmitter from "events";
 import { join } from "path";
 import { mkdir, writeFile } from "fs/promises";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
-import { getAllProjectOutputFiles, makeProjectOutputFileName, searchProjectOutputFile } from "../utilities.js";
+import { getAllProjectOutputFiles, isNodeAbortException, makeProjectOutputFileName, searchProjectOutputFile } from "../utilities.js";
 import logger from "../../logger.js";
 
 const STEP_EVENT = "step";
@@ -161,11 +161,8 @@ export class InstallRunner extends EventEmitter {
                 // Consume errors on purpose. run() is like a container method so we only really care about the whole process,
                 // not individual steps. Any specific error is up to the user to handle and sort out, so they'll be packaged
                 // into the error in the end.
-                console.log(err);
-                if (err instanceof Error) {
-                    if (err.message === "Disposed") {
-                        logger.warn(`Installer failed because step process was disposed of independently.`, { step: stepIdx, cmd: this.steps[stepIdx].cmd, projectContext: this.projectBinDir });
-                    }
+                if (isNodeAbortException(err instanceof SuppressedError ? err.suppressed : err)) {
+                    logger.warn(`Installer failed because step process was disposed of independently.`, { step: stepIdx, cmd: this.steps[stepIdx].cmd, projectContext: this.projectBinDir });
                 }
             }
             finally {
