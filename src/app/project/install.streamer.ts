@@ -10,7 +10,8 @@ import { createReadStream } from "node:fs";
 type InstallerStart = {
     type: "installerStart",
     steps: string[],
-    time: number
+    time: number,
+    eventRef?: string
 }
 
 type InstallerResult = {
@@ -40,49 +41,54 @@ export const InstallStreamerCollection: InstallStreamer[] = [];
 
 export class InstallStreamer implements IDisposable {
     private _ws: WebSocket;
-    private _proj: BoopProject;
+    private _installer: InstallRunner;
     private _disposed: boolean = false;
     private _disposeController: AbortController = new AbortController();
-
-    private currentInstallerStep: InstallerStep | null;
 
     public get disposed() {
         return this._disposed;
     }
 
-    public get project() {
-        return this._proj;
-    }
+    public readonly project: BoopProject;
 
-    constructor(ws: WebSocket, proj: BoopProject) {
+    constructor(ws: WebSocket, project: BoopProject) {
         this._ws = ws;
-        this._proj = proj;
+        this.project = project;
+        this._installer = project.installer;
         this.wsInit();
         //
         InstallStreamerCollection.push(this);
     }
 
     private async wsInit() {
-        // Sync current status
         await this.sendHistory();
-        //
-        this._proj.on("install", this.onInstall);
+        this._installer.on("start", this.onInstallerStart);
+        this._installer.on("exit", this.onInstallerComplete);
+        this._installer.on("step", this.onInstallerStepStart);
+        this._installer.on("stepExit", this.onInstallerStepComplete);
+        if (this._installer.currentStep != null) {
+            // Part of this output was already pushed out by sendHistory(), so start streaming from the open stream
+            this._installer.currentStep.process.output.on("data", this.onProcessOutput);
+        }
     }
 
+    /**
+     * Synchornises the current installer's status to the client. Will read from logs until the current step/process
+     * where it hands it off to the live data stream like if this was a normal run.
+     */
     private sendHistory = async () => {
-        // Installer
-        const installer = this._proj.installer;
+        const installer = this.project.installer;
         const installerTime = installer.startedAt;
-        const installerRef = installer.eventTrigger;
-        this.onInstall(installer, true);
+        const eventRef = installer.eventTrigger;
+        this.onInstallerStart(eventRef);
         for (let index = 0; index < installer.steps.length; index++) {
             const step = installer.steps[index];
             if (step.process == null) {
                 break;
             }
             // Send step notification
-            this.onInstallerStepChange(step, true);
-            const logPath = join(this._proj.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, `${installerTime}-${installerRef}`, `${index}.log`);
+            this.onInstallerStepStart(step, true);
+            const logPath = join(this.project.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, `${installerTime}-${eventRef}`, `${index}.log`);
             try {
                 await using reader = createReadStream(logPath, { signal: this._disposeController.signal });
                 reader.on("data", this.onProcessOutput);
@@ -98,55 +104,36 @@ export class InstallStreamer implements IDisposable {
             }
             finally {
                 if (step.process.exited == true) {
-                    this.onInstallerStepComplete(step, true);
+                    this.onInstallerStepComplete(step);
                 }
             }
         }
         if (installer.running == false) {
-            this.onInstallerComplete(this._proj.installer.success, true);
-        }
-        else {
-            // Manually do onInstall's job (-the message)
-            installer.once("exit", this.onInstallerComplete);
-            installer.on("step", this.onInstallerStepChange);
-            installer.on("stepExit", this.onInstallerStepComplete);
-            if (installer.currentStep != null) {
-                // Part of this output was already pushed out by the for loop, so start streaming from the open stream
-                installer.currentStep.process.output.on("data", this.onProcessOutput);
-            }
+            this.onInstallerComplete(installer.success);
         }
     }
 
-    private onInstall = (installer: InstallRunner, messageOnly?: boolean) => {
+    private onInstallerStart = (eventReference?: string) => {
+        const installer = this.project.installer;
         const msg: InstallerStart = {
             type: "installerStart",
             steps: installer.steps.map(el => el.cmd),
-            time:  installer.startedAt
+            time: installer.startedAt,
+            eventRef: eventReference
         };
         this._ws.send(JSON.stringify(msg));
-        if (messageOnly) {
-            return;
-        }
-        installer.once("exit", this.onInstallerComplete);
-        installer.on("step", this.onInstallerStepChange);
-        installer.on("stepExit", this.onInstallerStepComplete);
     }
 
-    private onInstallerComplete = (success: boolean, messageOnly?: boolean) => {
+    private onInstallerComplete = (success: boolean) => {
         const msg: InstallerResult = {
             type: "installerResult",
             success: success,
-            time: this._proj.installer.exitedAt
+            time: this.project.installer.exitedAt
         };
         this._ws.send(JSON.stringify(msg));
-        if (messageOnly) {
-            return;
-        }
-        this._proj.installer.removeListener("step", this.onInstallerStepChange);
-        this._proj.installer.removeListener("stepExit", this.onInstallerStepComplete);
     }
 
-    private onInstallerStepChange = (step: InstallerStep, messageOnly?: boolean) => {
+    private onInstallerStepStart = (step: InstallerStep, messageOnly?: boolean) => {
         const msg: ProcessStart = {
             type: "processStart",
             cmd: step.cmd,
@@ -156,11 +143,10 @@ export class InstallStreamer implements IDisposable {
         if (messageOnly) {
             return;
         }
-        this.currentInstallerStep = step;
         step.process.output.on("data", this.onProcessOutput);
     }
 
-    private onInstallerStepComplete = (step: InstallerStep, messageOnly?: boolean) => {
+    private onInstallerStepComplete = (step: InstallerStep) => {
         step.process.output.removeListener("data", this.onProcessOutput);
         const msg: ProcessExit = {
             type: "processExit",
@@ -168,10 +154,6 @@ export class InstallStreamer implements IDisposable {
             time: step.process.exitTime
         };
         this._ws.send(JSON.stringify(msg));
-        if (messageOnly) {
-            return;
-        }
-        this.currentInstallerStep = null;
     }
 
     private onProcessOutput = (chunk: string | Buffer) => {
@@ -186,19 +168,19 @@ export class InstallStreamer implements IDisposable {
 
     public [Symbol.dispose]() {
         if (this._disposed) {
-            throw new Error("Install streamer already disposed");
+            return;
         }
         this._disposed = true;
         this._disposeController.abort();
-        this._proj.removeListener("install", this.onInstall);
-        const installer = this._proj.installer;
+        const installer = this._installer;
+        installer.removeListener("start", this.onInstallerStart);
         if (installer != undefined) {
             installer.removeListener("exit", this.onInstallerComplete);
-            installer.removeListener("step", this.onInstallerStepChange);
+            installer.removeListener("step", this.onInstallerStepStart);
             installer.removeListener("stepExit", this.onInstallerStepComplete);
         }
-        if (this.currentInstallerStep != null) {
-            this.currentInstallerStep.process?.output.removeListener("data", this.onProcessOutput);
+        if (installer.currentStep != null) {
+            installer.currentStep.process?.output.removeListener("data", this.onProcessOutput);
         }
         if (this._ws.readyState === this._ws.CONNECTING || this._ws.readyState === this._ws.OPEN) {
             // 1001: resource shutting down
