@@ -79,13 +79,14 @@ export const ProjectOutputLogfileRegex = /^(?<timestamp>[\d+]{13,})(-(?<referenc
  * Creates JSON file with the given timestamp as the name.
  * @param time The timestamp for the logfile.
  * @param ref The webhook event reference (commit ID that triggered the action).
+ * @param ext The extension of the log file.
  * @returns 
  */
-export function makeProjectOutputFileName(time: number, ref?: string) {
+export function makeProjectOutputFileName(time: number, ref?: string, ext: string = ".json") {
     if (typeof time !== "number") {
         console.warn("Log filename is not compliant and will be invisible to search methods; use 'Date.now()'-like timestamps in milliseconds. ");
     }
-    return `${time}${(ref == undefined || ref == null) ? "" : `-${ref}`}.json`
+    return `${time}${(ref == undefined || ref == null) ? "" : `-${ref}`}.${ext}`
 }
 
 /**
