@@ -155,8 +155,8 @@ export class InstallRunner extends EventEmitter {
                 await using proc = shellExecuteAsync(step.cmd, this.projectBinDir);
                 step.process = proc;
                 this._currentStep = step;
-                const file = join(logDir, `${stepIdx}.log`);
-                await proc.redirectToFile(file);
+                const filePath = join(logDir, `${stepIdx}.log`);
+                proc.redirectToFile(filePath);
                 this.emit(STEP_EVENT, this._currentStep);
                 await proc.waitForExit();
             }

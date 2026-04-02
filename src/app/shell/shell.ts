@@ -80,16 +80,6 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
         return this._disposeController.signal.aborted;
     }
 
-    private _filehandle: FileHandle | null;
-    /**
-     * The filehandle of the destination file the {@link output} stream is redirected to using {@link redirectToFile}.
-     * 
-     * The handle is automatically closed when the process ends or is disposed of.
-     */
-    public get fileHandle() {
-        return this._filehandle;
-    }
-
     private _output: Transform;
     /**
      * The combined output stream of STDOUT and STDERR.
@@ -189,7 +179,6 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
             this._spawnFailed = true;
             this._process.removeListener("exit", this.onExit);
             this._process.removeListener("spawn", this.onSpawn);
-            this._filehandle?.close();
         }
         // Will be an error for send() most likely
         logger.debug(`Process error (${this.pid})`, {
@@ -219,8 +208,6 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
         this._process.removeListener("error", this.onError);
         this._process.removeListener("spawn", this.onSpawn);
         //
-        this._filehandle?.close();
-        //
         logger.debug(`Process exited (${this.pid})`, {
             pid: this.pid,
             exitCode: exitCode,
@@ -230,16 +217,15 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
     }
 
     /**
-     * Creates a file with a writestream to write the {@link ouput} stream into. The filehandle 
+     * Creates a file and pipes {@link output} into it using a {@link WriteStream}.
      * @param filePath Path to the destination file. If it doesn't exist, the file will be automatically created.
-     * @returns The filehandle of the destination file. Also available via {@link fileHandle}.
+     * @returns The WriteStream to the destination file. Will be automatically closed when {@link output} closes (when the process stops or is killed).
      */
-    public async redirectToFile(filePath: string): Promise<FileHandle> {
-        this._filehandle = await open(filePath, fsConstants.O_RDWR | fsConstants.O_CREAT);
+    public redirectToFile(filePath: string): WriteStream {
         // This will be closed automatically on process exit when the handle gets closed
-        const stream = this._filehandle.createWriteStream();
+        const stream = createWriteStream(filePath, { flags: "w"});
         this._output.pipe(stream);
-        return this.fileHandle;
+        return stream;
     }
 
     /**
@@ -251,7 +237,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
         this._disposeController.signal.throwIfAborted();
         // Resolve immediately if the process is dead
         if (this.exited == true) {
-            return this.exitCode;
+            return this.exitCode ?? -1;
         }
         try {
             const _signals = [this._disposeController.signal];
