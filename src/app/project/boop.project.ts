@@ -16,6 +16,7 @@ interface BoopProjectEvents {
     'deploy': (success: boolean) => void;
     'stop': () => void;
     'install': (installer: InstallRunner) => void;
+    'webhook': (webhookEvent: WebhookEvent) => void;
 }
 
 export interface BoopProject {
@@ -195,6 +196,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             }
             const event = this._webhookQueue ?? evt;
             this._webhookQueue = null;
+            this.emit("webhook", event);
             this.log.info(`Processing webhook event '${event.id}'`, { event: event.id });
             try {
                 this.webhookEvents.add(event);
