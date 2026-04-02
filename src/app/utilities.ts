@@ -101,15 +101,16 @@ export function searchProjectOutputFile(files: string[], searchFor: string | num
         return null;
     }
     if (searchFor == undefined) {
-        const num = Math.max(...files.map(el => Number(ProjectOutputLogfileRegex.exec(el).groups.timestamp)));
+        // Get latest file
+        const num = Math.max(...files.map(el => Number(ProjectOutputLogfileRegex.exec(el)!.groups?.timestamp ?? undefined)));
         logFileName = makeProjectOutputFileName(num);
     }
     else if (typeof searchFor === "number") {
         const name: string = makeProjectOutputFileName(searchFor);
-        logFileName = files.find(el => el === name);
+        logFileName = files.find(el => el === name) ?? null;
     }
     else if (typeof searchFor === "string") {
-        logFileName = files.find(el => el === searchFor);
+        logFileName = files.find(el => el === searchFor) ?? null;
     }
     return logFileName;
 }

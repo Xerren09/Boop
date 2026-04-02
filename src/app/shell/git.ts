@@ -4,6 +4,7 @@ import { getProjectNameFromRemote, pathExists } from "../utilities.js";
 import { mkdir } from "fs/promises";
 import { exec } from "child_process";
 import { once } from "events";
+import assert from "assert";
 
 /**
  * Downloads the project's files from the specified remote.
@@ -13,10 +14,9 @@ import { once } from "events";
  * @returns 
  */
 export async function downloadRemote(remoteUrl: string, cancel?: AbortSignal) {
-    if (URL.canParse(remoteUrl) == false) {
-        throw new Error(`'${remoteUrl}' is not a valid URL.`);
-    }
+    assert(URL.canParse(remoteUrl), `'${remoteUrl}' is not a valid URL.`)
     const name = getProjectNameFromRemote(remoteUrl);
+    assert(name, `'${remoteUrl}' is not a valid project URL.`);
     const projectPath = join(PROJECTS_DIR, name);
     const projectBinPath = join(projectPath, PROJECT_BIN_DIR_NAME);
     // Pull by default

@@ -7,6 +7,7 @@ import { AppProject } from "./app/project/app.project.js";
 import { createInterface } from "node:readline/promises";
 import { CompleterResult } from "node:readline";
 import { getProjectNameFromRemote } from "./app/utilities.js";
+import assert from "node:assert";
 
 interface CLICommand {
     command: string,
@@ -114,10 +115,8 @@ function throwIfNoArgs(args: string[], expects?: string) {
     }
 }
 
-function throwIfProjectNotFound(project: any, name: string) {
-    if (project === undefined) {
-        throw new Error(`No project with the name '${name}' was found. Check autocomplete for available projects.`);
-    }
+function throwIfProjectNotFound(project: any, name: string): asserts project is BoopProject {
+    assert(project, `No project with the name '${name}' was found. Check autocomplete for available projects.`);
 }
 
 // ----- Command handlers -----
@@ -187,11 +186,11 @@ function projectStatusReadout(project: BoopProject) {
 
 async function add(command: string, args: string[]) {
     throwIfNoArgs(args, "repositoryUrl");
-    if (URL.canParse(args[0]) == false) {
-        throw new Error(`Invalid URL, '${args[0]}' is a not valid github repository.`);;
-    }
     const remote = args[0];
     const name = getProjectNameFromRemote(remote);
+    if (URL.canParse(remote) == false || name === null) {
+        throw new Error(`Invalid URL, '${remote}' is a not valid github repository.`);;
+    }
     const fresh = await Manager.Create(name, remote);
     await fresh.install();
     await fresh.deploy();

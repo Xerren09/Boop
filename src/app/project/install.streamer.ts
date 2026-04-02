@@ -6,12 +6,13 @@ import { join } from "node:path";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
 import { once } from "node:events";
 import { createReadStream } from "node:fs";
+import { finished } from "node:stream/promises";
 
 type InstallerStart = {
     type: "installerStart",
     steps: string[],
     time: number,
-    eventRef?: string
+    eventRef: string | null
 }
 
 type InstallerResult = {
@@ -68,7 +69,7 @@ export class InstallStreamer implements IDisposable {
         this._installer.on("stepExit", this.onInstallerStepComplete);
         if (this._installer.currentStep != null) {
             // Part of this output was already pushed out by sendHistory(), so start streaming from the open stream
-            this._installer.currentStep.process.output.on("data", this.onProcessOutput);
+            this._installer.currentStep.process?.output.on("data", this.onProcessOutput);
         }
     }
 
@@ -95,7 +96,7 @@ export class InstallStreamer implements IDisposable {
                 reader.once("close", () => {
                     reader.removeAllListeners();
                 })
-                await once(reader, "close");
+                await finished(reader);
             }
             catch (err) {
                 if (isNodeAbortException(err instanceof SuppressedError ? err.suppressed : err)) {
@@ -113,7 +114,7 @@ export class InstallStreamer implements IDisposable {
         }
     }
 
-    private onInstallerStart = (eventReference?: string) => {
+    private onInstallerStart = (eventReference: string | null) => {
         const installer = this.project.installer;
         const msg: InstallerStart = {
             type: "installerStart",
@@ -137,21 +138,21 @@ export class InstallStreamer implements IDisposable {
         const msg: ProcessStart = {
             type: "processStart",
             cmd: step.cmd,
-            time: step.process.startTime
+            time: step.process!.startTime
         };
         this._ws.send(JSON.stringify(msg));
         if (messageOnly) {
             return;
         }
-        step.process.output.on("data", this.onProcessOutput);
+        step.process!.output.on("data", this.onProcessOutput);
     }
 
     private onInstallerStepComplete = (step: InstallerStep) => {
-        step.process.output.removeListener("data", this.onProcessOutput);
+        step.process!.output.removeListener("data", this.onProcessOutput);
         const msg: ProcessExit = {
             type: "processExit",
-            exitCode: step.process.exitCode,
-            time: step.process.exitTime
+            exitCode: step.process!.exitCode,
+            time: step.process!.exitTime
         };
         this._ws.send(JSON.stringify(msg));
     }

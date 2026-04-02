@@ -34,12 +34,12 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     private readonly _config: ProjectConfig;
     private readonly _name: string;
     private _webhookLock: boolean = false;
-    private _webhookQueue: WebhookEvent | null;
-    private _webhookProcess: Promise<void> | null;
+    private _webhookQueue: WebhookEvent | null = null;
+    private _webhookProcess: Promise<void> | null = null;
     private _webhookProcessCancellationController = new AbortController();
     protected readonly log: BoopLogger;
     protected _installer: InstallRunner;
-    protected _router: Router | null;
+    protected _router: Router | null = null;
     private _disposed: boolean = false;
 
     protected get webhookEventsFile(): string {
@@ -129,6 +129,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     
     constructor(config: ProjectConfig) {
         super();
+        // @ts-expect-error By this point the URL is verified to be valid
         this._name = getProjectNameFromRemote(config.repositoryURL);
         this._config = config;
         this.environment = new EnvFile(this.environmentFile);
@@ -208,7 +209,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             }
             catch (err) {
                 if (this._webhookProcessCancellationController.signal.aborted) {
-                    this.log.info(`Cancelled processing webhook event '${event.id}'.`, { event: event.id, cancelledBy: this._webhookQueue.id });
+                    this.log.info(`Cancelled processing webhook event '${event.id}'.`, { event: event.id, cancelledBy: this._webhookQueue!.id });
                 }
                 else {
                     this.log.error(`Error while processing webhook event '${event.id}'.`, { event: event.id });
@@ -259,7 +260,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             this.log.info(`Installer finished.`);
         }
         catch (err) {
-            const error = new Error(`Installer failed.`, { cause: cancel.aborted ? "Cancelled" : err });
+            const error = new Error(`Installer failed.`, { cause: (cancel && cancel.aborted) ? "Cancelled" : err });
             this.log.logException(error);
             throw error;
         }

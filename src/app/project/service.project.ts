@@ -10,9 +10,9 @@ import { once } from "node:events";
 
 export class ServiceProject extends BoopProject {
     public override get deployed(): boolean {
-        return this._router != undefined && this._process != undefined && this._process.exitCode == null;
+        return this._router != undefined && this._process != null && this._process.exitCode == null;
     }
-    private _process?: BoopProcess;
+    private _process: BoopProcess | null = null;
     /**
      * The project's service process. May be stale if the project is stopped or not currently deployed; 
      * use {@link deployed|deployed(): boolean} to check if its is up to date.
@@ -37,7 +37,7 @@ export class ServiceProject extends BoopProject {
      * @returns 
      */
     protected async _deploy() : Promise<void> {
-        if (this._process != undefined && this._process.exited == false) {
+        if (this._process != null && this._process.exited == false) {
             // Already running
             return;
         }
@@ -45,7 +45,7 @@ export class ServiceProject extends BoopProject {
         const config = await parseWorkflow(configPath);
         if (config.deploy.env !== undefined) {
             Object.keys(config.deploy.env).forEach(el => {
-                this.environment.set(el, config.deploy.env[el]);
+                this.environment.set(el, config.deploy.env![el]);
             });
         }
         await this.environment.save();
@@ -71,7 +71,7 @@ export class ServiceProject extends BoopProject {
         }
         this._process.once("exit", (code) => {
             this._router = null;
-            if (this._process.wasKilled == false) {
+            if (this._process!.wasKilled == false) {
                 this.log.warn(`Project process exited (${this._process?.pid}).`, { code: code });
             }
             else {
@@ -87,7 +87,7 @@ export class ServiceProject extends BoopProject {
      * @returns 
      */
     protected async _stop(): Promise<void> {
-        if (this._process === undefined) {
+        if (this._process === null) {
             return;
         }
         if (this._process.exited == false) {

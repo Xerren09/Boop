@@ -9,7 +9,7 @@ export interface BoopLogger extends winston.Logger {
      * @param exception 
      * @returns 
      */
-    logException: (exception: Error) => void
+    logException: (exception: any) => void
 }
 
 const logger = winston.createLogger({
@@ -66,7 +66,7 @@ export function createProjectLogger(projectRoot: string): BoopLogger {
     return _logger as BoopLogger;
 }
 
-function logException(this: winston.Logger, exception: Error) {
+function logException(this: winston.Logger, exception: any) {
     if (exception instanceof AggregateError) {
         this.error(exception.message);
         for (let index = 0; index < exception.errors.length; index++) {

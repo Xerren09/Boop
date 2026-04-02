@@ -12,7 +12,7 @@ const STEP_EXIT_EVENT = "stepExit";
 const EXIT_EVENT = "exit";
 
 interface InstallRunnerEvents {
-    'start': (eventReference?: string) => void;
+    'start': (eventReference: string | null) => void;
     'exit': (success: boolean) => void;
     'step': (step: InstallerStep) => void;
     'stepExit': (step: InstallerStep) => void;
@@ -20,7 +20,7 @@ interface InstallRunnerEvents {
 
 export interface InstallerStep {
     cmd: string,
-    process: null | BoopProcess
+    process: BoopProcess | null
 }
 
 export interface InstallerLog {
@@ -139,7 +139,7 @@ export class InstallRunner extends EventEmitter {
         };
         cancel?.addEventListener("abort", cancelHandler);
         //
-        this.emit("start", eventReference);
+        this.emit("start", eventReference ?? null);
         //
         const logDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, `${this._startTime}${(eventReference == undefined || eventReference == null) ? "" : `-${eventReference}`}`);
         try {
@@ -209,7 +209,7 @@ export class InstallRunner extends EventEmitter {
         if (this.running == false) {
             return;
         }
-        const errors: Error[] = [];
+        const errors: any[] = [];
         for (const step of this.steps) {
             try {
                 await step.process?.kill(true, force);

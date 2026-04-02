@@ -8,6 +8,7 @@ import { IAsyncDisposable } from "../utilities.js";
 import { ENV_DISABLE_WEBHOOK_SECURITY_KEY, ENV_PORT_KEY, ENV_SECRET_KEY } from "../../constants.js";
 import { FileHandle, open, constants as fsConstants } from "fs/promises";
 import { Readable, Transform } from "stream";
+import { createWriteStream, WriteStream } from "fs";
 
 /**
  * Spawns a new shell and runs the given command.
@@ -17,7 +18,7 @@ import { Readable, Transform } from "stream";
  * @returns A {@link BoopProcess} wrapper that provides additional functions on top of {@link ChildProcess}.
  */
 export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.ProcessEnv): BoopProcess {
-    let _proc: ChildProcess = null;
+    let _proc: ChildProcess | null = null;
     if (process.platform === "win32") {
         // Windows always knows where node is so we can just pass an empty env and it'll work
         _proc = spawn(command, {
@@ -202,7 +203,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
     private onExit = (exitCode: number | null, signal: string | null) => {
         this._endTime = Date.now();
         // See https://github.com/nodejs/node/blob/7bd2fea78b32e848d7e5ecc40d400c832a2fedf2/lib/internal/util.js#L410
-        this._exitCode = exitCode === null ? (128 + constants.signals[signal]) : exitCode;
+        this._exitCode = exitCode === null ? (128 + constants.signals[signal!]) : exitCode;
         //
         this.emit("exit", this._exitCode);
         this._process.removeListener("error", this.onError);
@@ -256,7 +257,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
             else {
                 // Exit
                 if (exit !== null || signal !== null) {
-                    return this._process.exitCode ?? (128 + constants.signals[this._process.signalCode]);
+                    return this._process.exitCode ?? (128 + constants.signals[this._process.signalCode!]);
                 }
             }
         }
@@ -270,6 +271,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
             }
             throw err;
         }
+        return -1;
     }
 
     /**
@@ -294,10 +296,10 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
                 const __signal = force === true ? 'SIGKILL' : 'SIGTERM';
                 this._wasKilled = true;
                 if (entireProcessTree === true) {
-                    treeKill(this._process.pid, __signal, (err?: KillError) => {
+                    treeKill(this._process.pid, __signal, (err?: Error | null) => {
                         if (err) {
                             if (process.platform === "win32") {
-                                if (err?.code === 128) {
+                                if ((err as KillError).code === 128) {
                                     // https://stackoverflow.com/questions/18682681/what-are-exit-codes-from-the-taskkill-utility
                                     // 128 is "no task found" in windows, meaning our process exited before kill went through
                                     return resolve();
@@ -367,7 +369,11 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
     }
 }
 
-// https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+/**
+ * Returned by {@link treeKill} on `win32` when its internal {@link https://github.com/pkrumins/node-tree-kill/blob/cb478381547107f5c53362668533f634beff7e6e/index.js#L29|`exec("taskkill")`} fails.
+ * 
+ * See {@link https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback|child_process.exec callback documentation} 
+ */
 interface KillError extends Error {
     code: number | null,
     signal: string | null

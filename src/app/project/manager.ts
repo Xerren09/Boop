@@ -19,7 +19,7 @@ class ProjectManager {
         return this._projects;
     }
 
-    public Find(name: string): BoopProject {
+    public Find(name: string): BoopProject | undefined {
         return this.projects.find(el => el.name == name);
     }
 
@@ -132,7 +132,7 @@ class ProjectManager {
         }
         const dir = await readdir(PROJECTS_DIR, { withFileTypes: true });
         const projects = dir.filter(entry => entry.isDirectory()).map(entry => entry.name);
-        const errors: Error[] = [];
+        const errors: any[] = [];
         for (const name of projects) {
             try {
                 await this.Load(name);
@@ -151,7 +151,7 @@ class ProjectManager {
      * Starts all loaded projects present in {@link projects}.
      */
     public async DeployAll() {
-        const errors: Error[] = [];
+        const errors: any[] = [];
         for (const project of this._projects) {
             if (project.deployed == false) {
                 try {
@@ -177,7 +177,7 @@ class ProjectManager {
      * Stops all loaded projects' processes if they have one.
      */
     public async StopAll(force: boolean = false) {
-        const errors: Error[] = [];
+        const errors: any[] = [];
         for (const project of this._projects) {
             try {
                 if (force === true) {
@@ -185,7 +185,7 @@ class ProjectManager {
                 }
                 if (project instanceof ServiceProject) {
                     if (force === true) {
-                        await project.process.kill(true, force);
+                        await project.process?.kill(true, force);
                     }
                     else {
                         await project.stop();

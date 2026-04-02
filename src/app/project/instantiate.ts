@@ -12,14 +12,14 @@ import { PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_LOGS_DIR_NAME 
  * @returns 
  */
 export async function InstantiateProject(config: ProjectConfig | string): Promise<BoopProject> {
-    let projectConfig: ProjectConfig = null;
+    let projectConfig: ProjectConfig | null = null;
     if (typeof config === "string") {
         projectConfig = JSON.parse((await readFile(config)).toString()) as ProjectConfig;
     }
     else {
         projectConfig = config;
     }
-    let ret: BoopProject = null;
+    let ret: BoopProject | null = null;
     switch (projectConfig.type) {
         case "webapp":
             ret = new AppProject(projectConfig);
