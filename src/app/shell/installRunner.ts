@@ -4,7 +4,7 @@ import EventEmitter from "events";
 import { join } from "path";
 import { mkdir, writeFile } from "fs/promises";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
-import { getAllProjectOutputFiles, isNodeAbortException, makeProjectOutputFileName, searchProjectOutputFile } from "../utilities.js";
+import { isNodeAbortException } from "../utilities.js";
 import logger from "../../logger.js";
 
 const STEP_EVENT = "step";
@@ -223,29 +223,6 @@ export class InstallRunner extends EventEmitter {
         }
     }
 
-    /**
-     * Gets the specified installation log for this project.
-     * @param log If not given, the last available timestamp is used and the latest log will be returned.
-     * @returns The full filepath string to the log file.
-     */
-    public async findLog(log?: string | number): Promise<string | null> {
-        const files = await this.getLogs();
-        const logFileName = searchProjectOutputFile(files, log);
-        if (logFileName) {
-            return join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, logFileName)
-        }
-        return null;
-    }
-
-    /**
-     * Gets a list of all installation log files for this project.
-     * @returns 
-     */
-    public async getLogs() {
-        const logsDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME);
-        return await getAllProjectOutputFiles(logsDir);
-    }
-
     private async saveLog(dir: string, time: number, ref?: string) {
         if (this._running) {
             throw new Error("InstallRunner is currently busy. Wait for the runner to complete before attempting to export.");
@@ -265,3 +242,4 @@ export class InstallRunner extends EventEmitter {
         await writeFile(file, JSON.stringify(log));       
     }
 }
+

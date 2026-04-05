@@ -2,10 +2,9 @@ import { shellExecuteAsync, type BoopProcess } from "../shell/shell.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js"
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import { createServiceRouter } from "../routers/service.router.js";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
-import { getAllProjectOutputFiles, searchProjectOutputFile } from "../utilities.js";
+import { PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import { once } from "node:events";
 
 export class ServiceProject extends BoopProject {
@@ -36,7 +35,7 @@ export class ServiceProject extends BoopProject {
      * Starts the project's service process and creates a new proxy router to forward requests to it.
      * @returns 
      */
-    protected async _deploy() : Promise<void> {
+    protected async _deploy(eventReference?: string) : Promise<void> {
         if (this._process != null && this._process.exited == false) {
             // Already running
             return;
@@ -54,11 +53,11 @@ export class ServiceProject extends BoopProject {
         //
         const err = await once(this._process, "start");
         if (err.length != 0) {
-            throw err[0]; // handled in Stop() proper
+            throw err[0];
         }
         this.log.debug(`Project process started (${this._process?.pid}).`);
         //
-        this._process.redirectToFile(join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, `${this.deployedAt}.log`));
+        await this.startLog(eventReference);
         //
         const port = Number(this.environment.get("PORT") ?? -1);
         // Even if no port is specified, the project might have a hardcoded one. 
@@ -70,12 +69,13 @@ export class ServiceProject extends BoopProject {
             this.log.warn(`No PORT environment variable is specified; can't create proxy router.`);
         }
         this._process.once("exit", (code) => {
+            // Destroy the router so we don't end up trying to connect to a server that doesn't exist
             this._router = null;
-            if (this._process!.wasKilled == false) {
-                this.log.warn(`Project process exited (${this._process?.pid}).`, { code: code });
+            if (this._process!.wasKilled) {
+                this.log.info(`Project process exited (${this._process?.pid}).`, { code: code });
             }
             else {
-                this.log.info(`Project process exited (${this._process?.pid}).`, { code: code });
+                this.log.warn(`Project process exited (${this._process?.pid}).`, { code: code });
             }
         });
     }
@@ -95,26 +95,46 @@ export class ServiceProject extends BoopProject {
         }
     }
 
-    /**
-     * Gets the specified deployment log for this project.
-     * @param log If not given, the last available timestamp is used and the latest log will be returned.
-     * @returns The full filepath string to the log file.
-     */
-    public async findLog(log?: string | number): Promise<string | null> {
-        const files = await this.getLogs();
-        const file = searchProjectOutputFile(files, log);
-        if (file) {
-            return join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, file)
+    private async saveResultLog(file: string, eventReference?: string) {
+        try {
+            const log: ServiceProcessResultLog = {
+                time: this.deployedAt,
+                eventReference: eventReference ?? null,
+                cmd: this._process!.childProcess.spawnargs.join(" "),
+                start: this._process!.startTime,
+                end: this._process!.exitTime,
+                code: this._process!.exitCode,
+                killed: this._process!.wasKilled
+            }
+            await writeFile(file, JSON.stringify(log));
         }
-        return null;
+        catch (err) {
+            this.log.logException(err);
+        }
     }
 
-    /**
-     * Gets a list of all deployment log files for this project.
-     * @returns 
-     */
-    public async getLogs() {
-        const installLogsDir = join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME);
-        return await getAllProjectOutputFiles(installLogsDir);
+    private async startLog(eventReference?: string) {
+        if (this._process?.exited) {
+            throw new Error("Process already exited");
+        }
+        const logDir = join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, `${this.deployedAt}${eventReference ? `-${eventReference}` : ""}`);
+        await mkdir(logDir);
+        const processOutputLog = join(logDir, `output.log`);
+        this._process?.redirectToFile(processOutputLog);
+        const resultFile = join(logDir, PROJECT_LOG_RESULT_FILE_NAME);
+        await this.saveResultLog(resultFile);
+        this._process?.once("exit", async () => {
+            await this.saveResultLog(resultFile);
+        })
     }
+}
+
+interface ServiceProcessResultLog {
+    time: number,
+    eventReference: string | null,
+    cmd: string,
+    start: number,
+    end: number,
+    code: number | null,
+    killed: boolean
 }

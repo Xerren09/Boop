@@ -1,8 +1,10 @@
 import { R_OK, W_OK } from "constants";
-import { PathLike } from "fs";
-import { access, readdir } from "fs/promises";
+import { createReadStream, PathLike } from "fs";
+import { access } from "fs/promises";
 import net from "net";
 import { dirname } from "path";
+import Stream, { Duplex, Readable } from "stream";
+import { finished } from "stream/promises";
 import { fileURLToPath } from "url";
 
 /**
@@ -67,65 +69,6 @@ export function getProjectNameFromRemote(url: string) {
     return res?.groups?.projectID ?? null;
 }
 
-/**
- * Regex to match timestamped project install and deploy logs.
- * 
- * Use the `reference` group to get the log's webhook event reference (commit ID that triggered the action).
- * Use the `timestamp` group to get the log's timestamp.
- */
-export const ProjectOutputLogfileRegex = /^(?<timestamp>[\d+]{13,})(-(?<reference>[^\W_]{8}[-]?(?:[^\W_]{4}[-]?){3}[^\W_]{12}))?.json$/;
-
-/**
- * Creates JSON file with the given timestamp as the name.
- * @param time The timestamp for the logfile.
- * @param ref The webhook event reference (commit ID that triggered the action).
- * @param ext The extension of the log file.
- * @returns 
- */
-export function makeProjectOutputFileName(time: number, ref?: string, ext: string = ".json") {
-    if (typeof time !== "number") {
-        console.warn("Log filename is not compliant and will be invisible to search methods; use 'Date.now()'-like timestamps in milliseconds. ");
-    }
-    return `${time}${(ref == undefined || ref == null) ? "" : `-${ref}`}.${ext}`
-}
-
-/**
- * Searches a list of output files based on the criteria.
- * @param files The list of filenames to search through.
- * @param searchFor A filename, timestamp, or `undefined`. If not given, the latest timestamped file will be returned, if any.
- * @returns The filename of the result, or `null` is no matches were found.
- */
-export function searchProjectOutputFile(files: string[], searchFor: string | number | undefined) {
-    let logFileName: string | null = null;
-    if (files.length == 0) {
-        return null;
-    }
-    if (searchFor == undefined) {
-        // Get latest file
-        const num = Math.max(...files.map(el => Number(ProjectOutputLogfileRegex.exec(el)!.groups?.timestamp ?? undefined)));
-        logFileName = makeProjectOutputFileName(num);
-    }
-    else if (typeof searchFor === "number") {
-        const name: string = makeProjectOutputFileName(searchFor);
-        logFileName = files.find(el => el === name) ?? null;
-    }
-    else if (typeof searchFor === "string") {
-        logFileName = files.find(el => el === searchFor) ?? null;
-    }
-    return logFileName;
-}
-
-/**
- * Gets the list of all valid project output files in a given directory.
- * @param dir 
- * @returns 
- */
-export async function getAllProjectOutputFiles(dir: string) {
-    const files = await readdir(dir);
-    const logs = files.filter(file => ProjectOutputLogfileRegex.test(file) == true);
-    return logs;
-}
-
 export function isDevEnv(): boolean {
     return process.env["NODE_ENV"] == "development";
 }
@@ -136,6 +79,26 @@ export function isNodeErrnoException(err: any, code?: string): err is NodeJS.Err
 
 export function isNodeAbortException(err: any): err is NodeJS.ErrnoException {
     return (err instanceof Error) && ((err as NodeJS.ErrnoException).code !== undefined) && ((err as NodeJS.ErrnoException).code === "ABORT_ERR")
+}
+
+export function createCompositeStream(file: string, stream: Stream.Readable, cancel?: AbortSignal) {
+    const _ret = new Duplex();
+    const fileSource = createReadStream(file, { signal: cancel });
+    _progressThroughStreams(_ret, fileSource, stream);   
+    return _ret as Readable;
+}
+async function _progressThroughStreams(destination: Stream.Writable, ...sources: Stream.Readable[]) {
+    try {
+        for (let index = 0; index < sources.length; index++) {
+            const element = sources[index];
+            const isLast = (index + 1 == sources.length);
+            element.pipe(destination, { end: isLast });
+            await finished(element, { cleanup: true });
+        }
+    }
+    catch (err) {
+        //send error to destination stream
+    }
 }
 
 export interface IDisposable extends Disposable {

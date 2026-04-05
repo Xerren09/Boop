@@ -1,7 +1,9 @@
 import winston from "winston";
-import { LOG_FILE, PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "./constants.js";
+import { LOG_FILE, PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "./constants.js";
 import { join } from "path";
 import { isDevEnv } from "./app/utilities.js";
+import { readdir } from "fs/promises";
+import { BoopProject } from "./app/project/boop.project.js";
 
 export interface BoopLogger extends winston.Logger {
     /**
@@ -101,4 +103,53 @@ function parseError(error: Error) {
         }
     }
     return obj;
+}
+
+/**
+ * Regex to match timestamped project install and deploy logs.
+ * 
+ * Use the `reference` group to get the log's webhook event reference (commit ID that triggered the action).
+ * Use the `timestamp` group to get the log's timestamp.
+ */
+const ProjectLogDirRegex = /^(?<timestamp>[\d+]{13,})(-(?<reference>[^\W_]{8}[-]?(?:[^\W_]{4}[-]?){3}[^\W_]{12}))?$/;
+
+/**
+ * Creates a valid log directory name that {@link listProjectLogs|listProjectLogs()} can see.
+ * @param time The timestamp for the logged event.
+ * @param ref The webhook event reference (commit ID that triggered the action).
+ * @returns 
+ */
+export function makeLogDirName(time: number, ref?: string | null) {
+    if (typeof time !== "number") {
+        console.warn("Log filename is not compliant and will be invisible to search methods; use 'Date.now()'-like timestamps in milliseconds. ");
+    }
+    return `${time}${(ref == undefined || ref == null) ? "" : `-${ref}`}`
+}
+
+export interface EventLog {
+    time: number,
+    eventReference?: string,
+    dir: string
+}
+
+/**
+ * Lists a project's log entries from a given category.
+ * @param project 
+ * @param category 
+ * @returns List of per-event directories.
+ */
+export async function listProjectLogs(project: BoopProject, category: 'installer' | 'output') : Promise<EventLog[]> {
+    const logTypeDir = category == "installer" ? PROJECT_LOGS_INSTALL_DIR_NAME : PROJECT_LOGS_DEPLOY_DIR_NAME;
+    const searchDir = join(project.projectDir, PROJECT_LOGS_DIR_NAME, logTypeDir);
+    const dirs = await readdir(searchDir);
+    const valids = dirs.filter(dir => ProjectLogDirRegex.test(dir) == true).map(dir => {
+        const groups = ProjectLogDirRegex.exec(dir)!.groups;
+        const _entry: EventLog = {
+            time: Number(groups!.timestamp),
+            eventReference: groups?.reference,
+            dir: join(searchDir, dir)
+        }
+        return _entry;
+    });
+    return valids;
 }

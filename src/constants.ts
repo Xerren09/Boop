@@ -54,6 +54,14 @@ export const PROJECT_LOGS_DEPLOY_DIR_NAME = "deploy";
  * The filename of a project's standard event log.
  */
 export const PROJECT_LOG_FILE_NAME = "project.log";
+/**
+ * The filename of a logged event's main file.
+ */
+export const PROJECT_LOG_RESULT_FILE_NAME = "result.json";
+/**
+ * The filename of a service project's main process' STDOUT log file.
+ */
+export const PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME = "output.log";
 
 //
 // ENVIRONMENT VARIABLES

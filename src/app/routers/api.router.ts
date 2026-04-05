@@ -4,10 +4,13 @@ import { readFile } from "fs/promises";
 import expressWs from "express-ws";
 import Manager from "../project/manager.js";
 import { join } from "path";
-import { PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
+import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME, PROJECT_LOG_FILE_NAME, PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import { ServiceProject } from "../project/service.project.js";
 import { InstallStreamer } from "../project/install.streamer.js";
-import { InstallerLog } from "../shell/installRunner.js";
+import { createReadStream } from "fs";
+import { finished } from "stream/promises";
+import { listProjectLogs } from "../../logger.js";
+import { pathExists } from "../utilities.js";
 export const apiRouter = express.Router();
 //@ts-expect-error
 expressWs(apiRouter);
@@ -82,8 +85,22 @@ apiRouter.get("/projects/:projectName/logs/project", async (req, res) => {
         return;
     }
     const path = join(project.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME);
-    const ret = (await readFile(path)).toString().replace(/\r\n/g,'\n').split('\n');;
-    res.status(200).json(ret);
+    try {
+        await using stream = createReadStream(path);
+        stream.pipe(res, { end: false });
+        await finished(stream, { cleanup: true });
+    }
+    catch (err) {
+        if (err instanceof SuppressedError) {
+            err = err.suppressed;
+        }
+        if (res.headersSent == false) {
+            res.status(500).json(err);
+        }
+    }
+    finally {
+        res.end();
+    }
 });
 
 apiRouter.get("/projects/:projectName/logs/webhook", async (req, res) => {
@@ -102,7 +119,7 @@ apiRouter.get("/projects/:projectName/logs/deploy", async (req, res) => {
     }
     try {
         if (project instanceof ServiceProject) {
-            const files = await project.getLogs();
+            const files = await listProjectLogs(project, "output");
             res.status(200).json(files);
         }
         else {
@@ -119,29 +136,48 @@ apiRouter.get("/projects/:projectName/logs/deploy/:log", async (req, res) => {
     if (project == undefined) {
         return;
     }
-    try {
-        if (project instanceof ServiceProject) {
-            const num = Number(req.params.log);
-            const file = await project.findLog(Number.isNaN(num) ? num : req.params.log);
-            if (file == null) {
-                res.status(404).send("No logfile found.");
+    if (project instanceof ServiceProject) {
+        const logTime = Number(req.params.log);
+        const wantsProcessOutput = `${req.query?.process}`.toLowerCase() == "true";
+        try {
+            const logs = await listProjectLogs(project, "output");
+            const log = logs.find(el => el.time == logTime);
+            if (!log) {
+                return res.sendStatus(404);
+            }
+            if (wantsProcessOutput) {
+                const path = join(log.dir, PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME);
+                if (await pathExists(path) == false) {
+                    return res.status(404).send(`No output file found with for this log.`);
+                }
+                try {
+                    await using stream = createReadStream(path);
+                    stream.pipe(res, { end: false });
+                    await finished(stream, {cleanup: true});
+                }
+                catch (err) {
+                    if (err instanceof SuppressedError) {
+                        err = err.suppressed;
+                    }
+                    if (res.headersSent == false) {
+                        res.status(500).json(err);
+                    }
+                }
+                finally {
+                    res.end();
+                }
             }
             else {
-                try {
-                    const text = await (await readFile(file)).toString();
-                    res.status(200).json(JSON.parse(text));
-                }
-                catch (error) {
-                    res.status(500).json(error)
-                }
+                const content = await readFile(join(log.dir, PROJECT_LOG_RESULT_FILE_NAME));
+                res.status(200).json(JSON.parse(content.toString()));
             }
         }
-        else {
-            res.sendStatus(404);
+        catch (err) {
+            res.status(500).json(err);
         }
     }
-    catch (err) {
-        res.status(500).json(err);
+    else {
+        res.sendStatus(404);
     }
 });
 
@@ -151,7 +187,7 @@ apiRouter.get("/projects/:projectName/logs/install", async (req, res) => {
         return;
     }
     try {
-        const files = await project.installer.getLogs();
+        const files = await listProjectLogs(project, "installer");
         res.status(200).json(files);
     }
     catch (err) {
@@ -159,25 +195,69 @@ apiRouter.get("/projects/:projectName/logs/install", async (req, res) => {
     }
 });
 
-// TODO: Load individual step output files too
 apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
     const project = Manager.projects.find(item => item.name === req.params.projectName);
     if (project == undefined) {
         return;
     }
     try {
-        const num = Number(req.params.log);
-        const file = await project.installer.findLog(Number.isNaN(num) ? num : req.params.log);
-        if (file == null) {
-            res.status(404).send("No logfile found.");
+        const logStep = Number(req.query["step"] ?? -1);
+        const logTime = Number(req.params.log);
+        if (Number.isNaN(logTime)) {
+            res.status(400).send(`"${req.params.log}" is not a valid number.`);
+        }
+        const files = await listProjectLogs(project, "installer");
+        const log = files.find(el => el.time == logTime);
+        if (!log) {
+            return res.status(404).send("No logfile found.");
+        }
+        if (logStep == -1) {
+            // Send back installer result only
+            const content = await readFile(join(log.dir, PROJECT_LOG_RESULT_FILE_NAME));
+            res.json(JSON.parse(content.toString()));
         }
         else {
-            const text = await (await readFile(file)).toString();
-            res.status(200).json(JSON.parse(text));
+            // Send back process output
+            const path = join(log.dir, `${logStep}.log`)
+            if (await pathExists(path) == false) {
+                return res.status(404).send(`No step file found with ID "${logStep}".`);
+            }
+            try {
+                await using stream = createReadStream(path);
+                stream.pipe(res, { end: false });
+                await finished(stream, {cleanup: true});
+            }
+            catch (err) {
+                if (err instanceof SuppressedError) {
+                    err = err.suppressed;
+                }
+                if (res.headersSent == false) {
+                    res.status(500).json(err);
+                }
+            }
+            finally {
+                res.end();
+            }
         }
     }
     catch (err) {
         res.status(500).json(err);
+    }
+});
+
+apiRouter.ws("/projects/:projectName", (ws, req) => {
+    const project = Manager.projects.find(item => item.name === req.params["projectName"]);
+    if (project) {
+        const withServiceProcess = req.query["withProcess"] == "true";
+        const streamer = new InstallStreamer(ws, project)
+        ws.once("close", () => {
+            if (streamer.disposed === false) {
+                streamer[Symbol.dispose]();
+            }
+        });
+    }
+    else {
+        ws.close();
     }
 });
 
@@ -196,40 +276,46 @@ apiRouter.ws("/projects/:projectName/installer", (ws, req) => {
     }
 });
 
-apiRouter.post("/projects/:projectName/start", (req, res) => {
+apiRouter.post("/projects/:projectName/start", async (req, res) => {
     const project = Manager.projects.find(item => item.name === req.params.projectName);
     if (project == undefined) {
         return;
     }
-    project.deploy().then(() => {
+    try {
+        await project.deploy();
         res.sendStatus(200);
-    }).catch((err) => {
+    }
+    catch (err) {
         res.status(500).json(err);
-    });
+    }
 });
 
-apiRouter.post("/projects/:projectName/stop", (req, res) => {
+apiRouter.post("/projects/:projectName/stop", async (req, res) => {
     const project = Manager.projects.find(item => item.name === req.params.projectName);
     if (project == undefined) {
         return;
     }
-    project.stop().then(() => {
+    try {
+        await project.stop();
         res.sendStatus(200);
-    }).catch((err) => {
+    }
+    catch (err) {
         res.status(500).json(err);
-    });
+    }
 });
 
-apiRouter.post("/projects/:projectName/restart", (req, res) => {
+apiRouter.post("/projects/:projectName/restart", async (req, res) => {
     const project = Manager.projects.find(item => item.name === req.params.projectName);
     if (project == undefined) {
         return;
     }
-    project.restart().then(() => {
+    try {
+        await project.restart();
         res.sendStatus(200);
-    }).catch((err) => {
+    }
+    catch (err) {
         res.status(500).json(err);
-    });
+    }
 });
 
 apiRouter.get("/projects/:projectName/env", (req, res) => {
