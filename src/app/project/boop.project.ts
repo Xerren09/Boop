@@ -8,7 +8,7 @@ import { DEBUG_ENV_BYPASS_GIT_PULL, PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME,
 import { InstallRunner } from "../shell/installRunner.js";
 import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
-import logger, { BoopLogger, createProjectLogger } from "../../logger.js";
+import { BoopLogger, createProjectLogger } from "../../logger.js";
 import { downloadRemote } from "../shell/git.js";
 import { getProjectNameFromRemote, IAsyncDisposable, isDevEnv } from "../utilities.js";
 
@@ -239,7 +239,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             throw err;
         }
         await this.install(ref, cancel);
-        await this.deploy();
+        await this.deploy(ref);
     }
 
     /**
@@ -267,28 +267,10 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     }
 
     /**
-     * Logs an event to both the project's own logfile, and Boop's global one.
-     * @param level Directly maps to log level methods, except in the case of `exception` which logs `Error` objects.
-     * @param message The main contents of the log event.
-     * @param meta Any additional metadata to be saved with the event.
-     */
-    protected SharedLog(level: "exception", message: Error, ...meta: any[])
-    protected SharedLog(level: "info" | "error" | "warn", message: string, ...meta: any[])
-    protected SharedLog(level: "info" | "error" | "warn" | "exception", message: string | Error, ...meta: any[]) {
-        if (level === "exception" && message instanceof Error) {
-            this.log.logException(message);
-            logger.error(`'${this.name}': ${message.message}`);
-            return;
-        }
-        this.log[level](message, ...meta);
-        logger[level](`'${this.name}': ${message}`, ...meta);
-    }
-
-    /**
      * Deploys the project and enables its router.
      * @returns 
      */
-    public async deploy(): Promise<void> {
+    public async deploy(eventReference?: string): Promise<void> {
         if (this.deployed) {
             return;
         }
@@ -296,7 +278,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             throw new Error("Project installer is currently running.");
         }
         try {
-            await this._deploy();
+            await this._deploy(eventReference);
             this.log.info(`Deployed.`);
         }
         catch (err) {
@@ -310,7 +292,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         }
         
     }
-    protected abstract _deploy(): Promise<void>;
+    protected abstract _deploy(eventReference?: string): Promise<void>;
     
     /**
      * Stops the project's handler and removes its router.
