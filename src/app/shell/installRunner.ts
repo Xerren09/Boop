@@ -5,7 +5,7 @@ import { join } from "path";
 import { mkdir, writeFile } from "fs/promises";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
 import { isNodeAbortException } from "../utilities.js";
-import logger from "../../logger.js";
+import logger, { makeLogDirName } from "../../logger.js";
 
 const STEP_EVENT = "step";
 const STEP_EXIT_EVENT = "stepExit";
@@ -141,7 +141,7 @@ export class InstallRunner extends EventEmitter {
         //
         this.emit("start", eventReference ?? null);
         //
-        const logDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, `${this._startTime}${(eventReference == undefined || eventReference == null) ? "" : `-${eventReference}`}`);
+        const logDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeLogDirName(this._startTime, eventReference));
         try {
             await mkdir(logDir);
         }

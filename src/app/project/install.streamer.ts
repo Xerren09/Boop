@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
 import { createReadStream } from "node:fs";
 import { finished } from "node:stream/promises";
+import { makeLogDirName } from "../../logger.js";
 
 type InstallerStart = {
     type: "installerStart",
@@ -88,7 +89,7 @@ export class InstallStreamer implements IDisposable {
             }
             // Send step notification
             this.onInstallerStepStart(step, true);
-            const logPath = join(this.project.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, `${installerTime}-${eventRef}`, `${index}.log`);
+            const logPath = join(this.project.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeLogDirName(installerTime, eventRef), `${index}.log`);
             try {
                 await using reader = createReadStream(logPath, { signal: this._disposeController.signal });
                 reader.on("data", this.onProcessOutput);

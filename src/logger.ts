@@ -123,7 +123,7 @@ export function makeLogDirName(time: number, ref?: string | null) {
     if (typeof time !== "number") {
         console.warn("Log filename is not compliant and will be invisible to search methods; use 'Date.now()'-like timestamps in milliseconds. ");
     }
-    return `${time}${(ref == undefined || ref == null) ? "" : `-${ref}`}`
+    return `${time}${(ref == undefined || ref == null || ref.length == 0) ? "" : `-${ref}`}`
 }
 
 export interface EventLog {

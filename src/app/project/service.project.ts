@@ -6,6 +6,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import { once } from "node:events";
+import { makeLogDirName } from "../../logger.js";
 
 export class ServiceProject extends BoopProject {
     public override get deployed(): boolean {
@@ -117,7 +118,7 @@ export class ServiceProject extends BoopProject {
         if (this._process?.exited) {
             throw new Error("Process already exited");
         }
-        const logDir = join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, `${this.deployedAt}${eventReference ? `-${eventReference}` : ""}`);
+        const logDir = join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, makeLogDirName(this.deployedAt, eventReference));
         await mkdir(logDir);
         const processOutputLog = join(logDir, `output.log`);
         this._process?.redirectToFile(processOutputLog);
