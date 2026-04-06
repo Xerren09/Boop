@@ -1,0 +1,15 @@
+info:
+  name: Stop
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: http://localhost:8004/boop/api/projects/{{PROJECT}}/stop
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

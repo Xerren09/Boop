@@ -1,0 +1,20 @@
+info:
+  name: Status
+  type: websocket
+  seq: 9
+
+websocket:
+  url: ws://localhost:8004/boop/api/projects/{{PROJECT}}?withProcess={{shouldStreamMainProcess}}
+  message:
+    type: json
+    data: "{}"
+  auth: inherit
+
+runtime:
+  variables:
+    - name: shouldStreamMainProcess
+      value: "true"
+
+settings:
+  timeout: 0
+  keepAliveInterval: 0

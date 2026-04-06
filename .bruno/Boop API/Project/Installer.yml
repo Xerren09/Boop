@@ -1,0 +1,11 @@
+info:
+  name: Installer
+  type: websocket
+  seq: 9
+
+websocket:
+  url: ws://localhost:8004/boop/api/projects/{{PROJECT}}/installer
+  message:
+    type: json
+    data: "{}"
+  auth: inherit
