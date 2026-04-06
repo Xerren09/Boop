@@ -326,7 +326,7 @@ apiRouter.get("/projects/:projectName/env", (req, res) => {
     res.status(200).json(project.environment.variables);
 });
 
-apiRouter.post("/projects/:projectName/env", (req, res) => {
+apiRouter.patch("/projects/:projectName/env", (req, res) => {
     if (req.body.key != undefined && req.body.value != undefined) {
         const project = Manager.projects.find(item => item.name === req.params.projectName);
         if (project == undefined) {
