@@ -4,7 +4,7 @@ info:
   seq: 7
 
 http:
-  method: POST
+  method: PATCH
   url: http://localhost:8004/boop/api/projects/{{PROJECT}}/env
   body:
     type: form-urlencoded
