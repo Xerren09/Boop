@@ -11,6 +11,7 @@ import { createReadStream } from "fs";
 import { finished } from "stream/promises";
 import { listProjectLogs } from "../../logger.js";
 import { pathExists } from "../utilities.js";
+import { ProjectStreamer } from "../project/project.streamer.js";
 export const apiRouter = express.Router();
 //@ts-expect-error
 expressWs(apiRouter);
@@ -248,8 +249,8 @@ apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
 apiRouter.ws("/projects/:projectName", (ws, req) => {
     const project = Manager.projects.find(item => item.name === req.params["projectName"]);
     if (project) {
-        const withServiceProcess = req.query["withProcess"] == "true";
-        const streamer = new InstallStreamer(ws, project)
+        const withServiceProcess = (req.query["withProcess"] ?? false) == "true";
+        const streamer = new ProjectStreamer(ws, project, withServiceProcess);
         ws.once("close", () => {
             if (streamer.disposed === false) {
                 streamer[Symbol.dispose]();

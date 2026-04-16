@@ -9,6 +9,7 @@ import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow, WorkflowConfig } from "../workflow.js";
 import { InstantiateProject } from "./instantiate.js";
 import { InstallStreamerCollection } from "./install.streamer.js";
+import { ProjectStreamerCollection } from "./project.streamer.js";
 
 class ProjectManager {
     private _projects: BoopProject[] = [];
@@ -98,11 +99,13 @@ class ProjectManager {
             const idx = this._projects.indexOf(project);
             this._projects.splice(idx, 1);
             //
-            const streamers = InstallStreamerCollection.filter(streamer => streamer.project == project);
-            for (const streamer of streamers) {
-                if (streamer.disposed == false) {
-                    streamer[Symbol.dispose]();
-                }
+            const installStreamers = InstallStreamerCollection.filter(streamer => streamer.project == project);
+            for (const streamer of installStreamers) {
+                streamer[Symbol.dispose]();
+            }
+            const projectStreamers = ProjectStreamerCollection.filter(streamer => streamer.project == project);
+            for (const streamer of projectStreamers) {
+                streamer[Symbol.dispose]();
             }
             await project[Symbol.asyncDispose]();
             //
