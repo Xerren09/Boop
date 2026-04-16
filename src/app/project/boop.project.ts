@@ -15,7 +15,6 @@ import { getProjectNameFromRemote, IAsyncDisposable, isDevEnv } from "../utiliti
 interface BoopProjectEvents {
     'deploy': (success: boolean) => void;
     'stop': () => void;
-    'install': (installer: InstallRunner) => void;
     'webhook': (webhookEvent: WebhookEvent) => void;
 }
 
@@ -255,7 +254,6 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         }
         try {
             await this._installer.loadConfiguration();
-            this.emit("install", this._installer);
             await this._installer.run(eventRef, cancel);
             this.log.info(`Installer finished.`);
         }
