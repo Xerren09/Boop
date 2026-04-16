@@ -10,6 +10,7 @@ import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_PORT_KEY, ENV_SECRET, ENV_S
 // Interfaces
 import { cli } from './cli.js';
 import { server } from './app/routers/rest.js';
+import { once } from 'node:events';
 
 const boopArgsOptions: ParseArgsOptionsConfig = {
     port: {
@@ -68,36 +69,44 @@ const BOOP = server.listen(port, async () => {
     catch (err) {
         logger.logException(err);
     }
-    cli.once("close", () => {
-        handle_termination();
-    });
     cli.prompt();
+    const abortHandler = new AbortController();
+    try {
+        await Promise.race([
+            once(cli, "close", {signal: abortHandler.signal}),
+            once(process, "SIGINT", {signal: abortHandler.signal}),
+            once(process, "SIGTERM", {signal: abortHandler.signal}),
+            once(process, "uncaughtException", { signal: abortHandler.signal }),
+            once(process, "unhandledRejection", { signal: abortHandler.signal }),
+        ]);
+    }
+    catch (e) {
+        if (e instanceof Error) {
+            logger.logException(e);
+            process.exitCode = 1;
+        }
+    }
+    finally {
+        abortHandler.abort("exiting");
+        await handle_termination();
+    }
 });
 
 async function handle_termination() {
-    console.log(`\n====`);
-    console.info("Preparing to shut down...");
+    console.info("\n====\nPreparing to shut down...");
     try {
-        await Manager.StopAll();
+        await Manager.Dispose();
     }
     catch (err) {
         logger.logException(err);
         logger.warn("Not all project shut down. This might mean some processes will be left alive after Boop shuts down...");
     }
-    logger.on('finish', (info) => {
-        BOOP.close();
-        process.exit(process.exitCode);
-    });
     logger.end();
+    await Promise.all([
+        once(logger, "finish"),
+    ]);
+    BOOP.close();
     cli.close();
     console.info("Boop going to rest...");
+    process.exit(process.exitCode);
 }
-
-process.once('SIGINT', handle_termination);
-process.once('SIGTERM', handle_termination);
-
-process.once('uncaughtException', async (err) => {
-    logger.logException(err);
-    process.exitCode = 1;
-    await handle_termination();
-});
