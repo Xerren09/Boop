@@ -1,6 +1,6 @@
 import { join } from "path";
 import { Router } from "express";
-import EventEmitter from "events";
+import EventEmitter, { once } from "events";
 import * as express from "express";
 
 import type { WebhookEvent } from "../webhook.js";
@@ -238,6 +238,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             throw err;
         }
         await this.install(ref, cancel);
+        cancel.throwIfAborted();
         await this.deploy(ref);
     }
 
@@ -336,9 +337,23 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         if (this._disposed) {
             return;
         }
+        this._disposed = true;
         this._webhookQueue = null;
-        await this.installer.kill(true);
-        await this.stop();
+        const res = await Promise.allSettled([
+            this.installer.kill(true),
+            this.stop()
+        ]);
+        const errs: any[] = res.filter(el => el.status == "rejected").map(el => el.reason);
+        try {
+            this.log.close();
+            await once(this.log, "close");
+        }
+        catch (e) {
+            errs.push(e);
+        }
+        if (errs.length != 0) {
+            throw new AggregateError(errs, "One or more exceptions occured during disposal.")
+        }
     }
 }
 

@@ -209,6 +209,28 @@ class ProjectManager {
             throw new AggregateError(errors, `One or more projects failed to stop.`);
         }
     }
+
+    private _disposed = false;
+    public async Dispose() {
+        if (this._disposed) {
+            return;
+        }
+        this._disposed = true;
+        const errs: any[] = [];
+        for (const project of this._projects) {
+            try {
+                logger.info(`Disposing project '${project.name}'...`);
+                await project[Symbol.asyncDispose]();
+                logger.info(`Disposed!`);
+            }
+            catch (e) {
+                errs.push(e);
+            }
+        }
+        if (errs.length != 0) {
+            throw new AggregateError(errs, `One or more projects failed to dispose properly.`);
+        }
+    }
 }
 
 async function createProjectFile(file: string, remoteUrl: string, config: WorkflowConfig): Promise<ProjectConfig> {
