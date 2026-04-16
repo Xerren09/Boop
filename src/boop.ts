@@ -1,20 +1,15 @@
 #!/usr/bin/env node
 import { styleText, parseArgs, type ParseArgsOptionsConfig } from 'node:util';
-import express from 'express';
-import expressWs from "express-ws";
 import { config } from "dotenv";
 config({ quiet: true });
-import morgan from "morgan";
 // Boop application imports
 import Manager from './app/project/manager.js';
 import logger from './logger.js';
-import { webhookHandler } from './app/webhook.js';
-import { uiRouter } from './app/routers/ui.router.js';
-import { apiRouter } from './app/routers/api.router.js';
-import { projectSelector } from './app/routers/selector.js';
 import { checkGitAvailable } from './app/shell/git.js';
 import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_PORT_KEY, ENV_SECRET, ENV_SECRET_KEY } from './constants.js';
+// Interfaces
 import { cli } from './cli.js';
+import { server } from './app/routers/rest.js';
 
 const boopArgsOptions: ParseArgsOptionsConfig = {
     port: {
@@ -39,39 +34,10 @@ process.env[ENV_PORT_KEY] = `${port}`;
 // Secret flag:
 const secret = args.values.secret ?? ENV_SECRET ?? "";
 process.env[ENV_SECRET_KEY] = `${secret}`
-const app = express();
-expressWs(app);
-app.use(express.json());
-app.use(express.urlencoded());
-app.use(morgan(
-    ':method :url :status :remote-addr',
-    {
-        stream: {
-            write: (message) => {
-                logger.info(message.trim());
-            },
-        },
-        skip(req, _res) {
-            // Only log webhook events.
-            if ((req.method === "POST") && (req.originalUrl.startsWith("/boop/webhook"))) {
-                return false;
-            }
-            return true;
-        },
-    }
-));
-// Webhook entry
-app.post('/boop/webhook', webhookHandler);
-// API router
-app.use('/boop/api', apiRouter);
-// Web interface router
-app.use('/boop/', uiRouter);
-// Entry point for all other requests, these either get ignored or forwarded to the project hosts
-app.all('/{*splat}', projectSelector);
 
 
 // BOOP!
-const BOOP = app.listen(port, async () => { 
+const BOOP = server.listen(port, async () => { 
     console.log(`                         __ `);
     console.log(` _____ _____ _____ _____|  |`);
     console.log(`| __  |     |     |  _  |  |`);

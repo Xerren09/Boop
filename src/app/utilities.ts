@@ -97,7 +97,7 @@ async function _progressThroughStreams(destination: Stream.Writable, ...sources:
         }
     }
     catch (err) {
-        //send error to destination stream
+        destination.emit("error", err);
     }
 }
 
