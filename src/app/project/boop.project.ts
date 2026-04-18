@@ -345,7 +345,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         ]);
         const errs: any[] = res.filter(el => el.status == "rejected").map(el => el.reason);
         try {
-            this.log.close();
+            this.log.destroy();
             await once(this.log, "close");
         }
         catch (e) {
