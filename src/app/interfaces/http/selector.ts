@@ -1,6 +1,6 @@
 import type { NextFunction, Response, Request } from "express";
-import Manager from "../project/manager.js";
-import { ServiceProject } from "../project/service.project.js";
+import Manager from "../../project/manager.js";
+import { ServiceProject } from "../../project/service.project.js";
 
 const projectIdFromUrlSegments = /^\/*(?<projectID>[\w-]+)\/?/;
 

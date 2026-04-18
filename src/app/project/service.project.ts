@@ -1,7 +1,7 @@
 import { shellExecuteAsync, type BoopProcess } from "../shell/shell.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js"
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
-import { createServiceRouter } from "../routers/service.router.js";
+import { createServiceRouter } from "../interfaces/http/service.router.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";

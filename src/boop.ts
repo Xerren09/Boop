@@ -8,8 +8,8 @@ import logger from './logger.js';
 import { checkGitAvailable } from './app/shell/git.js';
 import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_PORT_KEY, ENV_SECRET, ENV_SECRET_KEY, WEB_INTERFACE_DIR } from './constants.js';
 // Interfaces
-import { cli } from './cli.js';
-import { server } from './app/routers/rest.js';
+import { cli } from './app/interfaces/cli.js';
+import { server } from './app/interfaces/http/rest.js';
 import { once } from 'node:events';
 import { pathExists } from './app/utilities.js';
 import { join } from 'node:path';

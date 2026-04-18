@@ -1,8 +1,8 @@
 import express from 'express';
 import expressWs from "express-ws";
 import morgan from "morgan";
-import logger from "../../logger.js";
-import { webhookHandler } from "../webhook.js";
+import logger from "../../../logger.js";
+import { webhookHandler } from "../../webhook.js";
 import { apiRouter } from "./api.router.js";
 import { projectSelector } from "./selector.js";
 import { uiRouter } from "./ui.router.js";
