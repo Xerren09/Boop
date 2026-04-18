@@ -5,7 +5,10 @@ config({ quiet: true });
 
 // HACK: this is bad but what can you do.
 export const BOOP_BASE_DIR = join(resolve__dirname(import.meta.url), "..");
-
+/**
+ * Path to the web control interface's directory.
+ */
+export const WEB_INTERFACE_DIR = join(BOOP_BASE_DIR, 'bin', 'web');
 /**
  * Path leading to the `projects` folder, where repositories are downloaded.
  */

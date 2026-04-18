@@ -6,11 +6,13 @@ config({ quiet: true });
 import Manager from './app/project/manager.js';
 import logger from './logger.js';
 import { checkGitAvailable } from './app/shell/git.js';
-import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_PORT_KEY, ENV_SECRET, ENV_SECRET_KEY } from './constants.js';
+import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_PORT_KEY, ENV_SECRET, ENV_SECRET_KEY, WEB_INTERFACE_DIR } from './constants.js';
 // Interfaces
 import { cli } from './cli.js';
 import { server } from './app/routers/rest.js';
 import { once } from 'node:events';
+import { pathExists } from './app/utilities.js';
+import { join } from 'node:path';
 
 const boopArgsOptions: ParseArgsOptionsConfig = {
     port: {
@@ -54,8 +56,9 @@ const BOOP = server.listen(port, async () => {
     console.log(`====`);
     console.log(`Boop listening on port`, styleText("blueBright", `${port}`));
     console.log(`Webhook listener available at`, styleText("blueBright", `http://localhost:${port}/boop/webhook`));
-    // TODO: check if web is compiled
-    console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
+    if (await pathExists(join(WEB_INTERFACE_DIR, "index.html"))) {
+        console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
+    }
     console.log(`====\n`);
     try {
         await Manager.LoadAll();
