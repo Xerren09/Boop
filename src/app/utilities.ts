@@ -57,7 +57,7 @@ export async function pathExists(path: PathLike): Promise<boolean> {
     }
 }
 
-const RemoteURLNameRegex = /\/*(?<projectID>[\w-]+)$/;
+const RemoteURLNameRegex = /(?<projectID>[^/]+)(?=\/$|$)/;
 
 /**
  * Gets the project's name from the GitHub remote url.
