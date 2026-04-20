@@ -120,11 +120,30 @@ function isSignatureValid(req: express.Request): boolean {
 }
 
 export interface WebhookEvent {
+    /**
+     * The unique ID of this event delivery. This will be the same for original *and* redeliveries as well.
+     * 
+     * Determined by the value of the `X-GitHub-Delivery` header.
+     */
     id: string;
+    /**
+     * The type of the event, as configured on github. See {@link https://docs.github.com/en/webhooks/webhook-events-and-payloads|webhook events and payloads}.
+     * 
+     * Determined by the value of the `X-GitHub-Event` header.
+     */
     type: string;  // "ping"
+    /**
+     * The time this event was reveived by Boop.
+     */
     time: number,
+    /**
+     * Information about the source repository, including which branch triggered this event.
+     */
     repository: {
         url: string;
+        /**
+         * The branch this event originates from. `null` if `ref` is not set in the event payload.
+         */
         branch: string | null;
         name: string;
         owner: {
@@ -132,14 +151,28 @@ export interface WebhookEvent {
             url: string;
         },
     },
+    /**
+     * The commit that triggered this event.
+     */
     commit: {
         id: string | null;
         url: string | null;
     },
+    /**
+     * Information about if the event is secure and originated from github.
+     * 
+     * If the payload's hash and the request hash don't match, `valid` will be false.
+     */
     security: {
+        /**
+         * The value of the `X-Hub-Signature-256` header. Use a repository secret to ensure events are secure.
+         */
         hash: string | null;
         valid: boolean;
     },
+    /**
+     * The user that triggered this event. Usually this is the same as the commit's user.
+     */
     sender: {
         name: string;
         url: string;
