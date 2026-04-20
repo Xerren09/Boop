@@ -3,9 +3,14 @@ import { readFile, writeFile } from "fs/promises";
 import { pathExists } from "../utilities.js";
 
 export class EventsFile {
-    private _file: string;
     private _maxItems: number = 255;
     private _events: WebhookEvent[] = [];
+    
+    /**
+     * The system path of this file.
+     */
+    public readonly file: string;
+    
     /**
      * The list of previous webhook events.
      */
@@ -21,7 +26,7 @@ export class EventsFile {
     }
 
     constructor(file: string) {
-        this._file = file;
+        this.file = file;
     }
 
     public exists(id: string): boolean {
@@ -29,12 +34,12 @@ export class EventsFile {
     }
 
     public async load() {
-        if (await pathExists(this._file)) {
-            const text = (await readFile(this._file)).toString('utf8');
+        if (await pathExists(this.file)) {
+            const text = (await readFile(this.file)).toString('utf8');
             this._events = JSON.parse(text);
         }
         else {
-            throw new Error(`File '${this._file}' does not exist.`);
+            throw new Error(`File '${this.file}' does not exist.`);
         }
     }
 
@@ -46,6 +51,6 @@ export class EventsFile {
     }
 
     public async save() {
-        await writeFile(this._file, JSON.stringify(this._events))
+        await writeFile(this.file, JSON.stringify(this._events))
     }
 }

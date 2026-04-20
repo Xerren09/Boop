@@ -6,19 +6,27 @@ export type Environment = {
 }
 
 export class EnvFile {
-    private _file: string;
     private _env: Environment = {};
+
+    /**
+     * The system path of this file.
+     */
+    public readonly file: string;
+
+    /**
+     * An copy of the variables saved.
+     */
     public get variables(): Environment {
         return { ...this._env }
     }
 
     constructor(file: string) {
-        this._file = file;
+        this.file = file;
     }
 
     public async load() {
-        if (await pathExists(this._file)) {
-            const text = (await readFile(this._file)).toString('utf8');
+        if (await pathExists(this.file)) {
+            const text = (await readFile(this.file)).toString('utf8');
             if (text.length != 0) {
                 const p = JSON.parse(text) as Environment;
                 for (const key of Object.keys(p)) {
@@ -27,7 +35,7 @@ export class EnvFile {
             }
         }
         else {
-            throw new Error(`File '${this._file}' does not exist.`);
+            throw new Error(`File '${this.file}' does not exist.`);
         }
     }
 
@@ -51,6 +59,6 @@ export class EnvFile {
     }
 
     public async save() {
-        await writeFile(this._file, JSON.stringify(this._env));
+        await writeFile(this.file, JSON.stringify(this._env));
     }
 }
