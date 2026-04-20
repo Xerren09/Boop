@@ -93,7 +93,7 @@ const BOOP = server.listen(port, async () => {
     }
 });
 
-async function handle_termination() {
+async function handle_termination(code?: number) {
     console.info("\n====\nPreparing to shut down...");
     try {
         await Manager.Dispose();
@@ -102,12 +102,13 @@ async function handle_termination() {
         logger.logException(err);
         logger.warn("Not all project shut down. This might mean some processes will be left alive after Boop shuts down...");
     }
+    cli.close();
     logger.end();
+    BOOP.close();
     await Promise.all([
         once(logger, "finish"),
+        once(BOOP, "close"),
     ]);
-    BOOP.close();
-    cli.close();
     console.info("Boop going to rest...");
-    process.exit(process.exitCode);
+    process.exit(code ?? process.exitCode);
 }
