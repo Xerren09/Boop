@@ -202,7 +202,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
                 this.webhookEvents.add(event);
                 await this.webhookEvents.save();
                 // Save the promise so we can wait it to end if a new request comes in
-                this._webhookProcess = this.processWebhookEvent(event.id);
+                this._webhookProcess = this.processWebhookEvent(event.id, this._webhookProcessCancellationController.signal);
                 await this._webhookProcess;
                 this.log.info("Webhook event processed.", { event: event.id });
             }
@@ -221,9 +221,8 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         }
     }
 
-    private async processWebhookEvent(ref: string): Promise<void> {
+    private async processWebhookEvent(ref: string, cancel: AbortSignal): Promise<void> {
         await this.stop(ref);
-        const cancel = this._webhookProcessCancellationController.signal;
         try {
             if (DEBUG_ENV_BYPASS_GIT_PULL == false) {
                 await downloadRemote(this.remoteUrl, this._config.acceptBranch, cancel);
@@ -249,7 +248,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     public async install(eventReference?: string, cancel?: AbortSignal): Promise<void> {
         this.log.info(`Install process started.`, { event: eventReference });
         // Stop project and installer if its running.
-        await this.stop();
+        await this.stop(eventReference);
         if (this._installer.running) {
             await this._installer.kill(true);
         }
