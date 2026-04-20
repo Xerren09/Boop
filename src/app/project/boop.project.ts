@@ -197,21 +197,21 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             const event = this._webhookQueue ?? evt;
             this._webhookQueue = null;
             this.emit("webhook", event);
-            this.log.info(`Processing webhook event '${event.id}'`, { event: event.id });
+            this.log.info(`Processing webhook event.`, { event: event.id });
             try {
                 this.webhookEvents.add(event);
                 await this.webhookEvents.save();
                 // Save the promise so we can wait it to end if a new request comes in
                 this._webhookProcess = this.processWebhookEvent(event.id);
                 await this._webhookProcess;
-                this.log.info("Webhook event processed.");
+                this.log.info("Webhook event processed.", { event: event.id });
             }
             catch (err) {
                 if (this._webhookProcessCancellationController.signal.aborted) {
-                    this.log.info(`Cancelled processing webhook event '${event.id}'.`, { event: event.id, cancelledBy: this._webhookQueue!.id });
+                    this.log.info(`Cancelled processing webhook event.`, { event: event.id, cancelledBy: this._webhookQueue!.id });
                 }
                 else {
-                    this.log.error(`Error while processing webhook event '${event.id}'.`, { event: event.id });
+                    this.log.error(`Error while processing webhook event.`, { event: event.id });
                 }
             }
             finally {
@@ -226,7 +226,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         const cancel = this._webhookProcessCancellationController.signal;
         try {
             if (DEBUG_ENV_BYPASS_GIT_PULL == false) {
-                await downloadRemote(this.remoteUrl, cancel);
+                await downloadRemote(this.remoteUrl, this._config.acceptBranch, cancel);
             }
         }
         catch (err) {
@@ -244,10 +244,10 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
 
     /**
      * Runs the project's installer with the currently available build file.
-     * @param eventRef [Optional] The ID of the event that triggered the install workflow.
+     * @param eventReference [Optional] The ID of the event that triggered the install workflow.
      */
-    public async install(eventRef?: string, cancel?: AbortSignal): Promise<void> {
-        this.log.info(`Install process started.`);
+    public async install(eventReference?: string, cancel?: AbortSignal): Promise<void> {
+        this.log.info(`Install process started.`, { event: eventReference });
         // Stop project and installer if its running.
         await this.stop();
         if (this._installer.running) {
@@ -255,8 +255,8 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         }
         try {
             await this._installer.loadConfiguration();
-            await this._installer.run(eventRef, cancel);
-            this.log.info(`Installer finished.`);
+            await this._installer.run(eventReference, cancel);
+            this.log.info(`Installer finished.`, { event: eventReference });
         }
         catch (err) {
             const error = new Error(`Installer failed.`, { cause: (cancel && cancel.aborted) ? "Cancelled" : err });
@@ -278,7 +278,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         }
         try {
             await this._deploy(eventReference);
-            this.log.info(`Deployed.`);
+            this.log.info(`Deployed.`, { event: eventReference });
         }
         catch (err) {
             this._router = null;
@@ -296,13 +296,13 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     /**
      * Stops the project's handler and removes its router.
      */
-    public async stop(): Promise<void> {
+    public async stop(eventReference?: string): Promise<void> {
         if (this.deployed == false) {
             return;
         }
         try {
             await this._stop();
-            this.log.info(`Stopped.`);
+            this.log.info(`Stopped.`, { event: eventReference });
         }
         catch (err) {
             const error = new Error(`Failed to stop project.`, { cause: err });

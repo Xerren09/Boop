@@ -15,7 +15,7 @@ export async function webhookHandler(req: express.Request, res: express.Response
         if (isSignatureValid(req)) {
             const webhookEvent = parseWebhookEvent(req);
             //
-            logger.info(`Incoming webhook event from ${webhookEvent.repository.url}.`);
+            logger.info(`Incoming webhook event from ${webhookEvent.repository.url}.`, {event: webhookEvent.id});
             //
             const project = ProjectManager.projects.find(el => el.name == webhookEvent.repository.name);
             if (project) {
@@ -24,7 +24,7 @@ export async function webhookHandler(req: express.Request, res: express.Response
             }
             else {
                 // Project doesn't yet exists on this machine; create it
-                logger.info(`First time setup started for ${webhookEvent.repository.name}.`);
+                logger.info(`First time setup started for '${webhookEvent.repository.name}'.`, {event: webhookEvent.id});
                 res.status(202).send(`Accepted, creating Boop project.`);
                 try {
                     const fresh = await ProjectManager.Create(webhookEvent.repository.name, webhookEvent.repository.url);
