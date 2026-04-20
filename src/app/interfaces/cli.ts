@@ -187,11 +187,12 @@ function projectStatusReadout(project: BoopProject) {
 async function add(command: string, args: string[]) {
     throwIfNoArgs(args, "repositoryUrl");
     const remote = args[0];
+    const branch = args[1] ?? null;
     const name = getProjectNameFromRemote(remote);
     if (URL.canParse(remote) == false || name === null) {
         throw new Error(`Invalid URL, '${remote}' is a not valid github repository.`);;
     }
-    const fresh = await Manager.Create(name, remote);
+    const fresh = await Manager.Create(remote, branch);
     await fresh.install();
     await fresh.deploy();
 }

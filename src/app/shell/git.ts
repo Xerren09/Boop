@@ -13,18 +13,18 @@ import assert from "assert";
  * @param remoteUrl 
  * @returns 
  */
-export async function downloadRemote(remoteUrl: string, cancel?: AbortSignal) {
+export async function downloadRemote(remoteUrl: string, branch?: string | null, cancel?: AbortSignal) {
     assert(URL.canParse(remoteUrl), `'${remoteUrl}' is not a valid URL.`)
     const name = getProjectNameFromRemote(remoteUrl);
     assert(name, `'${remoteUrl}' is not a valid project URL.`);
     const projectPath = join(PROJECTS_DIR, name);
     const projectBinPath = join(projectPath, PROJECT_BIN_DIR_NAME);
     // Pull by default
-    let command: string = `git pull "${remoteUrl}"`;
+    let command: string = `git pull ${remoteUrl} ${branch ?? ""}`;
     if (await pathExists(projectBinPath) == false) {
         // Clone if files don't exist
         await mkdir(projectBinPath);
-        command = `git clone "${remoteUrl}" .`
+        command = `git clone --single-branch ${branch ? `--branch ${branch}` : ""} "${remoteUrl}" .`
     }
     const proc = exec(command, {
         cwd: projectBinPath,

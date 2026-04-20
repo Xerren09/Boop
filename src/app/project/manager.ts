@@ -4,7 +4,7 @@ import logger from "../../logger.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js";
 import { ServiceProject } from "./service.project.js";
 import { mkdir, rm, writeFile, readdir } from "fs/promises";
-import { pathExists } from "../utilities.js";
+import { getProjectNameFromRemote, pathExists } from "../utilities.js";
 import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow, WorkflowConfig } from "../workflow.js";
 import { InstantiateProject } from "./instantiate.js";
@@ -54,7 +54,11 @@ class ProjectManager {
      * @param remote 
      * @returns 
      */
-    public async Create(name: string, remote: string): Promise<BoopProject> {
+    public async Create(remote: string, branch?: string | null): Promise<BoopProject> {
+        const name = getProjectNameFromRemote(remote);
+        if (name == null) {
+            throw new Error(`Could not extract valid project name from "${remote}"`);
+        }
         const projectDir = join(PROJECTS_DIR, name);
         try {
             if (await pathExists(join(projectDir, PROJECT_FILE_NAME))) {
@@ -63,7 +67,7 @@ class ProjectManager {
             if (await pathExists(projectDir) == false) {
                 await mkdir(projectDir);
             }
-            await downloadRemote(remote);
+            await downloadRemote(remote, branch);
             const buildFile = await getWorkflowFile(join(projectDir, PROJECT_BIN_DIR_NAME));
             const buildConfig = await parseWorkflow(buildFile);
             const projectFile = await createProjectFile(join(projectDir, PROJECT_FILE_NAME), remote, buildConfig);
@@ -72,7 +76,7 @@ class ProjectManager {
             await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME));
             const project = await InstantiateProject(projectFile);
             this._projects.push(project);
-            logger.info(`Created new project (${remote}): ${projectDir}.`);
+            logger.info(`Created new project (${remote}#${branch ?? "main"}): ${projectDir}.`);
             return project;
         }
         catch (error) {
@@ -211,6 +215,10 @@ class ProjectManager {
     }
 
     private _disposed = false;
+    /**
+     * Stops and disposes of all loaded projects, effectively shutting down the whole system.
+     * @returns 
+     */
     public async Dispose() {
         if (this._disposed) {
             return;

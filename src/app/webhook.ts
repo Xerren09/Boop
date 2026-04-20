@@ -27,7 +27,7 @@ export async function webhookHandler(req: express.Request, res: express.Response
                 logger.info(`First time setup started for '${webhookEvent.repository.name}'.`, {event: webhookEvent.id});
                 res.status(202).send(`Accepted, creating Boop project.`);
                 try {
-                    const fresh = await ProjectManager.Create(webhookEvent.repository.name, webhookEvent.repository.url);
+                    const fresh = await ProjectManager.Create(webhookEvent.repository.url, webhookEvent.repository.branch);
                     fresh.onWebhookEvent(webhookEvent);
                 }
                 catch (err) {

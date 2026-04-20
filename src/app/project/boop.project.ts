@@ -222,7 +222,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     }
 
     private async processWebhookEvent(ref: string): Promise<void> {
-        await this.stop();
+        await this.stop(ref);
         const cancel = this._webhookProcessCancellationController.signal;
         try {
             if (DEBUG_ENV_BYPASS_GIT_PULL == false) {
