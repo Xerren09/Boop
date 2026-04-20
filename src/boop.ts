@@ -24,10 +24,8 @@ const boopArgsOptions: ParseArgsOptionsConfig = {
 };
 const args = parseArgs({ options: boopArgsOptions });
 
-try {
-    await checkGitAvailable();
-}
-catch {
+if (await checkGitAvailable() == false)
+{
     // Consider this a fatal error since nothing works without git
     throw new Error("Git is not available, but Boop needs it to work. Install git and try again.");
 }

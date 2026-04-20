@@ -44,8 +44,6 @@ export async function downloadRemote(remoteUrl: string, cancel?: AbortSignal) {
 export async function checkGitAvailable() {
     const proc = exec(`git --version`);
     const [code, signal] = await once(proc, "exit");
-    if (code !== 0) {
-        throw new Error(`Git not installed.`, { cause: {code, signal} });
-    }   
+    return code == 0; 
 }
 
