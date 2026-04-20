@@ -1,13 +1,13 @@
 import WebSocket from "ws"
-import type { BoopProject } from "./boop.project.js";
-import { ServiceProject } from "./service.project.js";
-import { IDisposable } from "../utilities.js";
-import { WebhookEvent } from "../webhook.js";
+import type { BoopProject } from "../../../project/boop.project.js";
+import { ServiceProject } from "../../../project/service.project.js";
+import { IDisposable } from "../../../utilities.js";
+import { WebhookEvent } from "../../../webhook.js";
 import { join } from "node:path";
-import logger, { listProjectLogs } from "../../logger.js";
+import logger, { listProjectLogs } from "../../../../logger.js";
 import { createReadStream } from "node:fs";
 import { finished } from "node:stream/promises";
-import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME } from "../../constants.js";
+import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME } from "../../../../constants.js";
 
 type Deploy = {
     type: "deploy",

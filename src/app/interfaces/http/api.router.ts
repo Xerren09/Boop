@@ -1,17 +1,19 @@
 import express from "express";
-import cors from "cors";
-import { readFile } from "fs/promises";
 import expressWs from "express-ws";
-import Manager from "../../project/manager.js";
-import { join } from "path";
-import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME, PROJECT_LOG_FILE_NAME, PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../../constants.js";
-import { ServiceProject } from "../../project/service.project.js";
-import { InstallStreamer } from "../../project/install.streamer.js";
+import cors from "cors";
 import { createReadStream } from "fs";
 import { finished } from "stream/promises";
+import { readFile } from "fs/promises";
+import { join } from "path";
+//
+import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME, PROJECT_LOG_FILE_NAME, PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../../constants.js";
+import Manager from "../../project/manager.js";
+import { ServiceProject } from "../../project/service.project.js";
+import { InstallStreamer } from "./ws/install.streamer.js";
+import { ProjectStreamer } from "./ws/project.streamer.js";
 import { listProjectLogs } from "../../../logger.js";
 import { pathExists } from "../../utilities.js";
-import { ProjectStreamer } from "../../project/project.streamer.js";
+
 export const apiRouter = express.Router();
 //@ts-expect-error
 expressWs(apiRouter);

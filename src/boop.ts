@@ -2,6 +2,9 @@
 import { styleText, parseArgs, type ParseArgsOptionsConfig } from 'node:util';
 import { config } from "dotenv";
 config({ quiet: true });
+import { once } from 'node:events';
+import { pathExists } from './app/utilities.js';
+import { join } from 'node:path';
 // Boop application imports
 import Manager from './app/project/manager.js';
 import logger from './logger.js';
@@ -10,9 +13,6 @@ import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_PORT_KEY, ENV_SECRET, ENV_S
 // Interfaces
 import { cli } from './app/interfaces/cli.js';
 import { server } from './app/interfaces/http/server.js';
-import { once } from 'node:events';
-import { pathExists } from './app/utilities.js';
-import { join } from 'node:path';
 
 const boopArgsOptions: ParseArgsOptionsConfig = {
     port: {
