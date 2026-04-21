@@ -75,7 +75,7 @@ export const ENV_SECRET_KEY = "SECRET";
 export const ENV_DISABLE_WEBHOOK_SECURITY_KEY = "DISABLE_WEBHOOK_SECURITY";
 export const DEBUG_ENV_BYPASS_GIT_PULL_KEY = "BYPASS_GIT_PULL";
 
-export const ENV_PORT = Number(process.env[ENV_PORT_KEY]) || null;
-export const ENV_SECRET = process.env[ENV_SECRET_KEY] ?? null;
+export const ENV_PORT = () => Number(process.env[ENV_PORT_KEY]) || null;
+export const ENV_SECRET = () => process.env[ENV_SECRET_KEY] ?? null;
 export const ENV_DISABLE_WEBHOOK_SECURITY = process.env[ENV_DISABLE_WEBHOOK_SECURITY_KEY]?.toLowerCase() === "true";
 export const DEBUG_ENV_BYPASS_GIT_PULL = process.env[DEBUG_ENV_BYPASS_GIT_PULL_KEY]?.toLowerCase() === "true";

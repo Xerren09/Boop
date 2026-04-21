@@ -30,10 +30,10 @@ if (await checkGitAvailable() == false)
     throw new Error("Git is not available, but Boop needs it to work. Install git and try again.");
 }
 // Port flag:
-const port = ((Number((args.values.port as string)) || null) ?? ENV_PORT ?? 8004);
+const port = ((Number((args.values.port as string)) || null) ?? ENV_PORT() ?? 8004);
 process.env[ENV_PORT_KEY] = `${port}`;
 // Secret flag:
-const secret = args.values.secret ?? ENV_SECRET ?? "";
+const secret = args.values.secret ?? ENV_SECRET() ?? "";
 process.env[ENV_SECRET_KEY] = `${secret}`
 
 
