@@ -73,7 +73,7 @@ function logException(this: BoopLogger, exception: any) {
         this.error(exception.message);
         for (let index = 0; index < exception.errors.length; index++) {
             const error = exception.errors[index];
-            this.debug(`Exception [${index}]:`, { exception: parseError(error)});
+            this.logException(error);
         }
     }
     else if (exception instanceof SuppressedError) {
