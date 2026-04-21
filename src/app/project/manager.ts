@@ -103,14 +103,6 @@ class ProjectManager {
             const idx = this._projects.indexOf(project);
             this._projects.splice(idx, 1);
             //
-            const installStreamers = InstallStreamerCollection.filter(streamer => streamer.project == project);
-            for (const streamer of installStreamers) {
-                streamer[Symbol.dispose]();
-            }
-            const projectStreamers = ProjectStreamerCollection.filter(streamer => streamer.project == project);
-            for (const streamer of projectStreamers) {
-                streamer[Symbol.dispose]();
-            }
             await project[Symbol.asyncDispose]();
             //
             if (await pathExists(project.projectDir)) {
@@ -119,6 +111,10 @@ class ProjectManager {
             else {
                 logger.warn(`Project directory '${project.projectDir}' does not exist: this project only exists in memory.`);
             }
+            const streamers = new DisposableStack();
+            InstallStreamerCollection.filter(streamer => streamer.project == project).forEach(el => streamers.use(el));
+            ProjectStreamerCollection.filter(streamer => streamer.project == project).forEach(el => streamers.use(el));
+            streamers.dispose();
             logger.info(`Deleted project '${project.name}'.`);
         }
         catch (err) {
@@ -224,19 +220,23 @@ class ProjectManager {
             return;
         }
         this._disposed = true;
-        const errs: any[] = [];
+        const errors: any[] = [];
         for (const project of this._projects) {
             try {
                 logger.info(`Disposing project '${project.name}'...`);
                 await project[Symbol.asyncDispose]();
+                const streamers = new DisposableStack();
+                InstallStreamerCollection.filter(streamer => streamer.project == project).forEach(el => streamers.use(el));
+                ProjectStreamerCollection.filter(streamer => streamer.project == project).forEach(el => streamers.use(el));
+                streamers.dispose();
                 logger.info(`Disposed!`);
             }
             catch (e) {
-                errs.push(e);
+                errors.push(e);
             }
         }
-        if (errs.length != 0) {
-            throw new AggregateError(errs, `One or more projects failed to dispose properly.`);
+        if (errors.length != 0) {
+            throw new AggregateError(errors, `One or more projects failed to dispose properly.`);
         }
     }
 }
