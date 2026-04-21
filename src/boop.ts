@@ -89,7 +89,7 @@ const BOOP = server.listen(port, async () => {
     }
     finally {
         abortHandler.abort("exiting");
-        await handle_termination();
+        handle_termination();
     }
 });
 
