@@ -1,132 +1,175 @@
-import { Icon, Spinner, SpinnerSize, Stack, Text } from "@fluentui/react";
-import React from "react";
-import { Observable, Subscription } from "rxjs";
+import { Text } from "@fluentui/react-components";
+import { useEffect, useRef, useState } from "react";
 import './terminal.css';
+import Stack from "../stack";
+import TerminalHeader from "./header";
+import { RemoteProcess } from "../../api/api";
 
-export class Terminal extends React.Component<TerminalProps, TerminalState> {
+export default function Terminal(props: Props) {
+    const [autoScroll, enableAutoscroll] = useState<boolean>(true);
+    const [collapsed, setCollapsed] = useState<boolean>(props.startCollapsed ?? true);
 
-    state: TerminalState = {
-        autoScroll: true,
-        collapsed: true
-    }
+    const lineCount = useRef<number>(0);
 
-    private terminalTextArea = React.createRef<HTMLTextAreaElement>();
-    private terminalDiv = React.createRef<HTMLDivElement>();
+    const [code, setCode] = useState<number | null>(null);
+    const [startTime, setStartAt] = useState<number>(0);
+    const [exitTime, setExitedAt] = useState<number>(0);
 
-    componentDidMount(): void {
-        this.onCollapseClick(this.props.collapsed === undefined ? false : this.props.collapsed);
-    }
+    const textArea = useRef<HTMLTextAreaElement>(null);
+    const container = useRef<HTMLDivElement>(null);
 
-    componentDidUpdate() {
-        if (this.terminalTextArea.current) {
-            if (this.state.autoScroll === true) {
-                this.terminalTextArea.current.scrollTop = this.terminalTextArea.current.scrollHeight;
-            }
+    function onNewLine(line: string, clear?: boolean) {
+        if (textArea.current == null) {
+            return;
+        }
+        if (clear) {
+            lineCount.current = 0;
+            textArea.current.value = "";
+        }
+        if (lineCount.current > RemoteProcess.MAX_OUTPUT_HISTORY)
+        {
+            // HACK: set the textArea text directly because its might be large and we want to avoid duplicating it in both the state + htmlelement
+            textArea.current.value = textArea.current.value.substring(line.length) + line;
+        }
+        else {
+            lineCount.current++;
+            textArea.current.value += line;
         }
     }
 
-    onScroll() {
-        if (this.terminalTextArea.current) {
-            const lineHeightPx = Math.abs(this.terminalTextArea.current.scrollHeight / this.props.source.length);
-            const height = this.terminalTextArea.current.getBoundingClientRect().height;
-            const delta = Math.abs(this.terminalTextArea.current.scrollHeight - (this.terminalTextArea.current.scrollTop + (height * 1.05)));
-            const isAtBottom = this.terminalTextArea.current.scrollHeight <= this.terminalTextArea.current.scrollTop + (height * 1.05);
-            if (this.state.autoScroll === false) {
+    function onCodeChange(exitCode: number | null) {
+        if (exitCode === null) {
+            textArea.current!.value = "";
+            lineCount.current = 0;
+        }
+        setCode(exitCode);
+    }
+
+    function onScroll() {
+        if (textArea.current) {
+            const lineHeightPx = Math.abs(textArea.current.scrollHeight / textArea.current.value.length);
+            const height = textArea.current.getBoundingClientRect().height;
+            const delta = Math.abs(textArea.current.scrollHeight - (textArea.current.scrollTop + (height * 1.05)));
+            const isAtBottom = textArea.current.scrollHeight <= textArea.current.scrollTop + (height * 1.05);
+            if (autoScroll === false) {
                 if (isAtBottom) {
-                    this.setState({ autoScroll: true });
+                    enableAutoscroll(true);
                 }
             }
             else {
-                if (delta > lineHeightPx*2) {
-                    this.setState({ autoScroll: false });
+                if (delta > (lineHeightPx * 2)) {
+                    enableAutoscroll(false);
                 }
             }
         }
     }
 
-    onCollapseClick(collapsed: boolean) {
-        this.setState({
-            collapsed: collapsed
-        }, () => {
-            if (this.terminalDiv.current) {
-                if (this.state.collapsed === true) {
-                    //@ts-expect-error
-                    this.terminalDiv.current.style.maxHeight = null;
+    function onCollapseClick(_collapsed: boolean) {
+        setCollapsed(_collapsed);
+    }
+
+    useEffect(() => {
+        if (props.process == undefined) {
+            return;
+        }
+        let shouldClear = true;
+        const sub = props.process.output.subscribe({
+            next(value) {
+                if (shouldClear) {
+                    shouldClear = false;
+                    setStartAt(props.process.startTime!);
+                    onCodeChange(props.process.exitCode);
+                    setExitedAt(props.process.exitTime!);
+                    onNewLine(value, true);
                 }
                 else {
-                    this.terminalDiv.current.style.maxHeight = this.terminalDiv.current.scrollHeight + "px";
-                } 
-            }
+                    onNewLine(value);
+                }
+            },
+            complete() {
+                if (props.process.dud) {
+                    // Never started
+                    onCodeChange(props.process.exitCode);
+                }
+                else {
+                    // Normal process
+                    onCodeChange(props.process.exitCode);
+                    setExitedAt(props.process.exitTime!);
+                }
+            },
         });
-    }
+        return () => {
+            sub.unsubscribe();
+        }
+    }, [props.process]);
 
-    render(): React.ReactNode {
-        return (
-            <Stack
-                tokens={{ childrenGap: 0 }}
-                style={{ width: "100%", backgroundColor: "#2d3436" }}
+    useEffect(() => {
+        if (container.current) {
+            //@ts-expect-error Set to null is valid
+            container.current.style.maxHeight = collapsed ? null : `${container.current.scrollHeight}px`;
+        }
+    }, [collapsed, container]);
+
+    useEffect(() => {
+        if (textArea.current) {
+            if (autoScroll === true) {
+                textArea.current.scrollTop = textArea.current.scrollHeight;
+            }
+        }
+    }, [autoScroll, textArea]);
+
+    return (
+        <Stack
+            style={{ width: "100%", backgroundColor: "#2d3436", borderRadius: "8px" }}
+        >
+            <TerminalHeader
+                title={props.title}
+                collapsed={ collapsed }
+                onCollapse={ onCollapseClick }
+                exitCode={props.process ? code : props.exitCode}
+                startTime={props.process ? (startTime == 0 ? undefined : startTime) : props.startTime}
+                exitTime={props.process ? (exitTime == 0 ? undefined : exitTime) : props.exitTime}
+            />
+            <div
+                className="content"
+                ref={container}
             >
-                <Stack
-                    horizontal
-                    horizontalAlign="space-between"
-                    verticalAlign="center"
-                    style={{ borderBottomColor: "black", borderBottomWidth: 1, borderBottomStyle: "solid", width: "100%" }}
-                >
-                    <Stack
-                        horizontal
-                        tokens={{ childrenGap: 8, padding: 8 }}
+                <Stack >
+                    <textarea
+                        onScroll={ onScroll }
+                        ref={textArea}
+                        name="terminalOutput"
+                        value={props.process ? props.stream : ""}
+                        readOnly={true}
+                        rows={props.maxHeightRows ?? 15}
+                        className="terminal-content"
+                        placeholder="Waiting for process output..."
+                    />
+                    <Text
+                        style={{
+                            color: "#dddddd",
+                            paddingLeft: "12px",
+                            marginBottom: "8px",
+                            paddingTop: "8px",
+                            width: "100%",
+                            textAlign: "start",
+                            borderTopColor: "black",
+                            borderTopWidth: 1,
+                            borderTopStyle: "solid",
+                        }}
                     >
                         {
-                            this.props.exitCode == null ?
-                                <Spinner size={SpinnerSize.small}/>
-                                :
-                                (
-                                    this.props.exitCode === 0 ?
-                                        <Icon iconName="SkypeCircleCheck" style={{ color: "#7FBA00", width: 16, height: 16, userSelect: "none" }}></Icon>
-                                        :
-                                        <Icon iconName="StatusErrorFull" style={{ color: "#ff3333", width: 16, height: 16, userSelect: "none" }}></Icon>
-                                )
+                            code === null ? "Running..." : `Exited with code: ${code}`
                         }
-                        <Text style={{ color: "#dddddd"}}>{this.props.title || "Terminal Output"}</Text>
-                        {
-                            (this.props.exitCode != null && this.props.exitCode !== 0) ?
-                                <Text style={{ color: "#dddddd" }}> - Exit code: {this.props.exitCode}</Text>
-                                :
-                                undefined
-                        }
-
-                    </Stack>
-                    <Icon
-                        iconName={this.state.collapsed ? "ChevronRightMed" : "ChevronDownMed"}
-                        style={{ color: "#dddddd", width: 16, height: 16, userSelect: "none", paddingRight: 12, paddingLeft: 12, paddingTop: 8, paddingBottom: 8 }}
-                        onClick={() => {this.onCollapseClick(!this.state.collapsed)}}
-                    ></Icon>
+                    </Text>
                 </Stack>
-                <div
-                    className="content"
-                    ref={this.terminalDiv}
-                >
-                    <Stack >
-                        <textarea
-                            onScroll={() => { this.onScroll() }}
-                            ref={this.terminalTextArea}
-                            name="terminalOutput"
-                            value={this.props.source.join("")}
-                            readOnly={true}
-                            rows={this.props.maxHeightRows || 15}
-                            className="terminal-content"
-                        />
-                        {
-                            this.props.exitCode === null ? undefined : <Text style={{ color: "#dddddd", paddingLeft: "12px", marginBottom: "8px", paddingTop: "8px", width: "100%", textAlign: "start", borderTopColor: "black", borderTopWidth: 1, borderTopStyle: "solid", }}>Finished with exit code: {this.props.exitCode}</Text>
-                        }
-                    </Stack>
-                </div>
-            </Stack>
-        );
-    }
+            </div>
+        </Stack>
+    );
+    
 }
 
-export type TerminalProps = {
+type CommonProps = {
     /**
      * The title of the terminal.
      * 
@@ -134,11 +177,22 @@ export type TerminalProps = {
      */
     title?: string,
     /**
+     * The maximum amount of rows displayed at once, before scrolling.
+     */
+    maxHeightRows?: number,
+    /**
+     * Sets if the terminal should start collapsed or not.
+     */
+    startCollapsed?: boolean
+}
+
+type StaticProps = {
+    /**
      * The source for the teminal's display. Can be either a string Observable or an array of strings.
      * 
      * Each entry should be started with `\n` if a new line is desired.
      */
-    source: string[],
+    stream: string,
     /**
      * The terminal's exit code. Determines the icon shown before the title.
      * 
@@ -147,22 +201,21 @@ export type TerminalProps = {
      * * `0` : Success
      * * `non 0 value`: Error
      */
-    exitCode?: number | null,
-    /**
-     * The maximum amount of rows displayed at once, before scrolling.
-     */
-    maxHeightRows?: number,
-    /**
-     * Sets if the terminal should start collapsed or not.
-     */
-    collapsed?: boolean,
-    /**
-     * Sets if the terminal should clear its content when receiving a `null` exitCode.
-     */
-    autoClear?: boolean,
+    exitCode: number | null,
+    startTime: number | Date,
+    exitTime: number | Date,
+    process?: never
 }
 
-interface TerminalState {
-    autoScroll: boolean,
-    collapsed: boolean
+type RemoteProcessProps = {
+    stream?: never,
+    exitCode?: never,
+    startTime?: never,
+    exitTime?: never,
+    /**
+     * A live {@link RemoteProcess} object. When this is used, static value props such as `stream` are ignored and not used.
+     */
+    process: RemoteProcess
 }
+
+type Props = CommonProps & (RemoteProcessProps | StaticProps)
