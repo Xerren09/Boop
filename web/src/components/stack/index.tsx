@@ -32,7 +32,7 @@ export default function Stack(props: StackProps) {
     );
 }
 
-interface StackProps extends React.PropsWithChildren{
+interface StackProps extends React.PropsWithChildren {
     horizontal?: boolean,
     gap?: number,
     horizontalAlign?: React.CSSProperties["alignItems"],
