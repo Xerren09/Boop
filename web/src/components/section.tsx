@@ -1,47 +1,52 @@
-import { Stack, Text } from "@fluentui/react";
+import { Text, Title3 } from '@fluentui/react-components';
 import React from "react";
+import Stack from './stack';
 
-export class SectionComponent extends React.Component<SectionComponentProps> {
-    render(): React.ReactNode {
-        return (
-            <Stack
-                horizontalAlign="start"
-                style={{
-                    width: "100%",
-                    //marginTop: 24,
-                    //backgroundColor: "white",
-                    //padding: 18,
-                    //boxShadow: "5px 5px 10px 5px #00000023"
-                }}
-            >
-                <Stack horizontal horizontalAlign="space-between" style={{ width: "100%", marginBottom: 12 }}>
-                    <Stack horizontalAlign="start">
-                        <Stack horizontal horizontalAlign="center" verticalAlign="center" tokens={{ childrenGap: 8 }}>
+export default function Section(props: SectionComponentProps) {
+    return (
+        <Stack
+            horizontalAlign="start"
+            style={{
+                width: "100%",
+                //marginTop: 24,
+                padding: 18,
+                boxShadow: "5px 5px 10px 5px #00000023",
+                borderRadius: 6
+            }}
+        >
+            <Stack horizontal horizontalAlign="space-between" verticalAlign='baseline' style={{ width: "100%", marginBottom: 12 }}>
+                <Stack horizontalAlign="start">
+                    <Stack horizontal horizontalAlign="center" verticalAlign="end" gap={8}>
+                        <Stack horizontal horizontalAlign="center" verticalAlign="center" gap={8}>
                             {
-                                this.props.title ? <Text variant="xLarge">{ this.props.title }</Text> : undefined
+                                props.icon
                             }
                             {
-                                this.props.titleExtras 
+                                props.title ? <Title3>{ props.title }</Title3> : undefined
                             }
                         </Stack>
                         {
-                            typeof this.props.subTitle === "string" ? <Text variant="small">{ this.props.subTitle }</Text> : this.props.subTitle
+                            props.titleExtras 
                         }
                     </Stack>
                     {
-                        this.props.right
+                        typeof props.subTitle === "string" ? <Text size={200}>{ props.subTitle }</Text> : props.subTitle
                     }
                 </Stack>
                 {
-                    this.props.children
+                    props.right
                 }
             </Stack>
-        );
-    }
+            {
+                props.children
+            }
+        </Stack>
+    );
 }
 
 interface SectionComponentProps extends React.PropsWithChildren {
     title?: string,
+    icon?: React.ReactNode,
     titleExtras?: React.ReactNode,
     subTitle?: React.ReactNode,
     right?: React.ReactNode,
