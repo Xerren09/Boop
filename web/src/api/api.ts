@@ -309,10 +309,19 @@ export class RemoteProcess {
     exitTime: number | null = null;
 
     /**
-     * Indicates that the process output stream is complete. If `true` while {@link exitCode} is `null`, the process never started.
+     * Indicates that the process exited.
+     * 
+     * Will also return `true` if {@link dud} is true.
      */
-    get dead(): boolean {
-        return this._output.closed;
+    get exited(): boolean {
+        return this.dud || (this._output.closed && this.exitCode !== null);
+    }
+
+    /**
+     * Indicates that this remote process was expected to start, but never did and will not start in the future.
+     */
+    get dud(): boolean {
+        return this._output.closed && this.exitCode === null;
     }
 
     constructor(cmd: string) {
