@@ -42,7 +42,7 @@ export default function DataTable(props:DataTableProps) {
             >
                 <tbody>
                     {
-                        props.rows.map((row, index) => (
+                        props.rows?.map((row, index) => (
                             <DataTableRow key={`${row.label}-${index}`} label={row.label} separator={ props.separator }>{ row.content }</DataTableRow>
                         ))
                     }
@@ -65,7 +65,7 @@ export function DataTableRow(props: DataTableRowProps) {
     )
 }
 interface DataTableProps extends React.PropsWithChildren {
-    rows: DataTableRow[],
+    rows?: DataTableRow[],
     gap?: number,
     separator?: string
 }
