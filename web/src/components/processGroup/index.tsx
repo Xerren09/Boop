@@ -70,8 +70,8 @@ export default function ProcessGroup(props: Props) {
     }, [props.processes])
 
     const startTime = (isRemoteProcessArray ? startedAt : (props.processes[0]?.startTime)) ?? 0;
-    const exitTime = (isRemoteProcessArray ? completedAt : (completedProcessListLastProcess!.exitTime)) ?? 0;
-    const groupStatus = (isRemoteProcessArray ? status : parseExitCode(completedProcessListLastProcess!.exitCode))
+    const exitTime = (isRemoteProcessArray ? completedAt : (completedProcessListLastProcess?.exitTime)) ?? 0;
+    const groupStatus = (isRemoteProcessArray ? status : parseExitCode(completedProcessListLastProcess?.exitCode ?? null))
 
     return (
         <Section
