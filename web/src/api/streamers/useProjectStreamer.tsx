@@ -62,7 +62,7 @@ export function useProjectStreamer(projectId: string, withProcess?: boolean) {
         if (socket.current !== null && socket.current.readyState === WebSocket.OPEN) {
             return;
         }
-        const ws = new WebSocket(`ws://${BoopAPI.constructApiURL(`projects/${projectId}?withProcess=${withProcess ?? false}`).toString().replace("http://", "")}`);
+        const ws = new WebSocket(`${BoopAPI.constructApiURL(`projects/${projectId}?withProcess=${withProcess ?? false}`).toString().replace("http://", "ws://")}`);
         socket.current = ws;
         ws.addEventListener("message", (message) => {
             onMessage(message.data);

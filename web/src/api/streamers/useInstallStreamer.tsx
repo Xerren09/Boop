@@ -56,7 +56,7 @@ export function useInstallStreamer(projectId: string) {
         if (_socket.current !== null && _socket.current.readyState === WebSocket.OPEN) {
             return;
         }
-        const ws = new WebSocket(`ws://${BoopAPI.constructApiURL(`projects/${projectId}/installer`).toString().replace("http://", "")}`);
+        const ws = new WebSocket(`${BoopAPI.constructApiURL(`projects/${projectId}/installer`).toString().replace("http://", "ws://")}`);
         _socket.current = ws;
         const handler = (msg: MessageEvent<unknown>) => {
             onMessage(msg.data as string);
