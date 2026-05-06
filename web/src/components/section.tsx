@@ -8,10 +8,10 @@ export default function Section(props: SectionComponentProps) {
             horizontalAlign="start"
             style={{
                 width: "100%",
-                //marginTop: 24,
                 padding: 18,
                 boxShadow: "5px 5px 10px 5px #00000023",
-                borderRadius: 6
+                borderRadius: 6,
+                ...props.style
             }}
         >
             <Stack horizontal horizontalAlign="space-between" verticalAlign='baseline' style={{ width: "100%", marginBottom: 12 }}>
@@ -50,4 +50,5 @@ interface SectionComponentProps extends React.PropsWithChildren {
     titleExtras?: React.ReactNode,
     subTitle?: React.ReactNode,
     right?: React.ReactNode,
+    style?: React.CSSProperties,
 }
