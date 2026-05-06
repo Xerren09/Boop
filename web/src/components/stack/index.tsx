@@ -10,7 +10,7 @@ function computedStyle(props: StackProps) : React.CSSProperties {
         alignItems: direction == "column" ? `${props.horizontalAlign ?? "normal"}` : `${props.verticalAlign ?? "normal"}`,
         justifyContent: direction == "column" ? `${props.verticalAlign ?? "normal"}` : `${props.horizontalAlign ?? "normal"}`,
         height: props.verticalFill == true ? `100%` : "auto",
-        widows: props.horizontalFill == true ? `100%` : "auto"
+        width: props.horizontalFill == true ? `100%` : "auto"
     }
 
     if (props.verticalFill) {
