@@ -153,7 +153,10 @@ export class BoopProject {
 async function makeRequest<T>(url: string | URL, method: "GET" | "POST" | "DELETE" | "PATCH", body?: object) : Promise<T | undefined> {
     const response = await fetch(url, {
         method: method,
-        body: body ? JSON.stringify(body) : undefined
+        body: body ? JSON.stringify(body) : undefined,
+        headers: body ? {
+            "Content-Type": "application/json",
+        } : undefined
     });
     try {
         const typeHeader = response.headers.get("content-type");
