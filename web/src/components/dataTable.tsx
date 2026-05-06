@@ -23,6 +23,7 @@ export default function DataTable(props:DataTableProps) {
     return (
         <Stack
             horizontalAlign="start"
+            horizontalFill
             style={{
                 width: "100%",
                 paddingTop: 12,
