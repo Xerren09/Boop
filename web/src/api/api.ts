@@ -104,7 +104,7 @@ export class BoopProject {
     }
 
     setEnv(envKey: string, value: string) {
-        return makeRequest<void>(this.getRequestUrl("env"), "PATCH", { [envKey]: value });
+        return makeRequest<void>(this.getRequestUrl("env"), "PATCH", { key: envKey, value: value });
     }
 
     deleteEnv(envKey: string) {
