@@ -54,7 +54,7 @@ export default function TerminalHeader(props: HeaderProps) {
                 verticalAlign="center"
             >
                 {
-                    props.startTime !== undefined ? <Runtime short start={props.startTime} end={props.exitCode == null ? undefined :  props.exitTime}></Runtime> : null
+                    props.startTime !== undefined ? <Runtime short start={props.startTime} end={props.exitCode == null ? undefined :  props.exitTime} style={{color: "#dddddd"}}></Runtime> : null
                 }
                 {
                     props.collapsed ? 
