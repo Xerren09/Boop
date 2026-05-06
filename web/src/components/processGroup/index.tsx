@@ -99,7 +99,7 @@ export default function ProcessGroup(props: Props) {
                                 <Terminal
                                     key={`${process.cmd}-${idx}`}
                                     title={process.cmd}
-                                    startCollapsed
+                                    startCollapsed={ props.startCollapsed }
                                     process={process}
                                 />
                             )
@@ -109,7 +109,7 @@ export default function ProcessGroup(props: Props) {
                                 <Terminal
                                     key={`${process.cmd}-${idx}`}
                                     title={process.cmd}
-                                    startCollapsed
+                                    startCollapsed={ props.startCollapsed }
                                     startTime={process.startTime ?? 0}
                                     exitTime={process.exitTime ?? 0}
                                     exitCode={process.exitCode}
@@ -127,7 +127,8 @@ export default function ProcessGroup(props: Props) {
 interface Props {
     title: string,
     subtitle?: React.ReactNode,
-    processes: CompletedProcess[] | RemoteProcess[]
+    processes: CompletedProcess[] | RemoteProcess[],
+    startCollapsed?: boolean;
 }
 
 export interface CompletedProcess extends Omit<RemoteProcess, "output" | "dispatch" | "dead">{
