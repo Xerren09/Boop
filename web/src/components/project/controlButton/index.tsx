@@ -37,16 +37,14 @@ export default function ProjectControlButton(props: Props) {
 
     const projectId: string | undefined = project ? project.name : props.projectId;
 
-    // FIXME: this should be just !projectId
-    if (project !== null && !project && !props.projectId) {
+    if (!projectId) {
         throw new Error(`Prop "projectId" must be given if no "ProjectProvider" context is available.`);
     }
 
     const invokeCallback = async () => {
         try {
             setBusy(true);
-            // FIXME: remove ! from projectId
-            await fetch(getAPICallURL(projectId!, props.action), { method: "POST"});
+            await fetch(getAPICallURL(projectId, props.action), { method: "POST"});
             if (props.onSettled) {
                 props.onSettled();
             }
