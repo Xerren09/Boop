@@ -84,7 +84,6 @@ interface Props extends React.PropsWithChildren {
      * If set the text will read "<time> ago", instead of just the time. Ignored when {@link end} is set.
      */
     since?: boolean,
-    // TODO: short
     short?: boolean,
     style?: React.CSSProperties
 }
