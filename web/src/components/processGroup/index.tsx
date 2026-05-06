@@ -91,7 +91,7 @@ export default function ProcessGroup(props: Props) {
                 (exitTime !== 0) ? <Runtime since start={exitTime}></Runtime> : null
             }
         >
-            <Stack gap={12} style={{width: "100%"}}>
+            <Stack gap={12} horizontalFill>
                 {
                     props.processes.map((process, idx) => {
                         if (process instanceof RemoteProcess) {
