@@ -24,6 +24,9 @@ export type Status = "ok" | "error" | "warning" | "pending";
 
 export type StatusIconProps = {
     status: Status,
+    /**
+     * Default: `small`.
+     */
     size?: Size,
 }
 
