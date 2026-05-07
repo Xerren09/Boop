@@ -8,7 +8,9 @@ export const ProjectProvider = createContext<BoopProject | null>(null);
 
 export class BoopAPI {
     static _origin: URL = new URL(window.location.origin);
-
+    static get origin() {
+        return this._origin;
+    }
     static _apiURL: URL = new URL(apiPathFragment, this._origin);
     static get apiUrl() {
         return this._apiURL;
@@ -60,12 +62,14 @@ export class BoopProject {
     readonly remote: string;
     readonly type: ProjectType;
     readonly baseUrl: URL;
+    readonly proxyUrl: URL;
 
     constructor(name: string, remote: string, type: ProjectType) {
         this.name = name;
         this.remote = remote;
         this.type = type;
         this.baseUrl = BoopAPI.constructApiURL(`projects/${this.name}/`);
+        this.proxyUrl = new URL(name, BoopAPI.origin);
     }
 
     private getRequestUrl(path: string, qparams?: { [key: string]: number | string, }): URL {
