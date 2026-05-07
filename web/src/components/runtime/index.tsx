@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Text, Tooltip } from "@fluentui/react-components";
 
-function calcInitialValue(props: Props) {
-    const start = typeof (props.start) === "number" ? props.start : props.start.getTime();
-    const end = typeof (props.end) === "number" ? props.end : props.end?.getTime();
+function calcInitialValue(start: number | Date, end?: number | Date) {
+    const startMs = typeof (start) === "number" ? start : start.getTime();
+    const endMs = typeof (end) === "number" ? end : end?.getTime();
 
-    const ret = Math.floor((end == undefined ? (Date.now() - start) : (end - start)) / 1000);
+    const ret = Math.floor((endMs == undefined ? (Date.now() - startMs) : (endMs - startMs)) / 1000);
     return ret;
 }
 
@@ -15,21 +15,21 @@ function getTimeString(counter: number, short?: boolean) {
     const day = Math.floor(counter / 86400);
     const year = Math.floor(counter / 31536000);
 
-    if (counter <= 60) 
+    if (counter < 60) 
         return short ? `${counter}s` : `${counter} seconds`
-    if ((counter > 60) && (counter < 3600)) 
-        return short ? `${String(minute).padStart(2, "0")}:${String(Math.floor(counter % 60)).padStart(2, "0")}` : `${minute} minute${minute > 1 ? "s" : ""} ${Math.floor(counter % 60)} seconds`
+    if ((counter >= 60) && (counter < 3600)) 
+        return short ? `${String(minute).padStart(2, "0")}:${String(Math.floor(counter % 60)).padStart(2, "0")}` : `${minute} minute${minute > 1 ? "s" : ""}`
     if ((counter > 3600) && (counter < 86400))
-        return short ? `${String(hour).padStart(2, "0")}:${String(Math.floor((counter % 3600) / 60)).padStart(2, "0")}:${String(Math.floor(counter % 60)).padStart(2, "0")}` : `${hour} hour${hour > 1 ? "s" : ""} ${Math.floor((counter % 3600) / 60)} minutes`
+        return short ? `${String(hour).padStart(2, "0")}:${String(Math.floor((counter % 3600) / 60)).padStart(2, "0")}:${String(Math.floor(counter % 60)).padStart(2, "0")}` : `${hour} hour${hour > 1 ? "s" : ""}`
     if ((counter > 86400) && ((counter < 31536000) || short == true)) 
-        return short ? `${String(day).padStart(2, "0")}:${String(Math.floor((counter % 86400) / 3600)).padStart(2, "0")}:${String(Math.floor(((counter % 86400) % 3600) / 60)).padStart(2, "0")}:${String(Math.floor((((counter % 86400) % 3600) % 60) % 60)).padStart(2, "0")}` : `${day} day${day > 1 ? "s" : ""} ${Math.floor((counter % 86400) / 3600)} hours`
+        return short ? `${String(day).padStart(2, "0")}:${String(Math.floor((counter % 86400) / 3600)).padStart(2, "0")}:${String(Math.floor(((counter % 86400) % 3600) / 60)).padStart(2, "0")}:${String(Math.floor((((counter % 86400) % 3600) % 60) % 60)).padStart(2, "0")}` : `${day} day${day > 1 ? "s" : ""}`
     if (counter > 31536000) 
         return `${year} year${year > 1 ? "s" : ""}`
     return "";
 }
 
 export default function Runtime(props: Props) {
-    const [counter, setCounter] = useState<number>(() => calcInitialValue(props));
+    const [counter, setCounter] = useState<number>(() => calcInitialValue(props.start, props.end));
     
     const timestamp = useMemo(() => {
         const date = new Date(props.start);
@@ -51,8 +51,8 @@ export default function Runtime(props: Props) {
 
     useEffect(() => {
         //eslint-disable-next-line react-hooks/set-state-in-effect
-        setCounter(() => calcInitialValue(props));
-    }, [props.start])
+        setCounter(() => calcInitialValue(props.start, props.end));
+    }, [props.start, props.end])
 
     return (
         <Tooltip content={ timestamp } relationship="label">
