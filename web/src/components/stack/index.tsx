@@ -13,14 +13,6 @@ function computedStyle(props: StackProps) : React.CSSProperties {
         width: props.horizontalFill == true ? `100%` : "auto"
     }
 
-    if (props.verticalFill) {
-        ret.height = props.verticalFill == true ? `100%` : "auto";
-    }
-
-    if (props.horizontalFill) {
-        ret.height = props.horizontalFill == true ? `100%` : "auto"
-    }
-
     return ret;
 }
 
