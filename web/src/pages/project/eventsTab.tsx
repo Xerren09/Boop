@@ -83,8 +83,13 @@ export default function ProjectWebhookEventsTab() {
     }, [project]);
 
     return(
-        <Section>
-            <Stack horizontalFill>
+        <Section
+            style={{
+                marginBottom: 22,
+                height: "100%"
+            }}
+        >
+            <Stack horizontalFill verticalFill>
                 <Table noNativeElements >
                     <TableHeader>
                         <TableRow>
