@@ -18,7 +18,7 @@ function computedStyle(props: StackProps) : React.CSSProperties {
 
 export default function Stack(props: StackProps) {
     return (
-        <div className={styles.stack} style={{...props.style, ...computedStyle(props)}}>
+        <div className={styles.stack} style={{...computedStyle(props), ...props.style}}>
             {props.children}
         </div>
     );
