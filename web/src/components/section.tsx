@@ -6,6 +6,7 @@ export default function Section(props: SectionComponentProps) {
     return (
         <Stack
             horizontalAlign="start"
+            horizontalFill
             style={{
                 width: "100%",
                 padding: 18,
