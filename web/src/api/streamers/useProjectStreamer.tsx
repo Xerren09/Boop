@@ -42,6 +42,9 @@ export function useProjectStreamer(projectId: string, withProcess?: boolean) {
                 if (message.success == false) {
                     setStatus("installFailed");
                 }
+                else {
+                    setStatus("installSuccess");
+                }
                 break;
             }
             case "deploy": {
