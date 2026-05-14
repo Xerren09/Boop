@@ -23,8 +23,10 @@ createRoot(document.getElementById('root')!).render(
             >
                 <Stack
                     horizontalAlign="center"
+                    horizontalFill
+                    verticalFill
                 >
-                    <Stack gap={16} style={{ maxWidth: "75vw" }}>
+                    <Stack gap={16} style={{ maxWidth: "75vw" }} horizontalFill verticalFill>
                         <BrowserRouter>
                             <Routes>
                                 <Route path="/" Component={FrontPage}/>
