@@ -266,8 +266,8 @@ export interface InstallerLog {
         cmd: string,
         log: string,
         exitCode: number | null,
-        start: number,
-        end: number
+        startTime: number,
+        exitTime: number
     }[]
 }
 
