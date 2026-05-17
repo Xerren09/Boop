@@ -46,9 +46,9 @@ export default function ProjectWebhookEventsTab() {
         return events.reverse().map((event) => (
             <TableRow key={event.time}>
                 <TableCell>
-                    <Stack horizontalAlign="space-between" horizontal verticalAlign="center" horizontalFill gap={8}>
+                    <Stack horizontal verticalAlign="center" horizontalFill gap={8}>
                         {
-                            event.security.valid == false  && <Tooltip content={<Text>Could not verify the authenticty of this event. This may be due to Boop being started with the <code>DISABLE_WEBHOOK_SECURITY</code> environment variable, or if there was no <code>SECRET</code> set.</Text>} relationship="label"><WarningColor /></Tooltip>
+                            event.security.valid == false  && <Tooltip content={<Text>Could not verify the authenticty of this event. This may be due to Boop being started with the <code>DISABLE_WEBHOOK_SECURITY</code> environment variable, or if there was no <code>SECRET</code> set.</Text>} relationship="label"><WarningColor fontSize={20}/></Tooltip>
                         }
                         <Text>{event.type}</Text>
                     </Stack>
