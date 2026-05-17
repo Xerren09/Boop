@@ -6,6 +6,7 @@ import { Text } from "@fluentui/react-components";
 import ProjectLogSelect from "../../components/projectLogSelect";
 import { ProjectProvider, type EventLog } from "../../api/api";
 import { useContext, useState } from "react";
+import StatusIcon from "../../components/statusIcon";
 
 const statusHeadingMap: { [key in NonNullable<InstallerStatus>]: string } = {
     "pending": "Installing",
@@ -67,6 +68,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
         <Stack horizontalFill gap={24}>
             <Section
                 title={statusHeadingMap[status]}
+                icon={<StatusIcon status={ status } />}
                 right={ <ProjectLogSelect install onSelect={onSelect}/> }
             >
                 <Text>
@@ -75,7 +77,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
             </Section>
             
             <RemoteProcessGroup
-                title="Installer"
+                title="Steps"
                 subtitle={<Text>{ triggerEvent }</Text>}
                 processes={processList}
                 onTerminalContentRequest={onTerminalContentRequested}
