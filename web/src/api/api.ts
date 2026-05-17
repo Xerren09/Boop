@@ -315,6 +315,8 @@ export class RemoteProcess {
     startTime: number | null = null;
     exitTime: number | null = null;
 
+    killed: boolean = false;
+
     /**
      * Indicates that the process exited.
      * 
@@ -347,6 +349,7 @@ export class RemoteProcess {
                 this.exitCode = message.exitCode;
                 // Special case to signal that the process will never start, but we want it to be dead.
                 this.exitTime = message.time == 0 ? null : message.time;
+                this.killed = message.killed;
                 this._output.complete();
                 break;
             }

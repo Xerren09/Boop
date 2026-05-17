@@ -18,7 +18,8 @@ export type ProcessStateMessage = {
 } | {
     type: "processExit",
     exitCode: number | null,
-    time: number
+    time: number,
+    killed: boolean,
 } | {
     type: "processOutput",
     output: string
