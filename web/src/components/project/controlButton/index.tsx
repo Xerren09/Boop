@@ -34,6 +34,7 @@ function getAPICallURL(projectId: string, action: ButtonAction) {
 export default function ProjectControlButton(props: Props) {
     const project = useContext(ProjectProvider);
     const [busy, setBusy] = useState<boolean>(false);
+    const [tooltipEnabled, setTooltipEnabled] = useState<boolean>(false);
 
     const projectId: string | undefined = project ? project.name : props.projectId;
 
@@ -63,7 +64,14 @@ export default function ProjectControlButton(props: Props) {
     const buttonInfo = buttonTypes[props.action];
 
     return (
-        <Tooltip content={buttonInfo.label} relationship="label">
+        <Tooltip
+            content={buttonInfo.label}
+            relationship="label"
+            visible={(tooltipEnabled && (props.hideLabel ?? false))}
+            onVisibleChange={
+                (_ev, data) => setTooltipEnabled(data.visible)
+            }
+        >
             {/* 
             //@ts-expect-error ...props */}
             <Button
