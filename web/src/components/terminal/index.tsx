@@ -118,6 +118,8 @@ export default function Terminal(props: Props) {
         }
     }, [autoScroll, textArea]);
 
+    const exitCode = props.process ? code : props.exitCode;
+
     return (
         <Stack
             style={{ width: "100%", backgroundColor: "#2d3436", borderRadius: "8px" }}
@@ -126,7 +128,7 @@ export default function Terminal(props: Props) {
                 title={props.title}
                 collapsed={ collapsed }
                 onCollapse={ onCollapseClick }
-                exitCode={props.process ? code : props.exitCode}
+                exitCode={exitCode}
                 startTime={props.process ? (startTime == 0 ? undefined : startTime) : props.startTime}
                 exitTime={props.process ? (exitTime == 0 ? undefined : exitTime) : props.exitTime}
             />
@@ -139,7 +141,7 @@ export default function Terminal(props: Props) {
                         onScroll={ onScroll }
                         ref={textArea}
                         name="terminalOutput"
-                        value={props.process ? props.stream : ""}
+                        value={props.process ? undefined : (props.stream ?? "")}
                         readOnly={true}
                         rows={props.maxHeightRows ?? 15}
                         className="terminal-content"
@@ -159,7 +161,7 @@ export default function Terminal(props: Props) {
                         }}
                     >
                         {
-                            code === null ? "Running..." : `Exited with code: ${code}`
+                            exitCode === null ? "Running..." : `Exited with code: ${exitCode}`
                         }
                     </Text>
                 </Stack>
@@ -188,11 +190,11 @@ type CommonProps = {
 
 type StaticProps = {
     /**
-     * The source for the teminal's display. Can be either a string Observable or an array of strings.
+     * The source for the teminal's display.
      * 
      * Each entry should be started with `\n` if a new line is desired.
      */
-    stream: string,
+    stream: string | null,
     /**
      * The terminal's exit code. Determines the icon shown before the title.
      * 
