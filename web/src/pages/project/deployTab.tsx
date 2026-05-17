@@ -62,7 +62,7 @@ export default function ProjectDeployTab(props: { status: ProjectStatus, process
                 }            
             </Section>
             {
-                props.process ? <RemoteProcessGroup title="Deploy" processes={[props.process]}/> : null
+                props.process ? <RemoteProcessGroup title="Service" processes={[props.process]}/> : null
             }
         </Stack>    
     );
