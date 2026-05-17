@@ -141,15 +141,15 @@ export class BoopProject {
         return ret ?? [];
     }
 
-    getInstallLog(log: string) : Promise<InstallerLog>
-    getInstallLog(log: string, step: number) : Promise<string>
-    getInstallLog(log: string, step?: number) : Promise<InstallerLog | string | undefined> {
+    getInstallLog(log: number) : Promise<InstallerLog>
+    getInstallLog(log: number, step: number) : Promise<string>
+    getInstallLog(log: number, step?: number) : Promise<InstallerLog | string | undefined> {
         // logs/install/:log
         if (step === undefined) {
-            return makeRequest<InstallerLog>(this.getRequestUrl(`logs/deploy/${log}`), "GET");
+            return makeRequest<InstallerLog>(this.getRequestUrl(`logs/install/${log}`), "GET");
         }
         else {
-            return makeRequest<string>(this.getRequestUrl(`logs/deploy/${log}`, { step }), "GET");
+            return makeRequest<string>(this.getRequestUrl(`logs/install/${log}`, { step }), "GET");
         }
     }
 }
