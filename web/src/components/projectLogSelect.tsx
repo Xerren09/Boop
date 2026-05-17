@@ -1,4 +1,4 @@
-import { Divider, Dropdown, Option, type ComboboxOpenChangeData, type ComboboxOpenEvents } from "@fluentui/react-components";
+import { Divider, Dropdown, Listbox, Option, type ComboboxOpenChangeData, type ComboboxOpenEvents } from "@fluentui/react-components";
 import { useContext, useState } from "react";
 import { ProjectProvider, type EventLog } from "../api/api";
 
@@ -49,13 +49,15 @@ export default function ProjectLogSelect(props: Props) {
                 }
             }}
         >
-            <Option value="live">Live</Option>
-            <Divider></Divider>
-            <Option value="latest">Latest</Option>
-            <Divider></Divider>
-            {
-                options.map((file, index) => <Option key={file.time} value={`${index}`}>{new Date(file.time).toLocaleString()}</Option>)
-            }
+            <Listbox style={{maxHeight: "50vh"}}>
+                <Option value="live">Live</Option>
+                <Divider></Divider>
+                <Option value="latest">Latest</Option>
+                <Divider></Divider>
+                {
+                    options.map((file, index) => <Option key={file.time} value={`${index}`}>{new Date(file.time).toLocaleString()}</Option>)
+                }
+            </Listbox>
         </Dropdown>
     );
 }
