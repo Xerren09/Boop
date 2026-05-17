@@ -56,7 +56,7 @@ export default function ProjectWebhookEventsTab() {
                 <TableCell>
                     {
                         event.commit.id ? (
-                            <Link href={event.commit.url!} target="_blank">{event.commit.id}@{event.repository.branch}</Link>
+                            <Link href={event.commit.url!} target="_blank">{event.commit.id.substring(0, 7)}@{event.repository.branch}</Link>
                         )
                             :
                         "---"
