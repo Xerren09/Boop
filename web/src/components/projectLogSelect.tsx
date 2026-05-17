@@ -50,6 +50,7 @@ export default function ProjectLogSelect(props: Props) {
             }}
         >
             <Option value="live">Live</Option>
+            <Divider></Divider>
             <Option value="latest">Latest</Option>
             <Divider></Divider>
             {
