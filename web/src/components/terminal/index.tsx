@@ -68,6 +68,23 @@ export default function Terminal(props: Props) {
         setCollapsed(_collapsed);
     }
 
+    /**
+     * Effect for lazy loading content when using props.stream. By default terminals start collapsed, so we don't need the content right away.
+     * When the terminal is expanded, request the content to be loaded.
+     * 
+     * NOTE: this only applies when props.stream is used, otherwise the content is pulled from props.process.
+     */
+    useEffect(() => {
+        if (props.stream === null && collapsed === false) {
+            if (props.onContentRequested) {
+                props.onContentRequested();
+            }
+        }
+    }, [props.stream, props.onContentRequested, collapsed]);
+
+    /**
+     * Effect for handling a RemoteProcess passed via props.process. This will hook the process up to the terminal's state.
+     */
     useEffect(() => {
         if (props.process == undefined) {
             return;
@@ -103,6 +120,9 @@ export default function Terminal(props: Props) {
         }
     }, [props.process]);
 
+    /**
+     * Effect for handling the collapse / expansion of the terminal.
+     */
     useEffect(() => {
         if (container.current) {
             //@ts-expect-error Set to null is valid
@@ -110,6 +130,9 @@ export default function Terminal(props: Props) {
         }
     }, [collapsed, container]);
 
+    /**
+     * Autoscroll.
+     */
     useEffect(() => {
         if (textArea.current) {
             if (autoScroll === true) {
@@ -189,7 +212,13 @@ type CommonProps = {
     /**
      * Sets if the terminal should start collapsed or not.
      */
-    startCollapsed?: boolean
+    startCollapsed?: boolean,
+    /**
+     * Called when the terminal is expanded and its static {@link StaticProps.stream} property is `null`.
+     * 
+     * The steam property's value should then be updated with the actual terminal output.
+     */
+    onContentRequested?: () => void,
 }
 
 type StaticProps = {
