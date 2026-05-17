@@ -122,7 +122,7 @@ export default function Terminal(props: Props) {
 
     return (
         <Stack
-            style={{ width: "100%", backgroundColor: "#2d3436", borderRadius: "8px" }}
+            style={{ width: "100%", backgroundColor: `#242424`, borderRadius: "8px" }}
         >
             <TerminalHeader
                 title={props.title}
@@ -146,6 +146,10 @@ export default function Terminal(props: Props) {
                         rows={props.maxHeightRows ?? 15}
                         className="terminal-content"
                         placeholder="Waiting for process output..."
+                        style={{
+                            backgroundColor: "black",
+                            color: "white"
+                        }}
                     />
                     <Text
                         style={{
