@@ -117,6 +117,11 @@ export default function ProcessGroup(props: Props) {
                                     exitTime={process.exitTime ?? 0}
                                     exitCode={process.exitCode}
                                     stream={process.output}
+                                    onContentRequested={() => {
+                                        if (props.onTerminalContentRequest) {
+                                            props.onTerminalContentRequest(idx);
+                                        }
+                                    }}
                                 />
                             )
                         }
@@ -132,6 +137,7 @@ interface Props {
     subtitle?: React.ReactNode,
     processes: CompletedProcess[] | RemoteProcess[],
     startCollapsed?: boolean;
+    onTerminalContentRequest?: (processIndex: number) => void;
 }
 
 export interface CompletedProcess extends Pick<RemoteProcess, "cmd" | "exitCode" | "exitTime" | "startTime">{
