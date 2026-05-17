@@ -102,9 +102,17 @@ export class BoopProject {
         return makeRequest(this.getRequestUrl("restart"), "POST");
     }
 
-    async getEnv() : Promise<ProjectEnv | null> {
-        const ret = await makeRequest<ProjectEnv>(this.getRequestUrl("env"), "GET");
-        return ret ?? null;
+    async getEnv() : Promise<ProjectEnv | null>
+    async getEnv(key: string) : Promise<string | null>
+    async getEnv(key?: string): Promise<ProjectEnv | string | null> {
+        if (key !== undefined) {
+            const ret = await makeRequest<string>(this.getRequestUrl(`env/${key}`), "GET");
+            return ret ?? null;
+        }
+        else {
+            const ret = await makeRequest<ProjectEnv>(this.getRequestUrl("env"), "GET");
+            return ret ?? null;
+        }
     }
 
     setEnv(envKey: string, value: string) {
