@@ -1,155 +1,64 @@
-import { DetailsList, DetailsListLayoutMode, IColumn, Icon, SelectionMode, Stack, Text, Link } from "@fluentui/react";
-import React from "react";
-import TimeAgo from 'react-timeago';
-import { DataTable } from "../../components/dataTable";
-import { SectionComponent } from "../../components/section";
-import { Link as RouterLink } from "react-router-dom";
-import { getApiString } from "../../util";
+import { useEffect, useMemo, useState } from "react";
+import ProjectList from "../../components/project/list";
+import Stack from "../../components/stack";
+import { Button, Caption1, LargeTitle, Link, Subtitle2 } from "@fluentui/react-components";
+import Runtime from "../../components/runtime";
+import { BoopAPI, type BoopStatus, type ProjectEntry } from "../../api/api";
+import { ArrowSyncRegular } from "@fluentui/react-icons";
+import Section from "../../components/section";
 
-export class FrontPageComponent extends React.Component<{}, ProjectListState> {
+export function FrontPage() {
 
-    state: ProjectListState = {
-        items: [],
-        status: {
-            uptime: 0,
-            projects: 0,
-            system: "unknown",
-            nodeVer: "unknown"
-        },
-        columns: [
-            {
-                key: "deployed",
-                name: "Deployed",
-                minWidth: 25,
-                maxWidth: 75,
-                fieldName: "deployed",
-                onRender: (item: ProjectItem) => (
-                    <Stack horizontalAlign="start" verticalAlign="center" style={{height: "100%"}}>
-                        {
-                            item.deployed === true ?
-                                <Icon iconName="SkypeCircleCheck" style={{ color: "#7FBA00", fontSize: 16, userSelect: "none" }}></Icon>
-                                :
-                                <Icon iconName="StatusErrorFull" style={{ color: "#ff3333", fontSize: 16, userSelect: "none" }}></Icon>
-                        }
-                    </Stack>
-                ),
-            },
-            {
-                key: "name",
-                name: "Name",
-                isRowHeader: true,
-                minWidth: 90,
-                maxWidth: 350,
-                fieldName: "name",
-                onRender: (item: ProjectItem) => (
-                    <RouterLink to={ `/${item.name}` } style={{textDecoration: "none" }}><Link>{ item.name }</Link></RouterLink>
-                )
-            },
-            {
-                key: "type",
-                name: "Type",
-                minWidth: 50,
-                fieldName: "type"
-            },
-            {
-                key: "lastEvent",
-                name: "Last Event",
-                minWidth: 90,
-                fieldName: "lastEvent",
-                onRender: (item: ProjectItem) => (
-                    <TimeAgo date={item.lastEvent}></TimeAgo>
-                )
-            }
-        ]
+    const [status, setStatus] = useState<BoopStatus | null>(null);
+    const [projects, setProjects] = useState<ProjectEntry[]>([]);
+
+    function updateProjectList() {
+        BoopAPI.getProjectList().then(list => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            setProjects(_ => list);
+        })
     }
 
-    componentDidMount(): void {
-        window.document.title = "Boop - Dashboard";
-        fetch(`${getApiString()}/projects`).then(res => {
-            if (res.ok) {
-                res.json().then((list: any[]) => {
-                    this.setState({
-                        items: list.map(el => ({
-                            name: el.name,
-                            lastEvent: el.lastEvent,
-                            type: el.type,
-                            deployed: el.deployed
-                        }))
-                    });
-                });
+    useEffect(() => {
+        window.document.title = "Dashboard | Boop";
+        const interval = setInterval(() => {
+            updateProjectList();
+        }, 15000);
+        BoopAPI.getStatus().then(status => {
+            if (status) {
+                setStatus(status);
             }
         });
-        fetch(`${getApiString()}/status`).then(res => {
-            if (res.ok) {
-                res.json().then((status: any) => {
-                    this.setState({
-                        status: {
-                            ...status
-                        }
-                    });
-                });
-            }
-        });
-    }
+        updateProjectList();
+        return () => { 
+            clearInterval(interval);
+        }
+    }, []);
 
-    render(): React.ReactNode {
-        return (
-            <Stack style={{width: "100%"}} tokens={{childrenGap: 24}}>
-                <SectionComponent title="System">
-                    <Stack style={{width: "100%", marginBottom: 12}}>
-                        <DataTable
-                            rows={[
-                                {
-                                    label: "OS",
-                                    content: <Text>{ this.state.status.system }</Text>
-                                },
-                                {
-                                    label: "Node version",
-                                    content: <Text>{ this.state.status.nodeVer }</Text>
-                                },
-                                {
-                                    label: "Started",
-                                    content: <Text><TimeAgo date={Date.now() - this.state.status.uptime}></TimeAgo></Text>
-                                },
-                                {
-                                    label: "Projects",
-                                    content: <Text>{ this.state.status.projects }</Text>
-                                }
-                            ]}
-                        />
-                    </Stack>
-                </SectionComponent>
-                <SectionComponent title="Projects">
-                    <Stack style={{width: "100%", marginBottom: 12}}>
-                        <DetailsList
-                            items={this.state.items}
-                            columns={this.state.columns}
-                            selectionMode={SelectionMode.none}
-                            setKey="none"
-                            layoutMode={DetailsListLayoutMode.justified}
-                            isHeaderVisible={true}
-                        />
-                    </Stack>
-                </SectionComponent>
+    const startupTime = useMemo(() => {
+        // eslint-disable-next-line react-hooks/purity
+        return status ? Date.now() - (status.uptime * 1000) : 0;
+    }, [status])
+
+    return (
+        <>
+            <Stack gap={36} style={{
+                padding: 12
+            }}>
+                <Stack>
+                    <LargeTitle style={{color: "#00abec"}}>Boop!</LargeTitle>
+                    <Subtitle2><Link href="https://github.com/Xerren09/Boop" target="_blank">A lightweight NodeJS CI/CD server for GitHub repositories</Link></Subtitle2>
+                    <Caption1 italic>Node { status?.nodeVer }  //  { status?.system }-{ status?.arch }  //  <Runtime short start={startupTime}/></Caption1>
+                </Stack>
+                <Section
+                    title="Projects"
+                    right={
+                        <Button icon={<ArrowSyncRegular/>} onClick={updateProjectList} appearance="subtle"></Button>
+                    }
+                >
+                    <ProjectList projects={projects}/>
+                </Section>
             </Stack>
-        );
-    }
-}
-
-interface ProjectListState {
-    items: ProjectItem[];
-    status: {
-        projects: number,
-        uptime: number,
-        nodeVer: string,
-        system: string
-    },
-    columns: IColumn[]
-}
-
-interface ProjectItem {
-    name: string;
-    lastEvent: number;
-    type: string;
-    deployed: boolean;
+        </>
+    );
 }
