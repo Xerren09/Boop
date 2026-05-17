@@ -41,7 +41,7 @@ export function useInstallStreamer(projectId: string) {
                 setStatus(() => message.success ? "ok" : "error");
                 for (let index = _step.current + 1; index < _steps.current.length; index++) {
                     const step = _steps.current[index];
-                    step.dispatch({ type: "processExit", exitCode: null, time: 0 });
+                    step.dispatch({ type: "processExit", exitCode: null, time: 0, killed: false });
                 }
                 _step.current = -1;
                 break;
