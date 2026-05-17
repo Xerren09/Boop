@@ -1,289 +1,290 @@
-import React, { useEffect, useState } from "react";
-import { getApiString } from "../../util";
-import { CommandBar, DefaultButton, DetailsList, DetailsListLayoutMode, Dialog, DialogFooter, DialogType, IColumn, ICommandBarItemProps, IconButton, PrimaryButton, SelectionMode, Stack, Text, TextField } from "@fluentui/react";
+import { useContext, useEffect, useMemo, useState } from "react";
+import {
+    Toolbar,
+    Dialog,
+    Text,
+    Button,
+    DialogTrigger,
+    DialogActions,
+    DialogBody,
+    DialogContent,
+    DialogSurface,
+    DialogTitle,
+    Switch,
+    Input,
+    ToolbarGroup,
+    Table,
+    TableBody,
+    TableHeader,
+    TableRow,
+    TableHeaderCell,
+    TableCell,
+    TableCellLayout,
+    TableCellActions
+} from "@fluentui/react-components";
+import { AddRegular, CheckmarkRegular, DeleteRegular, DismissRegular, EditOffRegular, EditRegular, EyeFilled, EyeOffFilled } from "@fluentui/react-icons";
+import Stack from "../../components/stack";
+import { ProjectProvider } from "../../api/api";
+import Section from "../../components/section";
 
-export class EnvironmentVariableEditor extends React.Component<{ projectId: string, dismiss: () => void }, EnvState> {
-    
-    state: Readonly<EnvState> = {
-        items: [],
-        columns: [
-            {
-                key: "name",
-                name: "Name",
-                minWidth: 100,
-                maxWidth: 250,
-                currentWidth: 100,
-                isResizable: true,
-                onRender: (item: EnvEntry) => (
-                    <Stack verticalFill verticalAlign="center">
-                        <Text>{ item.key }</Text>
-                    </Stack>
-                ),
-            },
-            {
-                key: "value",
-                name: "Value",
-                minWidth: 150,
-                isResizable: true,
-                onRender: (item: EnvEntry) => (
-                    <EnvValue
-                        item={item}
-                        visible={this.state.showAll}
-                        onValueChange={this.onKeyUpdate}
-                    ></EnvValue>
-                ),
-            },
-            {
-                key: "delete",
-                name: "Delete",
-                minWidth: 75,
-                maxWidth: 75,
-                onRender: (item: EnvEntry) => (
-                    <Stack verticalFill verticalAlign="center">
-                        <IconButton
-                            iconProps={{ iconName: "Delete" }}
-                            onClick={() => {
-                                const items = [...this.state.items];
-                                const index = items.findIndex(el => el.key === item.key);
-                                if (index != -1) {
-                                    items.splice(index, 1);
-                                    this.setState({
-                                        items: [...items]
-                                    });
-                                }
-                            }}
-                        ></IconButton>
-                    </Stack>
-                ),
-            }
-        ],
-        showAll: false,
-        hideDialog: true,
-        env: {},
-    };
+export default function EnvironmentVariableEditor() {
+    const project = useContext(ProjectProvider);
 
-    componentDidMount(): void {
-        this.getEnv();
-    }
+    const [env, setEnv] = useState<EnvironmentVariable[]>([]);
+    const [showVariables, setVariableVisibility] = useState(false);
 
-    private getEnv() {
-        fetch(`${getApiString()}/projects/${this.props.projectId}/env`).then(res => {
-            res.json().then(env => {
-                this.setState({
-                    items: Object.keys(env).map(el => ({
-                        key: el,
-                        value: env[el]
-                    })),
-                    env: env
-                })
-            });
-        })
-    }
-
-    private onKeyUpdate = (key: string, value: string) => {
-        const items = [...this.state.items];
-        const index = items.findIndex(el => el.key === key);
-        if (index != -1) {
-            items[index].value = value;
-        }
-        else {
-            items.push({ key: key, value: value });
-        }
-        this.setState({
-            items: [...items]
-        });
-    }
-
-    private saveKeys() {
-        let keys: any = {};
-        this.state.items.forEach(el => {
-            keys[el.key] = el.value;
-        });
-        for (const key of Object.keys(keys)) {
-            if (this.state.env[key] === undefined || this.state.env[key] !== keys[key]) {
-                fetch(`${getApiString()}/projects/${this.props.projectId}/env`, {
-                    method: 'POST',
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        key: key,
-                        value: keys[key]
-                    })
-                });
-            }
-        }
-        for (const key of Object.keys(this.state.env)) {
-            if (keys[key] === undefined) {
-                fetch(`${getApiString()}/projects/${this.props.projectId}/env`, {
-                    method: 'DELETE',
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        key: key
-                    })
-                });
-            }
+    async function refresh() {
+        const env = await project?.getEnv();
+        if (env) {
+            const list: EnvironmentVariable[] = Object.keys(env).map(key => ({ key: key, value: env[key] }));
+            setEnv(() => list);
         }
     }
 
-    commandBarItems: ICommandBarItemProps[] = [
-        {
-            key: 'add',
-            text: 'New environment variable',
-            iconProps: { iconName: 'Add' },
-            onClick: () => {
-                this.setState({ hideDialog: false });    
-            },
-        },
-        {
-            key: 'showAll',
-            text: 'Show values',
-            iconProps: { iconName: 'RedEye' },
-            onClick: () => {
-                this.setState({
-                    items: [...this.state.items],
-                    showAll: !this.state.showAll
-                })
-            },
-        }
-    ]
-
-    render(): React.ReactNode {
-        return (
-            <Stack style={{ width: "75vw", maxWidth: 1000, maxHeight: "75vh", padding: 16 }}>
-                <Stack horizontal horizontalAlign="space-between">
-                    <Text variant="xLarge">Environment variables</Text>
-                    <IconButton iconProps={{iconName: "Cancel"}} onClick={() => { this.props.dismiss() }}></IconButton>
-                </Stack>
-                <Text
-                    style={{marginTop: 12, marginBottom: 12}}
-                >
-                    Key-value pairs set here will be passed on to the application when deployed. These values are not encrypted and as such should be used with caution.
-                    
-                    Restart the application for changes to take effect.
-                </Text>
-                <CommandBar
-                    items={this.commandBarItems}
-                    style={{marginLeft: -24}}
-                />
-                <DetailsList
-                    styles={{root: {maxHeight: "50vh", scrollbarGutter: "stable", overflowY: "auto", overflowX: "hidden" }}}
-                    items={this.state.items}
-                    columns={this.state.columns}
-                    selectionMode={SelectionMode.none}
-                    setKey="none"
-                    layoutMode={DetailsListLayoutMode.justified}
-                    isHeaderVisible={true}
-                />
-                <Stack horizontal horizontalAlign="end" tokens={{childrenGap: 8}} style={{marginTop: 12}}>
-                    <PrimaryButton onClick={() => { this.saveKeys(); this.props.dismiss(); }} text="Save" />
-                    <DefaultButton onClick={() => { this.props.dismiss(); }} text="Don't save" />
-                </Stack>
-
-                {
-                    // ----------------------------------------
-                }
-
-                <Dialog
-                    hidden={this.state.hideDialog}
-                    dialogContentProps={{
-                        type: DialogType.normal,
-                        title: 'Enter variable name',
-                    }}
-                    onDismiss={() => {
-                        this.setState({ hideDialog: true });
-                    }}
-                >
-                    <NewVariable
-                        onDismiss={() => {
-                            this.setState({ hideDialog: true });
-                        }}
-                        onAddKey={(key: string) => {
-                            this.onKeyUpdate(key, "");
-                        }}
-                    ></NewVariable>
-                </Dialog>
-            </Stack>
-        );
+    function onDelete(key: string) {
+        project?.deleteEnv(key);
     }
-}
-
-interface EnvState {
-    items: EnvEntry[];
-    columns: IColumn[];
-    showAll: boolean;
-    hideDialog: boolean;
-    env: any;
-}
-
-interface EnvEntry {
-    key: string;
-    value: string;
-}
-
-function EnvValue(props: {item: {value: string, key: string}, visible: boolean, onValueChange: (key: string, value: string) => void}) {
-    const [visible, setVisibility] = useState(false);
 
     useEffect(() => {
-        setVisibility(props.visible);
-    }, [props.visible]);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        refresh();
+    }, []);
+
+    const rows = useMemo(() => {
+        return env.map(variable => (
+            <TableRow key={variable.key}>
+                <TableCell style={{maxWidth: "12em"}}>
+                    <Text truncate block>{ variable.key }</Text>
+                </TableCell>
+                <EnvironmentVariable
+                    envKey={variable.key}
+                    value={variable.value}
+                    visible={showVariables}
+                    onValueChange={() => {
+                        refresh();
+                    }}
+                    onDelete={() => {
+                        onDelete(variable.key);
+                    }}
+                />
+            </TableRow>
+        ));
+    }, [env, showVariables])
 
     return (
-        <Stack horizontal horizontalAlign="stretch" verticalAlign="center" tokens={{childrenGap: 8}} style={{height: "100%"}}>
-            <IconButton
-                toggle
-                checked={visible}
-                iconProps={visible ? { iconName: "Hide" } : { iconName: "RedEye" }}
-                onClick={() => {setVisibility(!visible)}}
-            ></IconButton>
-            {
-                visible ?
-                    <TextField
-                        styles={{ root: { width: "100%" } }}
-                        value={props.item.value}
-                        onChange={(target, val) => {
-                            props.onValueChange(props.item.key, val || props.item.value);
-                        }}
-                    />
-                    :
-                    <Text>Hidden value. Click show value to view.</Text>
-            }
-        </Stack>
+        <Section
+            title="Environment Variables"
+            style={{
+                marginBottom: 22,
+            }}
+        >
+            <Stack horizontalFill>
+                <Text
+                    style={{marginBottom: 12}}
+                >
+                    Key-value pairs set here will be passed on to the application when deployed as environment vairables. These values are not encrypted and as such should be used with caution.
+                    <p>
+                        Restart the application for changes to take effect.
+                    </p>
+                </Text>
+                <Toolbar style={{ justifyContent: "space-between" }}>
+                    <ToolbarGroup>
+                        <NewEnvironmentVariableDialog onAdded={refresh} />
+                    </ToolbarGroup>
+
+                    <ToolbarGroup>
+                        <Switch label={"Show all"} onChange={(_target, value) => { setVariableVisibility(value.checked)}}></Switch>
+                    </ToolbarGroup>
+                </Toolbar>
+                <Stack>
+                    <Table noNativeElements >
+                        <TableHeader>
+                            <TableRow>
+                                <TableHeaderCell style={{maxWidth: "12em"}}>
+                                    Key
+                                </TableHeaderCell>
+                                <TableHeaderCell>
+                                    Value 
+                                </TableHeaderCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody
+                            style={{
+                                display: "block",
+                                overflowY: "scroll",
+                                height: 250
+                            }}
+                        >
+                            {
+                                ...rows
+                            }
+                        </TableBody>
+                    </Table>
+                </Stack>
+            </Stack>
+        </Section>
+    )
+}
+
+interface EnvironmentVariable {
+    key: string,
+    value: string
+}
+
+/**
+ * Retruns a table cell configured to display and edit an environment variable value.
+ * @param props 
+ * @returns 
+ */
+function EnvironmentVariable(props: EnvironmentVariableProps) {
+    const [visible, toggleVisibility] = useState(props.visible);
+    const [editable, toggleEdit] = useState(false);
+    const [editedValue, setEditedValue] = useState(props.value);
+
+    function onVisibleClick() {
+        toggleVisibility(!visible);
+    }
+
+    function onEditClick() {
+        toggleEdit(!editable);
+    }
+
+    function onSaveValueClick() {
+        onEditClick();
+        props.onValueChange(props.envKey, editedValue);
+    }
+
+    // TODO: confirmation popup
+    function onDeleteClick() {
+        props.onDelete();
+    }
+
+    const showContent = ((visible == true) || (props.visible == true));
+
+    return (
+        <TableCell>
+            <TableCellLayout>
+                <Stack horizontal horizontalAlign="stretch" verticalAlign="center" gap={8} style={{ height: "100%", flexGrow: 1 }}>
+                    {
+                        !showContent && 
+                        <Text>Hidden value. Click <em><EyeOffFilled/> show value</em> to view.</Text>
+                    }
+                    {
+                        showContent && (
+                            editable ? 
+                                <Input
+                                    style={{width: `100%`}}
+                                    defaultValue={props.value}
+                                    onChange={(_target, val) => {
+                                        setEditedValue(val.value);
+                                    }}
+                                    contentAfter={
+                                        <Stack gap={4} horizontal> 
+                                            <Button appearance="subtle" icon={<CheckmarkRegular />} onClick={onSaveValueClick}/>
+                                            <Button appearance="subtle" icon={<DismissRegular />} onClick={onEditClick}/>
+                                        </Stack>
+                                    }
+                                />
+                            :
+                                <Stack gap={8} horizontal verticalAlign="center"> 
+                                    <Text><code>{props.value}</code></Text>
+                                </Stack>
+                        )
+                    }
+                </Stack>
+            </TableCellLayout>
+            <TableCellActions>
+                <Button
+                    icon={visible ? <EyeFilled/> : <EyeOffFilled/>}
+                    onClick={onVisibleClick}
+                    appearance="subtle"
+                />
+                <Button
+                    appearance="subtle"
+                    icon={editable ? <EditOffRegular/> : <EditRegular />}
+                    onClick={onEditClick}
+                    disabled={ !visible }
+                />
+                <Button
+                    appearance="subtle"
+                    icon={<DeleteRegular></DeleteRegular>}
+                    onClick={onDeleteClick}
+                />
+            </TableCellActions>
+        </TableCell>
     );
 }
 
-function NewVariable(props: { onDismiss: () => void, onAddKey: (key: string) => void }) {
+interface EnvironmentVariableProps {
+    envKey: string,
+    value: string,
+    visible: boolean,
+    onValueChange: (key: string, value: string) => void
+    onDelete: () => void
+}
 
-    const [name, setName] = useState("");
+/**
+ * Displays a dialogue window to create a new environment variable.
+ * @param props 
+ * @returns 
+ */
+function NewEnvironmentVariableDialog(props: NewEnvironmentVariableDialogProps) {
+    const project = useContext(ProjectProvider);
+
+    const [key, setKey] = useState("");
+    const [value, setValue] = useState("");
+
+    if (!project) {
+        throw new Error("No project instance was provided");
+    }
+
+    async function SetServerEnvVariable() {
+        await project?.setEnv(key, value);
+        if (props.onAdded) {
+            props.onAdded();
+        }
+    }
 
     return (
-        <>
-            <Stack>
-                <TextField
-                    styles={{ root: { width: "100%" } }}
-                    value={name}
-                    onChange={(target, val) => {
-                        setName(val || "");
-                    }}
-                />
-            </Stack>
-            <DialogFooter>
-                <PrimaryButton
-                    onClick={() => {
-                        props.onAddKey(name);
-                        props.onDismiss();
-                    }}
-                    text="Create"
-                />
-                <DefaultButton
-                    onClick={() => {
-                        props.onDismiss();
-                    }}
-                    text="Cancel"
-                />
-            </DialogFooter>
-        </>
+        <Dialog>
+            <DialogTrigger disableButtonEnhancement>
+                <Button icon={<AddRegular/>}>New Environment Variable</Button>
+            </DialogTrigger>
+            <DialogSurface>
+                <DialogBody>
+                    <DialogTitle>Define New Environment Variable</DialogTitle>
+                    <DialogContent>
+                        <Stack gap={12} style={{marginTop: 18, marginBottom: 18}}>
+                            <Input
+                                placeholder="Key"
+                                value={key}
+                                onChange={(_target, val) => {
+                                    setKey(`${val.value}`.toUpperCase());
+                                }}
+                            />
+                            <Input
+                                placeholder="Value"
+                                value={value}
+                                onChange={(_target, val) => {
+                                    setValue(val.value || "");
+                                }}
+                            />
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions>
+                        <DialogTrigger disableButtonEnhancement>
+                            <Button appearance="primary" onClick={SetServerEnvVariable}>Create</Button>
+                        </DialogTrigger>
+                        <DialogTrigger disableButtonEnhancement>
+                            <Button appearance="secondary">Cancel</Button>
+                        </DialogTrigger>
+                    </DialogActions>
+                </DialogBody>
+            </DialogSurface>
+        </Dialog>
     );
+}
+
+interface NewEnvironmentVariableDialogProps {
+    onAdded?: () => void
 }
