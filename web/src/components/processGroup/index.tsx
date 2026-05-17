@@ -37,7 +37,7 @@ export default function ProcessGroup(props: Props) {
             if (first.dud == false) {
                 await firstValueFrom(first.output, { defaultValue: null});
             }
-            setStartedAt(() => first.startTime!);
+            setStartedAt(() => first.startTime ?? 0);
             setCompletedAt(() => 0);
             setStatus(() => "pending");
             // Wait for the chain to complete
@@ -45,7 +45,7 @@ export default function ProcessGroup(props: Props) {
             const lastExitedIdx = getLastExitIdx(list);
             const groupStatus = list[lastExitedIdx].exitCode;
             setStatus(() => parseExitCode(groupStatus));
-            const groupStopTime = list[lastExitedIdx].exitTime!;
+            const groupStopTime = list[lastExitedIdx].exitTime ?? 0;
             setCompletedAt(() => groupStopTime);
         }
     }
@@ -79,16 +79,19 @@ export default function ProcessGroup(props: Props) {
             icon={
                 <StatusIcon size="extra-small" status={ groupStatus } />
             }
-            titleExtras={
-                // Total runtime in short format
-                (startTime !== 0) ? <Runtime start={startTime} end={exitTime != 0 ? exitTime : undefined} short /> : null
-            }
             subTitle={
                 props.subtitle
             }
             right={
                 // Time since completion of the group
-                (exitTime !== 0) ? <Runtime since start={exitTime}></Runtime> : null
+                <Stack horizontalAlign="end">
+                    {
+                        (exitTime !== 0) ? <Runtime since start={exitTime}></Runtime> : null
+                    }
+                    {
+                        (startTime !== 0) ? <Runtime start={startTime} end={exitTime != 0 ? exitTime : undefined} short /> : null
+                    }
+                </Stack>
             }
         >
             <Stack gap={12} horizontalFill>
