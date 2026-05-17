@@ -134,6 +134,6 @@ interface Props {
     startCollapsed?: boolean;
 }
 
-export interface CompletedProcess extends Omit<RemoteProcess, "output" | "dispatch" | "dead">{
-    output: string;
+export interface CompletedProcess extends Pick<RemoteProcess, "cmd" | "exitCode" | "exitTime" | "startTime">{
+    output: string | null;
 }
