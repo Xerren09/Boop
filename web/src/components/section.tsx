@@ -1,4 +1,4 @@
-import { Text, Title3 } from '@fluentui/react-components';
+import { Subtitle2, Title3 } from '@fluentui/react-components';
 import React from "react";
 import Stack from './stack';
 
@@ -31,7 +31,7 @@ export default function Section(props: SectionComponentProps) {
                         }
                     </Stack>
                     {
-                        typeof props.subTitle === "string" ? <Text size={200}>{ props.subTitle }</Text> : props.subTitle
+                        typeof props.subTitle === "string" ? <Subtitle2>{ props.subTitle }</Subtitle2> : props.subTitle
                     }
                 </Stack>
                 {
@@ -46,10 +46,25 @@ export default function Section(props: SectionComponentProps) {
 }
 
 interface SectionComponentProps extends React.PropsWithChildren {
+    /**
+     * The main title text of the section.
+     */
     title?: string,
+    /**
+     * Icon to be displayed before the title.
+     */
     icon?: React.ReactNode,
+    /**
+     * Additional content displayed after the title.
+     */
     titleExtras?: React.ReactNode,
-    subTitle?: React.ReactNode,
+    /**
+     * Subtitle displayed under the title row. If `string`, it will be displayed as a {@link Subtitle2}.
+     */
+    subTitle?: React.ReactNode | string,
+    /**
+     * Content to be displayed to the right border of the section's title.
+     */
     right?: React.ReactNode,
     style?: React.CSSProperties,
 }
