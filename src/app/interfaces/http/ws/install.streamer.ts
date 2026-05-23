@@ -30,7 +30,8 @@ type ProcessStart = {
 type ProcessExit = {
     type: "processExit",
     exitCode: number | null,
-    time: number
+    time: number,
+    killed: boolean
 }
 
 type ProcessOutput = {
@@ -138,7 +139,7 @@ export class InstallStreamer implements IDisposable {
         const msg: ProcessStart = {
             type: "processStart",
             cmd: step.cmd,
-            time: step.process!.startTime
+            time: step.process?.startTime ?? 0
         };
         this._ws.send(JSON.stringify(msg));
         if (messageOnly) {
@@ -152,7 +153,8 @@ export class InstallStreamer implements IDisposable {
         const msg: ProcessExit = {
             type: "processExit",
             exitCode: step.process!.exitCode,
-            time: step.process!.exitTime
+            time: step.process!.exitTime,
+            killed: step.process!.wasKilled
         };
         this._ws.send(JSON.stringify(msg));
     }
