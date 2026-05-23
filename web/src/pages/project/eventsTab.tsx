@@ -101,8 +101,8 @@ export default function ProjectWebhookEventsTab() {
                     <TableBody
                         style={{
                             display: "block",
-                            overflowY: "scroll",
-                            height: 440
+                            overflowY: "auto",
+                            height: 440,
                         }}
                     >
                         {
