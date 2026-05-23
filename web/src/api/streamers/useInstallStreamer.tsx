@@ -3,7 +3,7 @@ import type { InstallerStateMessage } from "./types";
 import { BoopAPI, RemoteProcess } from "../api";
 import type { Status } from "../../components/statusIcon";
 
-export type InstallerStatus = Exclude<Status, "warning">;
+export type InstallerStatus = Exclude<Status, "warning" | "paused">;
 
 export function useInstallStreamer(projectId: string) {
     const _socket = useRef<WebSocket | null>(null);

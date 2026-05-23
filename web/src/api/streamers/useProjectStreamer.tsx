@@ -48,11 +48,11 @@ export function useProjectStreamer(projectId: string, withProcess?: boolean) {
                 break;
             }
             case "deploy": {
-                setStatus(message.success ? "deployed" : "stopped");
+                setStatus(message.success ? "deployed" : "error");
                 break;
             }
             case "stop": {
-                setStatus("stopped");
+                setStatus(message.wasKilled ? "stopped" : "error");
                 break;
             }
             default: {

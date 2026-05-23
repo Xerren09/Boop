@@ -197,7 +197,6 @@ async function makeRequest<T>(url: string | URL, method: "GET" | "POST" | "DELET
             throw err;
         }
     }
-    return;
 }
 
 

@@ -31,7 +31,8 @@ export type ProjectStateEvent = {
     time: number
 } | {
     type: "stop",
-    time: number
+    time: number,
+    wasKilled: boolean
 } | {
     type: "install",
     time: number,
@@ -47,4 +48,4 @@ export type ProjectStateEvent = {
 
 export type ProjectStateEvents = ProjectStateEvent["type"];
 
-export type ProjectStatus = 'deployed' | 'stopped' | 'installing' | 'installSuccess' | 'installFailed' | null;
+export type ProjectStatus = 'deployed' | 'stopped' | 'error' | 'installing' | 'installSuccess' | 'installFailed' | null;

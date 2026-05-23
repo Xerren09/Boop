@@ -1,5 +1,5 @@
 import { Spinner, type SpinnerProps } from "@fluentui/react-components";
-import { CheckmarkCircleColor, ErrorCircleColor, WarningColor } from "@fluentui/react-icons";
+import { CheckmarkCircleColor, ErrorCircleColor, PauseFilled, WarningColor } from "@fluentui/react-icons";
 
 export default function StatusIcon(props: StatusIconProps) {
 
@@ -12,6 +12,8 @@ export default function StatusIcon(props: StatusIconProps) {
             return <ErrorCircleColor fontSize={size} />
         case "warning":
             return <WarningColor fontSize={size} />
+        case "paused":
+            return <PauseFilled  fontSize={size} primaryFill="orange" />
         case "pending":
         default:
             return <div style={{ display: "flex" }}>
@@ -20,7 +22,7 @@ export default function StatusIcon(props: StatusIconProps) {
     }
 }
 
-export type Status = "ok" | "error" | "warning" | "pending";
+export type Status = "ok" | "error" | "warning" | "pending" | "paused";
 
 export type StatusIconProps = {
     status: Status,
