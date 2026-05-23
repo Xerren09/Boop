@@ -17,7 +17,8 @@ type Deploy = {
 
 type Stop = {
     type: "stop",
-    time: number
+    time: number,
+    wasKilled: boolean
 }
 
 type Install = {
@@ -168,7 +169,8 @@ export class ProjectStreamer implements IDisposable {
     private onProjectStop = () => {
         const stopMsg: Stop = {
             type: "stop",
-            time: this.project.stoppedAt
+            time: this.project.stoppedAt,
+            wasKilled: this.project instanceof ServiceProject ? ((this.project as ServiceProject).process?.wasKilled ?? false) : true
         }
         this._ws.send(JSON.stringify(stopMsg));
     }
