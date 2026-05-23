@@ -73,6 +73,9 @@ export class ProjectStreamer implements IDisposable {
 
     private async wsInit() {
         await this.sync();
+        if (this._disposeController.signal.aborted) {
+            return;
+        }
         this.project.on("deploy", this.onProjectDeploy);
         this.project.on("webhook", this.onProjectWebhook);
         this.project.on("stop", this.onProjectStop);
@@ -120,6 +123,10 @@ export class ProjectStreamer implements IDisposable {
                 }
                 catch (err) {
                     logger.logException(err instanceof SuppressedError ? err.suppressed : err);
+                }
+                // Leave if disposing
+                if (this._disposeController.signal.aborted) {
+                    return;
                 }
                 if (this.project.process.exited) {
                     this.onProjectProcessExit();
@@ -204,7 +211,7 @@ export class ProjectStreamer implements IDisposable {
 
     public [Symbol.dispose]() {
         if (this._disposed) {
-            return true;
+            return;
         }
         this._disposed = true;
         this._disposeController.abort("disposed");

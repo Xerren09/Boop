@@ -7,6 +7,7 @@ import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../../.
 import { createReadStream } from "node:fs";
 import { finished } from "node:stream/promises";
 import { makeLogDirName } from "../../../../logger.js";
+import { once } from "node:events";
 
 type InstallerStart = {
     type: "installerStart",
@@ -64,6 +65,9 @@ export class InstallStreamer implements IDisposable {
 
     private async wsInit() {
         await this.sendHistory();
+        if (this._disposeController.signal.aborted) {
+            return;
+        }
         this._installer.on("start", this.onInstallerStart);
         this._installer.on("exit", this.onInstallerComplete);
         this._installer.on("step", this.onInstallerStepStart);
@@ -110,6 +114,9 @@ export class InstallStreamer implements IDisposable {
                 }
             }
         }
+        if (this._disposeController.signal.aborted) {
+            return;
+        }
         if (installer.running == false) {
             this.onInstallerComplete(installer.success);
         }
@@ -135,7 +142,10 @@ export class InstallStreamer implements IDisposable {
         this._ws.send(JSON.stringify(msg));
     }
 
-    private onInstallerStepStart = (step: InstallerStep, messageOnly?: boolean) => {
+    private onInstallerStepStart = async (step: InstallerStep, messageOnly?: boolean) => {
+        if (step.process && step.process.exited == false) {
+            await once(step.process, "start");
+        }
         const msg: ProcessStart = {
             type: "processStart",
             cmd: step.cmd,
@@ -175,15 +185,12 @@ export class InstallStreamer implements IDisposable {
         }
         this._disposed = true;
         this._disposeController.abort();
-        const installer = this._installer;
-        installer.removeListener("start", this.onInstallerStart);
-        if (installer != undefined) {
-            installer.removeListener("exit", this.onInstallerComplete);
-            installer.removeListener("step", this.onInstallerStepStart);
-            installer.removeListener("stepExit", this.onInstallerStepComplete);
-        }
-        if (installer.currentStep != null) {
-            installer.currentStep.process?.output.removeListener("data", this.onProcessOutput);
+        this._installer.removeListener("start", this.onInstallerStart);
+        this._installer.removeListener("exit", this.onInstallerComplete);
+        this._installer.removeListener("step", this.onInstallerStepStart);
+        this._installer.removeListener("stepExit", this.onInstallerStepComplete);
+        if (this._installer.currentStep != null) {
+            this._installer.currentStep.process?.output.removeListener("data", this.onProcessOutput);
         }
         if (this._ws.readyState === this._ws.CONNECTING || this._ws.readyState === this._ws.OPEN) {
             // 1001: resource shutting down
