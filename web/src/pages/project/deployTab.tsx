@@ -5,16 +5,18 @@ import { Link, Text } from "@fluentui/react-components";
 import type { ProjectStatus } from "../../api/streamers/types";
 import Stack from "../../components/stack";
 import RemoteProcessGroup from "../../components/processGroup";
+import { ProjectStatusIcon } from "../../components/project/statusIcon";
 
 const statusHeadingMap: { [key in NonNullable<ProjectStatus>]: string } = {
     "deployed": "Project deployed",
     "installing": "Installing",
     "installFailed": "Installer failed",
     "installSuccess": "Installer complete",
-    "stopped": "Project stopped"
+    "stopped": "Project stopped",
+    "error": "Project error"
 }
 
-export default function ProjectDeployTab(props: { status: ProjectStatus, process?: RemoteProcess | null }) {
+export default function ProjectDeployTab(props: { status: ProjectStatus, process?: RemoteProcess | null, directUrlHref?: string }) {
     const project = useContext(ProjectProvider);
 
     if (!props.status || !project) {
@@ -26,18 +28,29 @@ export default function ProjectDeployTab(props: { status: ProjectStatus, process
     return (
         <Stack horizontalFill gap={24}>
             <Section
-                title={ statusHeadingMap[props.status] }
+                title={statusHeadingMap[props.status]}
+                icon={<ProjectStatusIcon status={props.status}/>}
             >
                 {
                     props.status === "deployed" &&
                     <Text>
-                        This project is currently deployed. You can access it via BOOP's proxy at <Link href={proxyUrl}> { proxyUrl } </Link> or directly at --link--.
+                        This project is currently deployed. You can access it via Boop's HTTP proxy at <Link href={proxyUrl}> {proxyUrl} </Link>{ props.directUrlHref && <Text> or directly at <Link href={props.directUrlHref}> {props.directUrlHref} </Link></Text> }.
                     </Text>
                 }
                 {
                     props.status === "stopped" &&
                     <Text>
-                        This project is currently stopped. This may be intentional, or due to an error. Check that the installer completed successfully, or in the case of a service project, check the main process' output.
+                        This project is currently stopped, and unavailable for other services. To deploy the project, click <em>Start</em>.
+                    </Text>
+                }
+                {
+                    props.status === "error" &&
+                    <Text>
+                            This project is currently stopped due to an error.
+                            {
+                                props.process &&
+                                "Check the terminal window below to see what went wrong, or the <em>log</em> tab for further information."
+                            }
                     </Text>
                 }
                 {
