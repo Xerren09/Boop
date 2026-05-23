@@ -17,7 +17,6 @@ createRoot(document.getElementById('root')!).render(
         <FluentProvider theme={webDarkTheme}>
             <div
                 style={{
-                    minWidth: "100vw",
                     minHeight: "100vh"
                 }}
             >
