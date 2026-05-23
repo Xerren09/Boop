@@ -89,6 +89,7 @@ apiRouter.get("/projects/:projectName/logs/project", async (req, res) => {
     }
     const path = join(project.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME);
     try {
+        res.contentType("text");
         await using stream = createReadStream(path);
         stream.pipe(res, { end: false });
         await finished(stream, { cleanup: true });
@@ -154,6 +155,7 @@ apiRouter.get("/projects/:projectName/logs/deploy/:log", async (req, res) => {
                     return res.status(404).send(`No output file found with for this log.`);
                 }
                 try {
+                    res.contentType("text");
                     await using stream = createReadStream(path);
                     stream.pipe(res, { end: false });
                     await finished(stream, {cleanup: true});
@@ -226,6 +228,7 @@ apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
                 return res.status(404).send(`No step file found with ID "${logStep}".`);
             }
             try {
+                res.contentType("text");
                 await using stream = createReadStream(path);
                 stream.pipe(res, { end: false });
                 await finished(stream, {cleanup: true});
@@ -254,9 +257,7 @@ apiRouter.ws("/projects/:projectName", (ws, req) => {
         const withServiceProcess = (req.query["withProcess"] ?? false) == "true";
         const streamer = new ProjectStreamer(ws, project, withServiceProcess);
         ws.once("close", () => {
-            if (streamer.disposed === false) {
-                streamer[Symbol.dispose]();
-            }
+            streamer[Symbol.dispose]();
         });
     }
     else {
@@ -269,9 +270,7 @@ apiRouter.ws("/projects/:projectName/installer", (ws, req) => {
     if (project) {
         const streamer = new InstallStreamer(ws, project)
         ws.once("close", () => {
-            if (streamer.disposed === false) {
-                streamer[Symbol.dispose]();
-            }
+            streamer[Symbol.dispose]();
         });
     }
     else {
