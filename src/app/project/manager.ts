@@ -76,7 +76,11 @@ class ProjectManager {
             await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME));
             const project = await InstantiateProject(projectFile);
             this._projects.push(project);
-            logger.info(`Created new project (${remote}#${branch ?? "main"}): ${projectDir}.`);
+            logger.info(`Created new project.`, {
+                remote: remote,
+                branch: branch ?? "main",
+                dir: projectDir
+            });
             return project;
         }
         catch (error) {
@@ -159,7 +163,7 @@ class ProjectManager {
             if (project.deployed == false) {
                 try {
                     await project.deploy();
-                    console.info(`Deployed project '${project.name}' deployed.`);
+                    console.info(`Deployed project '${project.name}'.`);
                 }
                 catch (err) {
                     errors.push(err);

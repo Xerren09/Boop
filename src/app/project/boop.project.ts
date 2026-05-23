@@ -164,7 +164,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             return;
         }
         else if (this._webhookLock) {
-            this.log.warn(`Webhook processor is busy; event added to queue${ this._webhookQueue != null ? ` (discarding "${this._webhookQueue.id}")` : ""}.`);
+            this.log.warn(`Webhook processor is busy; event added to queue.`, {event: evt.id, discarding: this._webhookQueue?.id ?? null});
             res?.status(202).send(`Webhook event accepted into queue. If another event is received before the current one completes, this one will be discarded in favour of the new event.`);
             if (this._webhookQueue != null) {
                 // There is an event already in queue, drop it and replace with the new one
