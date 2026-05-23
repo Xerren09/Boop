@@ -40,7 +40,8 @@ type ProcessStart = {
 type ProcessExit = {
     type: "processExit",
     exitCode: number | null,
-    time: number
+    time: number,
+    killed: boolean
 }
 
 type ProcessOutput = {
@@ -203,7 +204,8 @@ export class ProjectStreamer implements IDisposable {
             const message: ProcessExit = {
                 type: "processExit",
                 exitCode: this.project.process!.exitCode,
-                time: this.project.process!.exitTime
+                time: this.project.process!.exitTime,
+                killed: this.project.process!.wasKilled
             }
             this._ws.send(JSON.stringify(message));
         }
