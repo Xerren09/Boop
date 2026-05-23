@@ -5,19 +5,19 @@ import RemoteProcessGroup, { type CompletedProcess } from "../../components/proc
 import { Text } from "@fluentui/react-components";
 import ProjectLogSelect from "../../components/projectLogSelect";
 import { ProjectProvider, type EventLog } from "../../api/api";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import StatusIcon from "../../components/statusIcon";
 
 const statusHeadingMap: { [key in NonNullable<InstallerStatus>]: string } = {
     "pending": "Installing",
     "error": "Installer failed",
-    "ok": "Installer complete"
+    "ok": "Installer complete",
 }
 
 const statusDescriptionMap: { [key in NonNullable<InstallerStatus>]: string } = {
     "pending": "This project is currently installing. You can follow the progress below. Once the installer completed, it will be automatically deployed if successful.",
     "error": `The project installer has failed. This means your build is failing; typically you can fix this by pushing a commit to the target branch of your repository.\n\nCheck the log below to see which step failed.`,
-    "ok": "This project has just been installed, and will be deployed momentarily."
+    "ok": "The installer completed successfully, and the project is now being deployed."
 }
 
 export default function ProjectInstallerTab(props: { projectId: string }) {
@@ -61,6 +61,20 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
         step.output = (await project?.getInstallLog(logTime, idx)) ?? "";
         setLogSteps(() => _steps);
     }
+
+    /**
+     * If the project didn't have an installer run yet in this Boop session, read the latest logged installer
+     */
+    useEffect(() => { 
+        if (!project) {
+            return;
+        }
+        if (steps.length == 0 && logSteps.length == 0) {
+            console.log("No installer in this session, getting latest log");
+            // Pull the latest log as the value of live
+            project.listInstallLogs().then(logs => logs.reduce((prev, curr) => prev.time > curr.time ? prev : curr)).then(log => onSelect(log ?? null));
+        }
+    }, [steps, logSteps]);
 
     const processList = logSteps.length === 0 ? steps : logSteps;
 
