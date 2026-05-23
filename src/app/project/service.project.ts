@@ -56,7 +56,7 @@ export class ServiceProject extends BoopProject {
         if (err.length != 0) {
             throw err[0];
         }
-        this.log.debug(`Project process started (${this._process?.pid}).`);
+        this.log.debug(`Project process started.`, {pid: this._process?.pid});
         //
         await this.startLog(eventReference);
         //
@@ -73,10 +73,10 @@ export class ServiceProject extends BoopProject {
             // Destroy the router so we don't end up trying to connect to a server that doesn't exist
             this._router = null;
             if (this._process!.wasKilled) {
-                this.log.info(`Project process exited (${this._process?.pid}).`, { code: code });
+                this.log.info(`Project process exited.`, { pid: this._process?.pid, code: code, killed: true });
             }
             else {
-                this.log.warn(`Project process exited (${this._process?.pid}).`, { code: code });
+                this.log.warn(`Project process exited.`, { pid: this._process?.pid, code: code, killed: false });
             }
         });
     }

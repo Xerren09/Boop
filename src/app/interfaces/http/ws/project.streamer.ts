@@ -17,7 +17,8 @@ type Deploy = {
 
 type Stop = {
     type: "stop",
-    time: number
+    time: number,
+    wasKilled: boolean
 }
 
 type Install = {
@@ -40,7 +41,8 @@ type ProcessStart = {
 type ProcessExit = {
     type: "processExit",
     exitCode: number | null,
-    time: number
+    time: number,
+    killed: boolean
 }
 
 type ProcessOutput = {
@@ -73,6 +75,9 @@ export class ProjectStreamer implements IDisposable {
 
     private async wsInit() {
         await this.sync();
+        if (this._disposeController.signal.aborted) {
+            return;
+        }
         this.project.on("deploy", this.onProjectDeploy);
         this.project.on("webhook", this.onProjectWebhook);
         this.project.on("stop", this.onProjectStop);
@@ -121,6 +126,10 @@ export class ProjectStreamer implements IDisposable {
                 catch (err) {
                     logger.logException(err instanceof SuppressedError ? err.suppressed : err);
                 }
+                // Leave if disposing
+                if (this._disposeController.signal.aborted) {
+                    return;
+                }
                 if (this.project.process.exited) {
                     this.onProjectProcessExit();
                 }
@@ -160,7 +169,8 @@ export class ProjectStreamer implements IDisposable {
     private onProjectStop = () => {
         const stopMsg: Stop = {
             type: "stop",
-            time: this.project.stoppedAt
+            time: this.project.stoppedAt,
+            wasKilled: this.project instanceof ServiceProject ? ((this.project as ServiceProject).process?.wasKilled ?? false) : true
         }
         this._ws.send(JSON.stringify(stopMsg));
     }
@@ -196,7 +206,8 @@ export class ProjectStreamer implements IDisposable {
             const message: ProcessExit = {
                 type: "processExit",
                 exitCode: this.project.process!.exitCode,
-                time: this.project.process!.exitTime
+                time: this.project.process!.exitTime,
+                killed: this.project.process!.wasKilled
             }
             this._ws.send(JSON.stringify(message));
         }
@@ -204,7 +215,7 @@ export class ProjectStreamer implements IDisposable {
 
     public [Symbol.dispose]() {
         if (this._disposed) {
-            return true;
+            return;
         }
         this._disposed = true;
         this._disposeController.abort("disposed");

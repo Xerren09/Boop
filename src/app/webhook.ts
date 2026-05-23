@@ -74,7 +74,7 @@ function parseWebhookEvent(req: express.Request): WebhookEvent {
         },
         security: {
             hash: req.get('X-Hub-Signature-256') ?? null,
-            valid: isSignatureValid(req)
+            valid: ENV_DISABLE_WEBHOOK_SECURITY ? false : isSignatureValid(req)
         },
         sender: {
             name: req.body.sender.login,  // "Codertocat"
@@ -101,7 +101,7 @@ function isSignatureValid(req: express.Request): boolean {
     }
     else {
         // If no SECRET is defined, we can't validate the signature, so reject it.
-        if (ENV_SECRET() == undefined) {
+        if (!ENV_SECRET()) {
             return false;
         }
     }

@@ -181,8 +181,9 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
             this._process.removeListener("spawn", this.onSpawn);
         }
         // Will be an error for send() most likely
-        logger.debug(`Process error (${this.pid})`, {
+        logger.debug(`Process error.`, {
             pid: this.pid,
+            args: this._process.spawnargs.join(" "),
             error: {
                 message: err.message,
                 cause: err.cause ?? null
@@ -193,7 +194,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
     private onSpawn = () => {
         this._startTime = Date.now();
         this.emit("start");
-        logger.debug(`Process started (${this.pid})`, {
+        logger.debug(`Process started.`, {
             args: this._process.spawnargs.join(" "),
             pid: this.pid
         });
@@ -208,11 +209,12 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
         this._process.removeListener("error", this.onError);
         this._process.removeListener("spawn", this.onSpawn);
         //
-        logger.debug(`Process exited (${this.pid})`, {
+        logger.debug(`Process exited.`, {
             pid: this.pid,
             exitCode: exitCode,
             signal: signal,
-            ret: this._exitCode
+            ret: this._exitCode,
+            killed: this.wasKilled
         });
     }
 
@@ -307,17 +309,17 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
                             if (this.exited) {
                                 return resolve();
                             }
-                            reject(new Error(`Process "${this._process.spawnargs}" (${this.pid}) could not be stopped.`, { cause: err }));
-                            logger.debug(`Failed to kill process (${this.pid})`, {
+                            reject(new Error(`Process "${this._process.spawnargs.join(" ")}" (${this.pid}) could not be stopped.`, { cause: err }));
+                            logger.debug(`Failed to kill process.`, {
                                 pid: this.pid,
                                 forced: force,
                                 error: err,
-                                args: this._process.spawnargs
+                                args: this._process.spawnargs.join(" ")
                             });
                         }
                         else {
                             resolve();
-                            logger.debug(`Killed process (${this.pid})`, {
+                            logger.debug(`Killed process.`, {
                                 pid: this.pid,
                                 forced: force
                             });
