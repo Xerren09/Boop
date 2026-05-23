@@ -30,8 +30,8 @@ export interface InstallerLog {
         cmd: string,
         log: string,
         exitCode: number | null,
-        start: number,
-        end: number
+        startTime: number,
+        exitTime: number
     }[]
 }
 
@@ -234,8 +234,8 @@ export class InstallRunner extends EventEmitter {
                 cmd: el.cmd,
                 log: `${idx}.log`,
                 exitCode: el.process?.exitCode ?? null,
-                start: el.process?.startTime ?? -1,
-                end: el.process?.exitTime ?? -1
+                startTime: el.process?.startTime ?? -1,
+                exitTime: el.process?.exitTime ?? -1
             }))
         };
         const file = join(dir, `result.json`);
