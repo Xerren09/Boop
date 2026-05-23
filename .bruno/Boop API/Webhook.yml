@@ -171,7 +171,11 @@ http:
           "user_view_type": "public",
           "site_admin": false
         },
-        "ref": "refs/heads/main"
+        "ref": "refs/heads/main",
+        "head_commit": {
+          "id": "b07609fd4b5a5db9c67f9eb9abd95d1d5cbc48ae",
+          "url": "https://github.com/Xerren09/testAPI/commit/b07609fd4b5a5db9c67f9eb9abd95d1d5cbc48ae"
+        }
       }
   auth: inherit
 
