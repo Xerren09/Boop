@@ -13,7 +13,7 @@ export default function ProjectLogTab() {
         if (project) {
             project.getProjectLog().then((logs) => {
                 if (logs) {
-                    setLogEntries(() => logs);
+                    setLogEntries(() => logs.reverse());
                 }
             })
         }
