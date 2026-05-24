@@ -22,31 +22,43 @@ const statusDescriptionMap: { [key in NonNullable<InstallerStatus>]: string } = 
 
 export default function ProjectInstallerTab(props: { projectId: string }) {
     const { steps, status, triggerEvent } = useInstallStreamer(props.projectId);
+
+    const [selectedFileHandle, setSelectedFileHandle] = useState<EventLog | null>(null);
+
     const [logTime, setlogTime] = useState<number|null>(null);
     const [logSteps, setLogSteps] = useState<CompletedProcess[]>([]);
+
     const project = useContext(ProjectProvider);
 
     // TODO: Add installer ref to the build group subtitle that links to the corresponding webhook event that triggered it
 
     async function onSelect(file: EventLog | null) {
-        console.log(file);
         if (!file) {
             console.log("Live selected");
+            setSelectedFileHandle(null);
+            setlogTime(null);
             setLogSteps([]);
             return;
         }
         if (file.time) {
+            console.log("Selected file:", file);
+            setSelectedFileHandle(file);
+            const _steps = await getLogFile(file);
             setlogTime(() => file.time);
-            const log = await project?.getInstallLog(file.time);
-            const _steps: CompletedProcess[] = [];
-            for (const step of log!.steps) {
-                _steps.push({
-                    ...step,
-                    output: null
-                });
-            }
             setLogSteps(() => _steps);
         }
+    }
+
+    async function getLogFile(file: EventLog) {
+        const log = await project?.getInstallLog(file.time);
+        const _steps: CompletedProcess[] = [];
+        for (const step of log!.steps) {
+            _steps.push({
+                ...step,
+                output: null
+            });
+        }
+        return _steps;
     }
 
     async function onTerminalContentRequested(idx: number) {
@@ -69,14 +81,18 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
         if (!project) {
             return;
         }
-        if (steps.length == 0 && logSteps.length == 0) {
+        if (steps.length == 0 && selectedFileHandle == null && logSteps.length == 0) {
             console.log("No installer in this session, getting latest log");
             // Pull the latest log as the value of live
-            project.listInstallLogs().then(logs => logs.reduce((prev, curr) => prev.time > curr.time ? prev : curr)).then(log => onSelect(log ?? null));
+            project.listInstallLogs().then(logs => logs.reduce((prev, curr) => prev.time > curr.time ? prev : curr)).then(async log => {
+                const _steps = await getLogFile(log);
+                setlogTime(() => log.time);
+                setLogSteps(() => _steps);
+            }).catch(err => console.error(err));
         }
-    }, [steps, logSteps]);
+    }, [steps, selectedFileHandle]);
 
-    const processList = logSteps.length === 0 ? steps : logSteps;
+    const processList = (steps.length > 0 && selectedFileHandle == null) || logSteps.length === 0 ? steps : logSteps;
 
     return (
         <Stack horizontalFill gap={24}>
@@ -92,7 +108,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
             
             <RemoteProcessGroup
                 title="Steps"
-                subtitle={<Text>{ triggerEvent }</Text>}
+                subtitle={<Text>Triggered by Webhook event { triggerEvent }</Text>}
                 processes={processList}
                 onTerminalContentRequest={onTerminalContentRequested}
             />
