@@ -123,9 +123,10 @@ export class BoopProject {
         return makeRequest(this.getRequestUrl("env"), "DELETE", { key: envKey });
     }
 
-    getProjectLog() : Promise<string | undefined> {
+    async getProjectLog() : Promise<LogEntry[] | undefined> {
         // logs/project
-        return makeRequest<string>(this.getRequestUrl(`logs/project`), "GET", undefined);
+        const str = await makeRequest<string>(this.getRequestUrl(`logs/project`), "GET");
+        return parseSystemLog(str!);
     }
 
     async getWebhookLog() : Promise<WebhookEvent[]> {
@@ -138,7 +139,7 @@ export class BoopProject {
         return ret ?? [];
     }
 
-    getDeployLog(log: string) : Promise<string | undefined> {
+    async getDeployLog(log: string) : Promise<string | undefined> {
         // logs/deploy/:log
         return makeRequest<string>(this.getRequestUrl(`logs/deploy/${log}`), "GET", undefined);
     }
@@ -199,6 +200,23 @@ async function makeRequest<T>(url: string | URL, method: "GET" | "POST" | "DELET
     }
 }
 
+function parseSystemLog(str: string): LogEntry[] {
+    const rawEntries = str!.split(/\r?\n/);
+    const entries: LogEntry[] = [];
+    for (const element of rawEntries) {
+        try {
+            if (!element || element === "") {
+                continue;
+            }
+            const obj = JSON.parse(element);
+            entries.push(obj);
+        }
+        catch {
+            console.warn("Log line is not a valid JSON:", element);
+        }
+    }
+    return entries;
+}
 
 export interface WebhookEvent {
     /**
@@ -309,6 +327,13 @@ export interface ProjectEntry {
     lastEventTime: number,
 }
 
+export interface LogEntry {
+    level: "info" | "warn" | "error" | "debug",
+    message: string,
+    metadata: {
+        timestamp: string
+    }
+}
 
 export class RemoteProcess {
     static readonly MAX_OUTPUT_HISTORY: number = 2500;
