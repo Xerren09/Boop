@@ -30,10 +30,8 @@ export default function ProjectLogSelect(props: Props) {
 
     return (
         <Dropdown
-            style={{
-                width: 200
-            }}
             placeholder={ PLACEHOLDER_DEFAULT }
+            style={props.style}
             button={<span style={{overflowX: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",}}>{selectedOptionText}</span>}
             onOpenChange={onOpen}
             onOptionSelect={(_evt, data) => {
