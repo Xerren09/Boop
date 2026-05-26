@@ -2,9 +2,12 @@ import { Divider, Dropdown, Listbox, Option, type ComboboxOpenChangeData, type C
 import { useContext, useState } from "react";
 import { ProjectProvider, type EventLog } from "../api/api";
 
+const PLACEHOLDER_DEFAULT = "Live";
+
 export default function ProjectLogSelect(props: Props) {
     const project = useContext(ProjectProvider);
     const [options, setOptions] = useState<EventLog[]>([]);
+    const [selectedOptionText, setSelectedOptionText] = useState<string>(PLACEHOLDER_DEFAULT);
 
     if (project === null) {
         throw new Error(`Prop "projectId" must be given if no "ProjectProvider" context is available.`);
@@ -27,14 +30,15 @@ export default function ProjectLogSelect(props: Props) {
 
     return (
         <Dropdown
-            placeholder="Select log"
             style={{
                 width: 200
             }}
-            defaultValue={"Live"}
+            placeholder={ PLACEHOLDER_DEFAULT }
+            button={<span style={{overflowX: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",}}>{selectedOptionText}</span>}
             onOpenChange={onOpen}
             onOptionSelect={(_evt, data) => {
                 if (data.optionValue != undefined) {
+                    setSelectedOptionText(data.optionText ?? PLACEHOLDER_DEFAULT);
                     if (data.optionValue === "latest") {
                         return onSelect(0);
                     }
@@ -63,11 +67,12 @@ export default function ProjectLogSelect(props: Props) {
 }
 
 type Props = {
+    onSelect: (file: EventLog | null) => void;
+    style?: React.CSSProperties | undefined
+} & ({
     install?: never;
     build: true;
-    onSelect: (file: EventLog | null) => void;
 } | {
     install: true;
     build?: never;
-    onSelect: (file: EventLog | null) => void;
-}
+})
