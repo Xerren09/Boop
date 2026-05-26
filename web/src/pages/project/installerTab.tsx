@@ -2,11 +2,12 @@ import { useInstallStreamer, type InstallerStatus } from "../../api/streamers/us
 import Section from "../../components/section";
 import Stack from "../../components/stack";
 import RemoteProcessGroup, { type CompletedProcess } from "../../components/processGroup";
-import { Text } from "@fluentui/react-components";
+import { Field, ProgressBar, Text } from "@fluentui/react-components";
 import ProjectLogSelect from "../../components/projectLogSelect";
-import { ProjectProvider, type EventLog } from "../../api/api";
+import { ProjectProvider, RemoteProcess, type EventLog } from "../../api/api";
 import { useContext, useEffect, useState } from "react";
 import StatusIcon from "../../components/statusIcon";
+import { lastValueFrom } from "rxjs";
 
 const statusHeadingMap: { [key in NonNullable<InstallerStatus>]: string } = {
     "pending": "Installing",
@@ -15,7 +16,7 @@ const statusHeadingMap: { [key in NonNullable<InstallerStatus>]: string } = {
 }
 
 const statusDescriptionMap: { [key in NonNullable<InstallerStatus>]: string } = {
-    "pending": "This project is currently installing. You can follow the progress below. Once the installer completed, it will be automatically deployed if successful.",
+    "pending": "This project is currently installing. You can follow the progress below. Once the installer successfully completed, the project will be automatically deployed.",
     "error": `The project installer has failed. This means your build is failing; typically you can fix this by pushing a commit to the target branch of your repository.\n\nCheck the log below to see which step failed.`,
     "ok": "The installer completed successfully, and the project is now being deployed."
 }
@@ -101,9 +102,15 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
                 icon={<StatusIcon status={ status } />}
                 right={ <ProjectLogSelect install onSelect={onSelect} style={{ width: "35%", minWidth: 120, maxWidth: 190}}/> }
             >
-                <Text>
-                    { statusDescriptionMap[status] }
-                </Text>        
+                <Stack gap={8}>
+                    <Text>
+                        { statusDescriptionMap[status] }
+                    </Text>
+                    {
+                        status === "pending" && steps.length > 0 &&
+                        <InstallerProgressBar processes={steps}/>
+                    }
+                </Stack>
             </Section>
             
             <RemoteProcessGroup
@@ -113,5 +120,26 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
                 onTerminalContentRequest={onTerminalContentRequested}
             />
         </Stack>
+    );
+}
+
+function InstallerProgressBar(props: { processes: RemoteProcess[] }) {
+    const [stepIndex, setStep] = useState<number>(0);
+
+    useEffect(() => {
+        async function iterate() {
+            for (let index = 0; index < props.processes.length; index++) {
+                const process = props.processes[index];
+                setStep(() => index);
+                await lastValueFrom(process.output, { defaultValue: null});
+            }
+        }
+        iterate();
+    }, [props.processes]);
+
+    return (
+        <Field label="Build progress">
+            <ProgressBar max={props.processes.length} value={stepIndex}/>
+        </Field>
     );
 }
