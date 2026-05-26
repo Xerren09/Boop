@@ -41,8 +41,14 @@ export default function EnvironmentVariableEditor() {
         }
     }
 
-    function onDelete(key: string) {
-        project?.deleteEnv(key);
+    async function onDelete(key: string) {
+        await project?.deleteEnv(key);
+        refresh();
+    }
+
+    async function onValueChange(key: string, value: string) {
+        await project?.setEnv(key, value);
+        refresh();
     }
 
     useEffect(() => {
@@ -60,8 +66,8 @@ export default function EnvironmentVariableEditor() {
                     envKey={variable.key}
                     value={variable.value}
                     visible={showVariables}
-                    onValueChange={() => {
-                        refresh();
+                    onValueChange={(key, value) => {
+                        onValueChange(key, value);
                     }}
                     onDelete={() => {
                         onDelete(variable.key);
