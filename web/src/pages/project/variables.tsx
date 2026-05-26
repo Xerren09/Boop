@@ -205,11 +205,7 @@ function EnvironmentVariable(props: EnvironmentVariableProps) {
                     onClick={onEditClick}
                     disabled={ !visible }
                 />
-                <Button
-                    appearance="subtle"
-                    icon={<DeleteRegular></DeleteRegular>}
-                    onClick={onDeleteClick}
-                />
+                <CancellableDeleteButton onConfirm={onDeleteClick} variableKey={ props.envKey }/>
             </TableCellActions>
         </TableCell>
     );
@@ -287,4 +283,36 @@ function NewEnvironmentVariableDialog(props: NewEnvironmentVariableDialogProps) 
 
 interface NewEnvironmentVariableDialogProps {
     onAdded?: () => void
+}
+
+function CancellableDeleteButton(props: { onConfirm: () => void, variableKey: string }) {
+    return (
+        <Dialog modalType="alert">
+            <DialogTrigger disableButtonEnhancement>
+                <Button
+                    appearance="subtle"
+                    icon={<DeleteRegular></DeleteRegular>}
+                />
+            </DialogTrigger>
+            <DialogSurface>
+                <DialogBody>
+                    <DialogTitle>Delete environment variable?</DialogTitle>
+                    <DialogContent>
+                        <Stack gap={12} style={{marginTop: 18, marginBottom: 18}}>
+                            <Text>Are you sure you want to delete <code>{ props.variableKey }</code>?</Text>
+                            <Text weight="bold">This can not be undone.</Text>
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions>
+                        <DialogTrigger disableButtonEnhancement>
+                            <Button appearance="primary" onClick={props.onConfirm}>Delete</Button>
+                        </DialogTrigger>
+                        <DialogTrigger disableButtonEnhancement>
+                            <Button appearance="secondary">Cancel</Button>
+                        </DialogTrigger>
+                    </DialogActions>
+                </DialogBody>
+            </DialogSurface>
+        </Dialog>
+    );
 }
