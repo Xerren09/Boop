@@ -78,8 +78,6 @@ export function ProjectPage() {
                 const proj = await BoopAPI.getProject(projectId);
                 if (proj) {
                     setProject(proj);
-                    const _port = await proj.getEnv("PORT");
-                    setPort(_port);
                 }
                 else {
                     navigation("..");
