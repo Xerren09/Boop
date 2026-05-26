@@ -1,8 +1,9 @@
-import { Button, Spinner, Text, Tooltip, type ButtonProps } from "@fluentui/react-components"
+import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Spinner, Subtitle1, Text, Tooltip, type ButtonProps } from "@fluentui/react-components"
 import type { ProjectStatus } from "../../../api/streamers/types"
-import { DeleteFilled, PlayFilled, ReplayFilled, StopFilled } from "@fluentui/react-icons"
+import { DeleteFilled, PlayFilled, ReplayFilled, StopFilled, WarningColor } from "@fluentui/react-icons"
 import { useContext, useState, type JSX } from "react";
 import { BoopAPI, ProjectProvider } from "../../../api/api";
+import Stack from "../../stack";
 
 const buttonTypes: {[key in ButtonAction]: ButtonData} = {
     "start": {
@@ -34,6 +35,7 @@ function getAPICallURL(projectId: string, action: ButtonAction) {
 export default function ProjectControlButton(props: Props) {
     const project = useContext(ProjectProvider);
     const [busy, setBusy] = useState<boolean>(false);
+    const [dialogueOpen, setDialogueOpen] = useState<boolean>(false);
     const [tooltipEnabled, setTooltipEnabled] = useState<boolean>(false);
 
     const projectId: string | undefined = project ? project.name : props.projectId;
@@ -61,27 +63,62 @@ export default function ProjectControlButton(props: Props) {
         }
     }
 
+    const showCancellationDialogue = () => {
+        setDialogueOpen(true);
+    }
+
     const buttonInfo = buttonTypes[props.action];
 
     return (
-        <Tooltip
-            content={buttonInfo.label}
-            relationship="label"
-            visible={(tooltipEnabled && (props.hideLabel ?? false))}
-            onVisibleChange={
-                (_ev, data) => setTooltipEnabled(data.visible)
+        <>
+            <Tooltip
+                content={buttonInfo.label}
+                relationship="label"
+                visible={(tooltipEnabled && (props.hideLabel ?? false))}
+                onVisibleChange={
+                    (_ev, data) => setTooltipEnabled(data.visible)
+                }
+            >   
+                {/* 
+                //@ts-expect-error ...props */}
+                <Button
+                    icon={busy ? <Spinner size="extra-tiny" /> : buttonInfo.icon}
+                    onClick={props.cancellable ? showCancellationDialogue : invokeCallback}
+                    disabled={busy || buttonInfo.disableOn === null ? false : props.projectState === buttonInfo.disableOn}
+                    children={props.hideLabel === true ? undefined : (<Text weight="semibold">{ buttonInfo.label }</Text>)}
+                    {...props}
+                />
+            </Tooltip>
+            {
+                props.cancellable && <Dialog open={ dialogueOpen } modalType="alert">
+                    <DialogSurface>
+                        <DialogBody>
+                            <DialogTitle>
+                                <Stack verticalAlign="end" horizontal gap={8}>
+                                    <WarningColor fontSize={24} />
+                                    <Subtitle1>{buttonInfo.label} { project?.name }?</Subtitle1>
+                                </Stack>
+                            </DialogTitle>
+                            <DialogContent>
+                                <Text>Are you sure you want to {buttonInfo.label.toLocaleLowerCase()} this project?</Text>
+                                {
+                                    buttonInfo.label === "Delete" &&
+                                    <Text weight="bold">This can not be undone.</Text>
+                                }
+                            </DialogContent>
+                            <DialogActions>
+                                <DialogTrigger disableButtonEnhancement>
+                                    <Button appearance="primary" onClick={() => { setDialogueOpen(false); invokeCallback(); }}>Delete</Button>
+                                </DialogTrigger>
+                                <DialogTrigger disableButtonEnhancement>
+                                    <Button appearance="secondary" onClick={() => { setDialogueOpen(false); }}>Cancel</Button>
+                                </DialogTrigger>
+                            </DialogActions>
+                        </DialogBody>
+                    </DialogSurface>
+                </Dialog>
             }
-        >
-            {/* 
-            //@ts-expect-error ...props */}
-            <Button
-                icon={busy ? <Spinner size="extra-tiny" /> : buttonInfo.icon}
-                onClick={invokeCallback}
-                disabled={busy || buttonInfo.disableOn === null ? false : props.projectState === buttonInfo.disableOn}
-                children={props.hideLabel === true ? undefined : (<Text weight="semibold">{ buttonInfo.label }</Text>)}
-                {...props}
-            />
-        </Tooltip>
+        </>
     );
 }
 
@@ -96,6 +133,7 @@ type Props = {
      */
     projectId?: string,
     hideLabel?: boolean,
+    cancellable?: boolean,
     /**
      * Callback that fires when the action completed.
      * @param err 
