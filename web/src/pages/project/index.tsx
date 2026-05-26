@@ -1,10 +1,10 @@
-import { ArrowLeftRegular } from "@fluentui/react-icons";
+import { HomeColor } from "@fluentui/react-icons";
 import { useEffect, useMemo, useState } from "react";
 import ProjectWebhookEventsTab from "./eventsTab";
 import { useNavigate, useParams } from "react-router";
 import EnvironmentVariableEditor from "./variables";
 import  Stack from "../../components/stack";
-import { Button, Link, Tab, TabList, Text, Title3, Toolbar, ToolbarGroup, Tooltip } from "@fluentui/react-components";
+import { Breadcrumb, BreadcrumbButton, BreadcrumbDivider, BreadcrumbItem, Link, Overflow, OverflowItem, Tab, TabList, Text, Title3, Toolbar, ToolbarGroup, Tooltip } from "@fluentui/react-components";
 import Section from "../../components/section";
 import DataTable, { DataTableRow } from "../../components/dataTable";
 import Runtime from "../../components/runtime";
@@ -130,15 +130,16 @@ export function ProjectPage() {
 
     return (
         <ProjectProvider value={project}>
-            <Stack horizontalAlign="start" style={{minWidth: "75%"}} verticalFill horizontalFill>
-                <Button
-                    icon={<ArrowLeftRegular></ArrowLeftRegular>}
-                    onClick={() => {
-                        navigation("..");
-                    }}
-                >
-                    Back
-                </Button>
+            <Stack horizontalAlign="start" style={{ minWidth: "75%", marginTop: 12 }} gap={12} verticalFill horizontalFill>
+                <Breadcrumb size="large">
+                    <BreadcrumbItem>
+                        <BreadcrumbButton onClick={() => { navigation(".."); }}><HomeColor/></BreadcrumbButton>
+                    </BreadcrumbItem>
+                    <BreadcrumbDivider />
+                    <BreadcrumbItem>
+                        <BreadcrumbButton current>{ projectId }</BreadcrumbButton>
+                    </BreadcrumbItem>
+                </Breadcrumb>
                 <Stack horizontalFill gap={24} verticalFill={false}>
                     <Section>
                         <Stack horizontal horizontalAlign="start" verticalAlign="center" gap={12}>
@@ -210,7 +211,6 @@ export function ProjectPage() {
                     verticalFill
                     style={{
                         marginBottom: 36,
-                        marginTop: 12
                     }}
                 >
                     <TabList
