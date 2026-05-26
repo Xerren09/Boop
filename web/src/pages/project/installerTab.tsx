@@ -99,7 +99,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
             <Section
                 title={statusHeadingMap[status]}
                 icon={<StatusIcon status={ status } />}
-                right={ <ProjectLogSelect install onSelect={onSelect}/> }
+                right={ <ProjectLogSelect install onSelect={onSelect} style={{ width: "35%", minWidth: 120, maxWidth: 190}}/> }
             >
                 <Text>
                     { statusDescriptionMap[status] }
