@@ -130,10 +130,10 @@ export function ProjectPage() {
 
     return (
         <ProjectProvider value={project}>
-            <Stack horizontalAlign="start" style={{ minWidth: "75%", marginTop: 12 }} gap={12} verticalFill horizontalFill>
+            <Stack horizontalAlign="start" style={{ minWidth: "75%", marginTop: 12, padding: 12 }} gap={12} verticalFill horizontalFill>
                 <Breadcrumb size="large">
                     <BreadcrumbItem>
-                        <BreadcrumbButton onClick={() => { navigation(".."); }}><HomeColor/></BreadcrumbButton>
+                        <BreadcrumbButton onClick={() => { navigation(".."); }}><HomeColor fontSize={24}/></BreadcrumbButton>
                     </BreadcrumbItem>
                     <BreadcrumbDivider />
                     <BreadcrumbItem>
@@ -219,8 +219,10 @@ export function ProjectPage() {
                             setCurrentTab(data.value as number);
                     }}>
                         <Tab value={ Tabs.deploy }>Deploy</Tab>
-                        <Tab value={ Tabs.install }>Installer</Tab>
-                        <Tab value={ Tabs.environment }>Environment</Tab>
+                        <Tab value={ Tabs.install }>Build</Tab>
+                        {
+                            project.type == "service" && <Tab value={ Tabs.environment }>Environment</Tab>
+                        }
                         <Tab value={ Tabs.events }>Webhook Events</Tab>
                         <Tab value={ Tabs.log }>Log</Tab>
                     </TabList>
