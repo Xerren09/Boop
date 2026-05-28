@@ -1,4 +1,4 @@
-import { Link, TableCell, TableCellActions, TableCellLayout, TableRow } from "@fluentui/react-components";
+import { Link, Menu, MenuButton, MenuList, MenuPopover, MenuTrigger, TableCell, TableCellActions, TableCellLayout, TableRow } from "@fluentui/react-components";
 import Runtime from "../../runtime";
 import { useProjectStreamer } from "../../../api/streamers/useProjectStreamer";
 import { ProjectStatusIcon } from "../statusIcon";
@@ -6,6 +6,7 @@ import { ProjectIcon } from "../typeIcon";
 import { Link as RouterLink } from "react-router"; 
 import ProjectControlButton from "../controlButton";
 import type { ProjectType } from "../../../api/api";
+import { MoreHorizontalFilled } from "@fluentui/react-icons";
 
 export default function ProjectListItem(props: Props) {
     const { projectStatus, lastWebhookEvent } = useProjectStreamer(props.name);
@@ -15,7 +16,10 @@ export default function ProjectListItem(props: Props) {
             display: props.hidden ? "none" : "table-row"
         }}>
             <TableCell>
-                <TableCellLayout media={<ProjectIcon type={props.type} filled />}>
+                <TableCellLayout
+                    media={<ProjectIcon type={props.type} filled />}
+                    truncate
+                >
                     <RouterLink to={`/${props.name}`}>
                         {props.name}
                     </RouterLink>
@@ -23,9 +27,18 @@ export default function ProjectListItem(props: Props) {
                 {
                     props.disableActions ? null : (
                         <TableCellActions>
-                            <ProjectControlButton action="start" projectState={projectStatus} projectId={props.name} appearance="subtle" hideLabel/>
-                            <ProjectControlButton action="stop" projectState={projectStatus} projectId={props.name} appearance="subtle" hideLabel/>
-                            <ProjectControlButton action="restart" projectState={projectStatus} projectId={props.name} appearance="subtle" hideLabel/>
+                            <Menu>
+                                <MenuTrigger disableButtonEnhancement>
+                                    <MenuButton appearance="subtle" icon={<MoreHorizontalFilled />}/>
+                                </MenuTrigger>
+                                <MenuPopover>
+                                    <MenuList>
+                                        <ProjectControlButton action="start" projectState={projectStatus} projectId={props.name} appearance="subtle" asMenuItem/>
+                                        <ProjectControlButton action="stop" projectState={projectStatus} projectId={props.name} appearance="subtle" asMenuItem/>
+                                        <ProjectControlButton action="restart" projectState={projectStatus} projectId={props.name} appearance="subtle" asMenuItem/>
+                                    </MenuList>
+                                </MenuPopover>
+                            </Menu>
                         </TableCellActions>
                     )
                 }

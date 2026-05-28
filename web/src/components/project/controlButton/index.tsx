@@ -1,4 +1,4 @@
-import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Spinner, Subtitle1, Text, Tooltip, type ButtonProps } from "@fluentui/react-components"
+import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, MenuItem, Spinner, Subtitle1, Text, Tooltip, type ButtonProps } from "@fluentui/react-components"
 import type { ProjectStatus } from "../../../api/streamers/types"
 import { DeleteFilled, PlayFilled, ReplayFilled, StopFilled, WarningColor } from "@fluentui/react-icons"
 import { useContext, useState, type JSX } from "react";
@@ -9,7 +9,7 @@ const buttonTypes: {[key in ButtonAction]: ButtonData} = {
     "start": {
         disableOn: "deployed",
         icon: <PlayFilled color="green" />,
-        label: "Start"
+        label: "Deploy"
     },
     "stop": {
         disableOn: "stopped",
@@ -68,6 +68,10 @@ export default function ProjectControlButton(props: Props) {
     }
 
     const buttonInfo = buttonTypes[props.action];
+    const icon = busy ? <Spinner size="extra-tiny" /> : buttonInfo.icon;
+    const onClick = props.cancellable ? showCancellationDialogue : invokeCallback;
+    const disabled = busy || buttonInfo.disableOn === null ? false : props.projectState === buttonInfo.disableOn;
+    const children = props.hideLabel === true ? undefined : (<Text weight="semibold">{buttonInfo.label}</Text>);
 
     return (
         <>
@@ -79,15 +83,26 @@ export default function ProjectControlButton(props: Props) {
                     (_ev, data) => setTooltipEnabled(data.visible)
                 }
             >   
-                {/* 
-                //@ts-expect-error ...props */}
-                <Button
-                    icon={busy ? <Spinner size="extra-tiny" /> : buttonInfo.icon}
-                    onClick={props.cancellable ? showCancellationDialogue : invokeCallback}
-                    disabled={busy || buttonInfo.disableOn === null ? false : props.projectState === buttonInfo.disableOn}
-                    children={props.hideLabel === true ? undefined : (<Text weight="semibold">{ buttonInfo.label }</Text>)}
-                    {...props}
-                />
+                {
+                    props.asMenuItem ?
+                            //@ts-expect-error ...props
+                            <MenuItem
+                                icon={icon}
+                                onClick={onClick}
+                                disabled={disabled}
+                                children={children}
+                                {...props}
+                            />
+                        :
+                            //@ts-expect-error ...props
+                            <Button
+                                icon={icon}
+                                onClick={onClick}
+                                disabled={disabled}
+                                children={children}
+                                {...props}
+                            />
+                }
             </Tooltip>
             {
                 props.cancellable && <Dialog open={ dialogueOpen } modalType="alert">
@@ -100,18 +115,20 @@ export default function ProjectControlButton(props: Props) {
                                 </Stack>
                             </DialogTitle>
                             <DialogContent>
-                                <Text>Are you sure you want to {buttonInfo.label.toLocaleLowerCase()} this project?</Text>
-                                {
-                                    buttonInfo.label === "Delete" &&
-                                    <Text weight="bold">This can not be undone.</Text>
-                                }
+                                <Stack gap={8} horizontalFill>
+                                    <Text>Are you sure you want to {buttonInfo.label.toLocaleLowerCase()} this project?</Text>
+                                    {
+                                        buttonInfo.label === "Delete" &&
+                                        <Text weight="bold">This can not be undone.</Text>
+                                    }
+                                </Stack>
                             </DialogContent>
                             <DialogActions>
                                 <DialogTrigger disableButtonEnhancement>
                                     <Button appearance="primary" onClick={() => { setDialogueOpen(false); invokeCallback(); }}>Delete</Button>
                                 </DialogTrigger>
                                 <DialogTrigger disableButtonEnhancement>
-                                    <Button appearance="secondary" onClick={() => { setDialogueOpen(false); }}>Cancel</Button>
+                                    <Button appearance="secondary" autoFocus onClick={() => { setDialogueOpen(false); }}>Cancel</Button>
                                 </DialogTrigger>
                             </DialogActions>
                         </DialogBody>
@@ -134,13 +151,14 @@ type Props = {
     projectId?: string,
     hideLabel?: boolean,
     cancellable?: boolean,
+    asMenuItem?: boolean
     /**
      * Callback that fires when the action completed.
      * @param err 
      * @returns 
      */
     onSettled?: (err?: unknown) => void
-} & Omit<ButtonProps, "disabled" | "icon">
+} & Omit<ButtonProps, "disabled" | "icon" | "onClick">
 
 type ButtonAction = "start" | "stop" | "restart" | "delete";
 
