@@ -42,9 +42,7 @@ export function FrontPage() {
 
     return (
         <>
-            <Stack gap={36} style={{
-                padding: 12
-            }}>
+            <Stack gap={36} style={{ padding: 12 }}>
                 <Stack>
                     <LargeTitle style={{color: "#00abec"}}>Boop!</LargeTitle>
                     <Subtitle2><Link href="https://github.com/Xerren09/Boop" target="_blank">A lightweight NodeJS CI/CD server for GitHub repositories</Link></Subtitle2>

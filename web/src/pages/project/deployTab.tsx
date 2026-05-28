@@ -8,12 +8,12 @@ import RemoteProcessGroup from "../../components/processGroup";
 import { ProjectStatusIcon } from "../../components/project/statusIcon";
 
 const statusHeadingMap: { [key in NonNullable<ProjectStatus>]: string } = {
-    "deployed": "Project deployed",
+    "deployed": "Deployed",
     "installing": "Installing",
     "installFailed": "Installer failed",
     "installSuccess": "Installer complete",
-    "stopped": "Project stopped",
-    "error": "Project error"
+    "stopped": "Stopped",
+    "error": "Error"
 }
 
 export default function ProjectDeployTab(props: { status: ProjectStatus, process?: RemoteProcess | null, directUrlHref?: string }) {
@@ -29,7 +29,7 @@ export default function ProjectDeployTab(props: { status: ProjectStatus, process
         <Stack horizontalFill gap={24}>
             <Section
                 title={statusHeadingMap[props.status]}
-                icon={<ProjectStatusIcon status={props.status}/>}
+                icon={<ProjectStatusIcon status={props.status} />}
             >
                 {
                     props.status === "deployed" &&
@@ -46,11 +46,11 @@ export default function ProjectDeployTab(props: { status: ProjectStatus, process
                 {
                     props.status === "error" &&
                     <Text>
-                            This project is currently stopped due to an error.
-                            {
-                                props.process &&
-                                "Check the terminal window below to see what went wrong, or the <em>log</em> tab for further information."
-                            }
+                        This project is currently stopped due to an error.
+                        {
+                            props.process &&
+                            "Check the terminal window below to see what went wrong, or the <em>log</em> tab for further information."
+                        }
                     </Text>
                 }
                 {
