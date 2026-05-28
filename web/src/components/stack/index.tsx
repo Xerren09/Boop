@@ -18,7 +18,7 @@ function computedStyle(props: StackProps) : React.CSSProperties {
 
 export default function Stack(props: StackProps) {
     return (
-        <div className={styles.stack} style={{...computedStyle(props), ...props.style}}>
+        <div id={ props.id } className={props.className ? `${styles.stack} ${props.className}` : styles.stack} style={{...computedStyle(props), ...props.style}}>
             {props.children}
         </div>
     );
@@ -31,5 +31,7 @@ interface StackProps extends React.PropsWithChildren {
     verticalAlign?: React.CSSProperties["justifyContent"],
     verticalFill?: boolean,
     horizontalFill?: boolean,
-    style?: React.CSSProperties
+    style?: React.CSSProperties,
+    id?: string,
+    className?: string
 }
