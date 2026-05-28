@@ -25,7 +25,7 @@ createRoot(document.getElementById('root')!).render(
                     horizontalFill
                     verticalFill
                 >
-                    <Stack gap={16} style={{ maxWidth: "75vw" }} horizontalFill verticalFill>
+                    <Stack gap={16} id='mainContentContainer' horizontalFill verticalFill>
                         <BrowserRouter>
                             <Routes>
                                 <Route path="/" Component={FrontPage}/>
