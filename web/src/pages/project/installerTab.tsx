@@ -10,15 +10,15 @@ import StatusIcon from "../../components/statusIcon";
 import { lastValueFrom } from "rxjs";
 
 const statusHeadingMap: { [key in NonNullable<InstallerStatus>]: string } = {
-    "pending": "Installing",
-    "error": "Installer failed",
-    "ok": "Installer complete",
+    "pending": "Building",
+    "error": "Build failed",
+    "ok": "Build complete",
 }
 
 const statusDescriptionMap: { [key in NonNullable<InstallerStatus>]: string } = {
-    "pending": "This project is currently installing. You can follow the progress below. Once the installer successfully completed, the project will be automatically deployed.",
-    "error": `The project installer has failed. This means your build is failing; typically you can fix this by pushing a commit to the target branch of your repository.\n\nCheck the log below to see which step failed.`,
-    "ok": "The installer completed successfully, and the project is now being deployed."
+    "pending": "This project is currently building. You can follow the progress below. Once the project has been successfully built, the project will be automatically deployed.",
+    "error": `The project build has failed. This means your build is failing; typically you can fix this by pushing a commit to the target branch of your repository.\n\nCheck the log below to see which step failed.`,
+    "ok": "The project build completed successfully, and the project is now being deployed."
 }
 
 export default function ProjectInstallerTab(props: { projectId: string }) {
