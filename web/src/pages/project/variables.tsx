@@ -275,7 +275,7 @@ function NewEnvironmentVariableDialog(props: NewEnvironmentVariableDialogProps) 
                     </DialogContent>
                     <DialogActions>
                         <DialogTrigger disableButtonEnhancement>
-                            <Button appearance="primary" onClick={SetServerEnvVariable}>Create</Button>
+                            <Button appearance="primary" autoFocus onClick={SetServerEnvVariable}>Create</Button>
                         </DialogTrigger>
                         <DialogTrigger disableButtonEnhancement>
                             <Button appearance="secondary">Cancel</Button>
@@ -314,7 +314,7 @@ function CancellableDeleteButton(props: { onConfirm: () => void, variableKey: st
                             <Button appearance="primary" onClick={props.onConfirm}>Delete</Button>
                         </DialogTrigger>
                         <DialogTrigger disableButtonEnhancement>
-                            <Button appearance="secondary">Cancel</Button>
+                            <Button autoFocus appearance="secondary">Cancel</Button>
                         </DialogTrigger>
                     </DialogActions>
                 </DialogBody>
