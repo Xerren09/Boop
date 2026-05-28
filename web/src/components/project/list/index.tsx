@@ -11,21 +11,25 @@ const HeaderCells: HeaderCell[] = [
     },
     {
         id: "status",
-        label: "Status"
+        label: "Status",
+        width: 40
     },
     {
         id: "lastCommitId",
-        label: "Commit"
+        label: "Commit",
+        width: 60
     },
     {
         id: "lastEventTime",
-        label: "Last Event"
+        label: "Last Event",
+        width: 80
     },
 ];
 
 type HeaderCell = {
     id: string,
-    label: string
+    label: string,
+    width?: React.CSSProperties["width"]
 }
 
 export default function ProjectList(props: Props) {
@@ -33,7 +37,7 @@ export default function ProjectList(props: Props) {
 
     const headerCells = useMemo(() => {
         return HeaderCells.map((column) => (
-            <TableHeaderCell key={column.id}>
+            <TableHeaderCell key={column.id} style={column.width ? {width: column.width} : undefined}>
                 {column.label}
             </TableHeaderCell>
         ))
@@ -57,7 +61,7 @@ export default function ProjectList(props: Props) {
     }
 
     return (
-        <Stack gap={8}>
+        <Stack gap={8} horizontalFill verticalFill>
             <Stack horizontal horizontalAlign="space-between">
                 <SearchBox
                     placeholder="Search..."
@@ -69,7 +73,7 @@ export default function ProjectList(props: Props) {
                     }}
                 />
             </Stack>
-            <Table>
+            <Table style={{width: "100%"}}>
                 <TableHeader>
                     <TableRow>
                         {
