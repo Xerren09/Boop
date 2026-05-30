@@ -2,7 +2,7 @@ import { useInstallStreamer, type InstallerStatus } from "../../api/streamers/us
 import Section from "../../components/section";
 import Stack from "../../components/stack";
 import RemoteProcessGroup, { type CompletedProcess } from "../../components/processGroup";
-import { Field, ProgressBar, Text } from "@fluentui/react-components";
+import { Caption1, Field, ProgressBar, Text } from "@fluentui/react-components";
 import ProjectLogSelect from "../../components/projectLogSelect";
 import { ProjectProvider, RemoteProcess, type EventLog } from "../../api/api";
 import { useContext, useEffect, useState } from "react";
@@ -94,6 +94,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
     }, [steps, selectedFileHandle]);
 
     const processList = (steps.length > 0 && selectedFileHandle == null) || logSteps.length === 0 ? steps : logSteps;
+    const eventRef = (steps.length > 0 && selectedFileHandle == null) || logSteps.length === 0 ? triggerEvent : selectedFileHandle?.eventReference;
 
     return (
         <Stack horizontalFill gap={24}>
@@ -115,7 +116,9 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
             
             <RemoteProcessGroup
                 title="Steps"
-                subtitle={<Text>Triggered by Webhook event { triggerEvent }</Text>}
+                subtitle={
+                    eventRef && <Caption1>Triggered by event {eventRef}</Caption1>
+                }
                 processes={processList}
                 onTerminalContentRequest={onTerminalContentRequested}
             />
