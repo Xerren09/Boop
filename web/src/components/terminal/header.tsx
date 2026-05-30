@@ -30,23 +30,18 @@ export default function TerminalHeader(props: HeaderProps) {
         >
             <Stack
                 horizontal
+                horizontalFill
                 verticalAlign="center"
                 gap={8}
                 style={{
-                    padding: 8
+                    padding: 8,
+                    minWidth: 0
                 }}
             >
                 {
                     <StatusIcon size="extra-tiny" status={ getStatusFromExitCode(props.exitCode) } />
                 }
-                <Text style={{ color: "#dddddd" }}>{props.title || "Terminal Output"}</Text>
-                {
-                    (props.exitCode != null && props.exitCode !== 0) ?
-                        <Text style={{ color: "#dddddd" }}> - Exit code: {props.exitCode}</Text>
-                    :
-                        undefined
-                }
-
+                <Text title={props.title || "Terminal Output"} style={{ color: "#dddddd", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{props.title || "Terminal Output"}</Text>
             </Stack>
             <Stack
                 horizontal
