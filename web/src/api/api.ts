@@ -72,7 +72,7 @@ export class BoopProject {
         this.proxyUrl = new URL(name, BoopAPI.origin);
     }
 
-    private getRequestUrl(path: string, qparams?: { [key: string]: number | string, }): URL {
+    private getRequestUrl(path: string, qparams?: { [key: string]: number | string | boolean, }): URL {
         const ret = new URL(path, this.baseUrl);
         if (qparams) {
             for (const element of Object.keys(qparams)) {
@@ -139,8 +139,11 @@ export class BoopProject {
         return ret ?? [];
     }
 
-    async getDeployLog(log: string) : Promise<string | undefined> {
+    async getDeployLog(log: string, withProcess?: boolean) : Promise<string | undefined> {
         // logs/deploy/:log
+        if (withProcess) {
+            return makeRequest<string>(this.getRequestUrl(`logs/deploy/${log}`, {process: true}), "GET", undefined);
+        }
         return makeRequest<string>(this.getRequestUrl(`logs/deploy/${log}`), "GET", undefined);
     }
 
