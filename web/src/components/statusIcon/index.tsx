@@ -5,21 +5,29 @@ export default function StatusIcon(props: StatusIconProps) {
 
     const size = matchSizeToFont(props.size ?? "small");
 
-    switch (props.status) {
-        case "ok":
-            return <CheckmarkCircleColor fontSize={size} />          
-        case "error":
-            return <ErrorCircleColor fontSize={size} />
-        case "warning":
-            return <WarningColor fontSize={size} />
-        case "paused":
-            return <PauseFilled  fontSize={size} primaryFill="orange" />
-        case "pending":
-        default:
-            return <div style={{ display: "flex" }}>
-                <Spinner size={ props.size ?? "small" }></Spinner>
-            </div>
+    function getIcon() {
+        switch (props.status) {
+            case "ok":
+                return <CheckmarkCircleColor fontSize={size} />          
+            case "error":
+                return <ErrorCircleColor fontSize={size} />
+            case "warning":
+                return <WarningColor fontSize={size} />
+            case "paused":
+                return <PauseFilled  fontSize={size} primaryFill="orange" />
+            case "pending":
+            default:
+                return <Spinner size={ props.size ?? "small" }></Spinner>
+        }
     }
+
+    return (
+        <div style={{ display: "flex" }}>
+            {
+                getIcon()
+            }
+        </div>
+    );
 }
 
 export type Status = "ok" | "error" | "warning" | "pending" | "paused";
