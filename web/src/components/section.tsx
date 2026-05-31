@@ -1,5 +1,5 @@
 import { Subtitle2, Title3 } from '@fluentui/react-components';
-import React from "react";
+import React, { type JSX } from "react";
 import Stack from './stack';
 
 export default function Section(props: SectionComponentProps) {
@@ -15,7 +15,7 @@ export default function Section(props: SectionComponentProps) {
                 ...props.style
             }}
         >
-            <Stack horizontal horizontalFill horizontalAlign="space-between" verticalAlign='start' gap={8} style={{ marginBottom: 24 }}>
+            <Stack horizontal horizontalFill horizontalAlign="space-between" verticalAlign='start' gap={8} style={{ marginBottom: props.headerMargin ?? 20 }}>
                 <Stack horizontalAlign="start" gap={8}>
                     <Stack horizontal horizontalAlign="center" verticalAlign="end" gap={8}>
                         <Stack horizontal horizontalAlign="center" verticalAlign="center" gap={8}>
@@ -53,18 +53,19 @@ interface SectionComponentProps extends React.PropsWithChildren {
     /**
      * Icon to be displayed before the title.
      */
-    icon?: React.ReactNode,
+    icon?: JSX.Element,
     /**
      * Additional content displayed after the title.
      */
-    titleExtras?: React.ReactNode,
+    titleExtras?: JSX.Element,
     /**
      * Subtitle displayed under the title row. If `string`, it will be displayed as a {@link Subtitle2}.
      */
-    subTitle?: React.ReactNode | string,
+    subTitle?: JSX.Element | string,
     /**
      * Content to be displayed to the right border of the section's title.
      */
-    right?: React.ReactNode,
+    right?: JSX.Element,
     style?: React.CSSProperties,
+    headerMargin?: number
 }
