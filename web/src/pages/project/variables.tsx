@@ -233,14 +233,20 @@ interface EnvironmentVariableProps {
 function NewEnvironmentVariableDialog(props: NewEnvironmentVariableDialogProps) {
     const project = useContext(ProjectProvider);
 
-    const [key, setKey] = useState("");
-    const [value, setValue] = useState("");
+    const keyInput = useRef<HTMLInputElement | null>(null);
+    const valueInput = useRef<HTMLInputElement|null>(null);
 
     if (!project) {
         throw new Error("No project instance was provided");
     }
 
     async function SetServerEnvVariable() {
+        if (!keyInput.current || !valueInput.current) {
+            console.error("key or value input field refs missing.");
+            return;
+        }
+        const key = keyInput.current.value.toUpperCase();
+        const value = valueInput.current.value;
         await project?.setEnv(key, value);
         if (props.onAdded) {
             props.onAdded();
@@ -250,7 +256,7 @@ function NewEnvironmentVariableDialog(props: NewEnvironmentVariableDialogProps) 
     return (
         <Dialog>
             <DialogTrigger disableButtonEnhancement>
-                <Button icon={<AddRegular/>}>New Environment Variable</Button>
+                <Button icon={<AddRegular/>} appearance="primary">Create new</Button>
             </DialogTrigger>
             <DialogSurface>
                 <DialogBody>
@@ -258,18 +264,19 @@ function NewEnvironmentVariableDialog(props: NewEnvironmentVariableDialogProps) 
                     <DialogContent>
                         <Stack gap={12} style={{marginTop: 18, marginBottom: 18}}>
                             <Input
+                                ref={keyInput}
                                 placeholder="Key"
-                                value={key}
                                 onChange={(_target, val) => {
-                                    setKey(`${val.value}`.toUpperCase());
+                                    if (!keyInput.current) {
+                                        return;
+                                    }
+                                    keyInput.current.value = val.value.toUpperCase();
                                 }}
+                                
                             />
                             <Input
+                                ref={valueInput}
                                 placeholder="Value"
-                                value={value}
-                                onChange={(_target, val) => {
-                                    setValue(val.value || "");
-                                }}
                             />
                         </Stack>
                     </DialogContent>
