@@ -217,7 +217,11 @@ export function ProjectPage() {
                         selectedValue={currentTab}
                         onTabSelect={(tab, data) => {
                             setCurrentTab(data.value as number);
-                    }}>
+                        }}
+                        style={{
+                            overflowX: "auto"
+                        }}
+                    >
                         <Tab value={ Tabs.deploy }>Deploy</Tab>
                         <Tab value={ Tabs.install }>Build</Tab>
                         {
