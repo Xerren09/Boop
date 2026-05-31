@@ -21,21 +21,21 @@ function LogItem(props: { item: LogEntry, accordionId: string }) {
     const { timestamp, ...metadata } = props.item.metadata;
     if (isMetadataEmpty) {
         return (
-            <Stack horizontal horizontalFill horizontalAlign="space-between" verticalAlign="center" style={{ paddingLeft: 10, paddingRight: 10, minHeight: 44}}>
-                <Stack gap={8} horizontal verticalAlign="center">
+            <Stack gap={8} horizontal horizontalFill horizontalAlign="space-between" verticalAlign="center" style={{ paddingLeft: 10, paddingRight: 10, minHeight: 44}}>
+                <Stack gap={8} horizontal verticalAlign="center" style={{minWidth: 0}}>
                     <LogItemIcon level={props.item.level} />
-                    <Text>{ props.item.message }</Text>
+                    <Text style={{whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%"}}>{ props.item.message }</Text>
                 </Stack>
-                <Runtime since start={new Date(timestamp)} style={{paddingRight: 28}}/>
+                <Runtime since start={new Date(timestamp)} style={{paddingRight: 28, whiteSpace: "nowrap"}}/>
             </Stack>
         )
     }
     return (
         <AccordionItem value={props.accordionId} disabled={isMetadataEmpty}>
             <AccordionHeader expandIconPosition="end" icon={<LogItemIcon level={ props.item.level } />} style={{color: "white", fill: "white"}}>
-                <Stack horizontal horizontalFill horizontalAlign="space-between">
-                    <Text>{ props.item.message }</Text>
-                    <Runtime since start={new Date(timestamp)}/>
+                <Stack gap={8} horizontal horizontalFill horizontalAlign="space-between" verticalAlign="center" style={{minWidth: 0}}>
+                    <Text style={{whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%"}}>{ props.item.message }</Text>
+                    <Runtime since start={new Date(timestamp)} style={{whiteSpace: "nowrap"}}/>
                 </Stack>
             </AccordionHeader>
             <AccordionPanel>
@@ -50,14 +50,22 @@ function LogItem(props: { item: LogEntry, accordionId: string }) {
 }
 
 function LogItemIcon(props: { level: LogEntry["level"] }) {
-    switch (props.level) {
-        case "info":
-            return <InfoRegular fontSize={20}/>
-        case "debug":
-            return <BugRegular fontSize={20} color="lightgreen"/>
-        case "error":
-            return <DismissCircleColor fontSize={20}/>
-        case "warn":
-            return <WarningColor fontSize={20}/>
+    function getIcon() {
+        switch (props.level) {
+            case "info":
+                return <InfoRegular fontSize={20}/>
+            case "debug":
+                return <BugRegular fontSize={20} color="lightgreen"/>
+            case "error":
+                return <DismissCircleColor fontSize={20}/>
+            case "warn":
+                return <WarningColor fontSize={20}/>
+        }
     }
+
+    return (
+        <Stack>
+            {getIcon()}
+        </Stack>
+    );
 }
