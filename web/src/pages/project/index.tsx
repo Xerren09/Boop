@@ -196,10 +196,10 @@ export function ProjectPage() {
                                 {
                                     lastWebhookEvent === null || lastWebhookEvent.commit.id === null ? "No event received yet."
                                         :
-                                    <>
+                                    <Stack gap={16} horizontal horizontalFill>
                                         <Link href={ lastWebhookEvent.commit.url! } target="_blank">{ `${lastWebhookEvent.commit.id.substring(0, 7)}@${lastWebhookEvent.repository.branch} ` }</Link>
                                         <Runtime since start={lastWebhookEvent.time}></Runtime>
-                                    </>
+                                    </Stack>
                                 }
                             </Text>
                         </DataTableRow>
