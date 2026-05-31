@@ -4,7 +4,7 @@ import ProjectWebhookEventsTab from "./eventsTab";
 import { useNavigate, useParams } from "react-router";
 import EnvironmentVariableEditor from "./variables";
 import  Stack from "../../components/stack";
-import { Breadcrumb, BreadcrumbButton, BreadcrumbDivider, BreadcrumbItem, Link, Overflow, OverflowItem, Tab, TabList, Text, Title3, Toolbar, ToolbarGroup, Tooltip } from "@fluentui/react-components";
+import { Breadcrumb, BreadcrumbButton, BreadcrumbDivider, BreadcrumbItem, Link, Tab, TabList, Text, Toolbar, ToolbarGroup, Tooltip } from "@fluentui/react-components";
 import Section from "../../components/section";
 import DataTable, { DataTableRow } from "../../components/dataTable";
 import Runtime from "../../components/runtime";
@@ -140,70 +140,71 @@ export function ProjectPage() {
                         <BreadcrumbButton current>{ projectId }</BreadcrumbButton>
                     </BreadcrumbItem>
                 </Breadcrumb>
-                <Stack horizontalFill gap={24} verticalFill={false}>
-                    <Section>
-                        <Stack horizontal horizontalAlign="start" verticalAlign="center" gap={12}>
-                            <ProjectStatusIcon status={projectStatus}/>
+                <Section
+                    icon={
+                        <>
+                            <ProjectStatusIcon status={projectStatus} />
                             <ProjectIcon type={project.type} size={34}/>
-                            <Title3>{projectId || ""}</Title3>
-                        </Stack>
-                        <div style={{ marginTop: 12, width: "100%" }}>
-                            <Toolbar style={{ justifyContent: "space-between" }}>
-                                <ToolbarGroup>
-                                    <ProjectControlButton
-                                        action="start"
-                                        appearance="subtle"
-                                    />
-                                    <ProjectControlButton
-                                        action="stop"
-                                        appearance="subtle"
-                                    />
-                                    <ProjectControlButton
-                                        action="restart"
-                                        appearance="subtle"
-                                    />
-                                </ToolbarGroup>
-                                <ToolbarGroup>
-                                    <ProjectControlButton
-                                        action="delete"
-                                        appearance="subtle"
-                                        onSettled={onProjectDeleted}
-                                    />
-                                </ToolbarGroup>
-                            </Toolbar>
-                        </div>
-                        <DataTable>
-                            <DataTableRow label="Remote">
-                                <Text><Link href={project.remote} target="_blank">{project.remote}</Link></Text>
-                            </DataTableRow>
-                            <DataTableRow label="Router">
-                                <Tooltip content={ projectStatus == "deployed" ? "This project is available via Boop's proxy at this URL." : "This project is not currently deployed, so the project is unavailable through Boop's proxy." } relationship="description">
-                                    <Text><Link disabled={ projectStatus != "deployed" } href={proxyUrlHref} target="_blank">{proxyUrlHref}</Link></Text>
+                        </>
+                    }
+                    title={project.name}
+                    headerMargin={18}
+                >
+                    <Toolbar style={{ justifyContent: "space-between", width: "100%" }}>
+                        <ToolbarGroup>
+                            <ProjectControlButton
+                                action="start"
+                                appearance="subtle"
+                            />
+                            <ProjectControlButton
+                                action="stop"
+                                appearance="subtle"
+                            />
+                            <ProjectControlButton
+                                action="restart"
+                                appearance="subtle"
+                            />
+                        </ToolbarGroup>
+                        <ToolbarGroup>
+                            <ProjectControlButton
+                                cancellable
+                                action="delete"
+                                appearance="subtle"
+                                onSettled={onProjectDeleted}
+                            />
+                        </ToolbarGroup>
+                    </Toolbar>  
+                    <DataTable>
+                        <DataTableRow label="Remote">
+                            <Text><Link href={project.remote} target="_blank">{project.remote}</Link></Text>
+                        </DataTableRow>
+                        <DataTableRow label="Router">
+                            <Tooltip content={ projectStatus == "deployed" ? "This project is available via Boop's proxy at this URL." : "This project is not currently deployed, so the project is unavailable through Boop's proxy." } relationship="description">
+                                <Text><Link disabled={ projectStatus != "deployed" } href={proxyUrlHref} target="_blank">{proxyUrlHref}</Link></Text>
+                            </Tooltip>
+                        </DataTableRow>
+                        {
+                            project.type == "service" &&
+                            <DataTableRow label="Direct">
+                                <Tooltip content={ projectStatus == "deployed" ? "This project is available at this port on Boop's host machine." : "This project is not currently deployed, so the project is unavailable." } relationship="description">
+                                    <Text><Link disabled={ projectStatus != "deployed" } href={directUrlHref} target="_blank">{directUrlHref}</Link></Text>
                                 </Tooltip>
                             </DataTableRow>
-                            {
-                                project.type == "service" &&
-                                <DataTableRow label="Direct">
-                                    <Tooltip content={ projectStatus == "deployed" ? "This project is available at this port on Boop's host machine." : "This project is not currently deployed, so the project is unavailable." } relationship="description">
-                                        <Text><Link disabled={ projectStatus != "deployed" } href={directUrlHref} target="_blank">{directUrlHref}</Link></Text>
-                                    </Tooltip>
-                                </DataTableRow>
-                            }
-                            <DataTableRow label="Last Event">
-                                <Text>
-                                    {
-                                        lastWebhookEvent === null || lastWebhookEvent.commit.id === null ? "No event received yet."
-                                            :
-                                        <>
-                                            <Link href={ lastWebhookEvent.commit.url! } target="_blank">{ `${lastWebhookEvent.commit.id.substring(0, 7)}@${lastWebhookEvent.repository.branch} ` }</Link>
-                                            <Runtime since start={lastWebhookEvent.time}></Runtime>
-                                        </>
-                                    }
-                                </Text>
-                            </DataTableRow>
-                        </DataTable>
-                    </Section>
-                </Stack>
+                        }
+                        <DataTableRow label="Last Event">
+                            <Text>
+                                {
+                                    lastWebhookEvent === null || lastWebhookEvent.commit.id === null ? "No event received yet."
+                                        :
+                                    <>
+                                        <Link href={ lastWebhookEvent.commit.url! } target="_blank">{ `${lastWebhookEvent.commit.id.substring(0, 7)}@${lastWebhookEvent.repository.branch} ` }</Link>
+                                        <Runtime since start={lastWebhookEvent.time}></Runtime>
+                                    </>
+                                }
+                            </Text>
+                        </DataTableRow>
+                    </DataTable>
+                </Section>
 
                 <Stack
                     gap={12}
