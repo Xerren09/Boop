@@ -20,7 +20,8 @@ import {
     TableHeaderCell,
     TableCell,
     TableCellLayout,
-    TableCellActions
+    TableCellActions,
+    useApplyScrollbarWidth
 } from "@fluentui/react-components";
 import { AddRegular, CheckmarkRegular, DeleteRegular, DismissRegular, EditOffRegular, EditRegular, EyeFilled, EyeOffFilled } from "@fluentui/react-icons";
 import Stack from "../../components/stack";
@@ -57,15 +58,16 @@ export default function EnvironmentVariableEditor() {
     }
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         refresh();
     }, []);
 
     const rows = useMemo(() => {
         return env.map(variable => (
             <TableRow key={variable.key}>
-                <TableCell style={{maxWidth: "12em"}}>
-                    <Text truncate block>{ variable.key }</Text>
+                <TableCell>
+                    <TableCellLayout truncate>
+                        <Text>{ variable.key }</Text>
+                    </TableCellLayout>
                 </TableCell>
                 <EnvironmentVariable
                     env={variable}
@@ -80,6 +82,8 @@ export default function EnvironmentVariableEditor() {
             </TableRow>
         ));
     }, [env, showVariables])
+
+    const scrollWidthAlignRef = useApplyScrollbarWidth();
 
     return (
         <Section
@@ -104,15 +108,16 @@ export default function EnvironmentVariableEditor() {
                     </ToolbarGroup>
                 </Toolbar>
                 <Stack>
-                    <Table noNativeElements >
+                    <Table noNativeElements>
                         <TableHeader>
                             <TableRow>
-                                <TableHeaderCell style={{maxWidth: "12em"}}>
+                                <TableHeaderCell>
                                     Key
                                 </TableHeaderCell>
                                 <TableHeaderCell>
                                     Value 
                                 </TableHeaderCell>
+                                <div role="presentation" ref={scrollWidthAlignRef} />
                             </TableRow>
                         </TableHeader>
                         <TableBody
