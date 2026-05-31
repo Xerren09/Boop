@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
     Toolbar,
     Dialog,
@@ -26,6 +26,11 @@ import { AddRegular, CheckmarkRegular, DeleteRegular, DismissRegular, EditOffReg
 import Stack from "../../components/stack";
 import { ProjectProvider } from "../../api/api";
 import Section from "../../components/section";
+
+type EnvironmentVariable  = {
+    key: string,
+    value: string
+}
 
 export default function EnvironmentVariableEditor() {
     const project = useContext(ProjectProvider);
@@ -63,8 +68,7 @@ export default function EnvironmentVariableEditor() {
                     <Text truncate block>{ variable.key }</Text>
                 </TableCell>
                 <EnvironmentVariable
-                    envKey={variable.key}
-                    value={variable.value}
+                    env={variable}
                     visible={showVariables}
                     onValueChange={(key, value) => {
                         onValueChange(key, value);
@@ -129,11 +133,6 @@ export default function EnvironmentVariableEditor() {
     )
 }
 
-interface EnvironmentVariable {
-    key: string,
-    value: string
-}
-
 /**
  * Retruns a table cell configured to display and edit an environment variable value.
  * @param props 
@@ -142,7 +141,8 @@ interface EnvironmentVariable {
 function EnvironmentVariable(props: EnvironmentVariableProps) {
     const [visible, toggleVisibility] = useState(props.visible);
     const [editable, toggleEdit] = useState(false);
-    const [editedValue, setEditedValue] = useState(props.value);
+
+    const editField = useRef<HTMLInputElement | null>(null);
 
     function onVisibleClick() {
         toggleVisibility(!visible);
@@ -153,11 +153,14 @@ function EnvironmentVariable(props: EnvironmentVariableProps) {
     }
 
     function onSaveValueClick() {
+        if (!editField.current) {
+            console.error("Editfield ref missing.");
+            return;
+        }
         onEditClick();
-        props.onValueChange(props.envKey, editedValue);
+        props.onValueChange(props.env.key, editField.current.value);
     }
 
-    // TODO: confirmation popup
     function onDeleteClick() {
         props.onDelete();
     }
@@ -166,57 +169,52 @@ function EnvironmentVariable(props: EnvironmentVariableProps) {
 
     return (
         <TableCell>
-            <TableCellLayout>
-                <Stack horizontal horizontalAlign="stretch" verticalAlign="center" gap={8} style={{ height: "100%", flexGrow: 1 }}>
-                    {
-                        !showContent && 
-                        <Text>Hidden value. Click <em><EyeOffFilled/> show value</em> to view.</Text>
-                    }
-                    {
-                        showContent && (
-                            editable ? 
-                                <Input
-                                    style={{width: `100%`}}
-                                    defaultValue={props.value}
-                                    onChange={(_target, val) => {
-                                        setEditedValue(val.value);
-                                    }}
-                                    contentAfter={
-                                        <Stack gap={4} horizontal> 
-                                            <Button appearance="subtle" icon={<CheckmarkRegular />} onClick={onSaveValueClick}/>
-                                            <Button appearance="subtle" icon={<DismissRegular />} onClick={onEditClick}/>
-                                        </Stack>
-                                    }
-                                />
-                            :
-                                <Stack gap={8} horizontal verticalAlign="center"> 
-                                    <Text><code>{props.value}</code></Text>
-                                </Stack>
-                        )
-                    }
-                </Stack>
+            <TableCellLayout truncate>
+                {
+                    !showContent && 
+                    <Text>Hidden value. Click <em><EyeOffFilled/></em> to view.</Text>
+                }
+                {
+                    showContent && (
+                        editable ? 
+                            <Input
+                                ref={editField}
+                                style={{width: `100%`}}
+                                defaultValue={props.env.value}
+                                contentAfter={
+                                    <Stack gap={4} horizontal> 
+                                        <Button title="Save" appearance="subtle" icon={<CheckmarkRegular />} onClick={onSaveValueClick}/>
+                                        <Button title="Dismiss" appearance="subtle" icon={<DismissRegular />} onClick={onEditClick}/>
+                                    </Stack>
+                                }
+                            />
+                        :
+                        <Text><code>{props.env.value}</code></Text>
+                    )
+                }
             </TableCellLayout>
-            <TableCellActions>
-                <Button
-                    icon={visible ? <EyeFilled/> : <EyeOffFilled/>}
-                    onClick={onVisibleClick}
-                    appearance="subtle"
-                />
-                <Button
-                    appearance="subtle"
-                    icon={editable ? <EditOffRegular/> : <EditRegular />}
-                    onClick={onEditClick}
-                    disabled={ !visible }
-                />
-                <CancellableDeleteButton onConfirm={onDeleteClick} variableKey={ props.envKey }/>
-            </TableCellActions>
+            {
+                !editable && <TableCellActions>
+                    <Button
+                        icon={showContent ? <EyeFilled/> : <EyeOffFilled/>}
+                        onClick={onVisibleClick}
+                        appearance="subtle"
+                    />
+                    <Button
+                        appearance="subtle"
+                        icon={editable ? <EditOffRegular/> : <EditRegular />}
+                        onClick={onEditClick}
+                        disabled={ !showContent }
+                    />
+                    <CancellableDeleteButton onConfirm={onDeleteClick} variableKey={ props.env.key }/>
+                </TableCellActions>
+            }
         </TableCell>
     );
 }
 
 interface EnvironmentVariableProps {
-    envKey: string,
-    value: string,
+    env: EnvironmentVariable,
     visible: boolean,
     onValueChange: (key: string, value: string) => void
     onDelete: () => void
