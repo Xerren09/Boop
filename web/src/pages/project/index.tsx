@@ -210,7 +210,7 @@ export function ProjectPage() {
                     horizontalFill
                     verticalFill
                     style={{
-                        marginBottom: 36,
+                        marginBottom: 18,
                     }}
                 >
                     <TabList

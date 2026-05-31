@@ -23,7 +23,6 @@ export default function ProjectLogTab() {
         <Section
             title="Project Log"
             style={{
-                marginBottom: 22,
                 height: "100%"
             }}
         >

@@ -85,7 +85,6 @@ export default function ProjectWebhookEventsTab() {
     return(
         <Section
             style={{
-                marginBottom: 22,
                 height: "100%"
             }}
         >

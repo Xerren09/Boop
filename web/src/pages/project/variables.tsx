@@ -80,9 +80,6 @@ export default function EnvironmentVariableEditor() {
     return (
         <Section
             title="Environment Variables"
-            style={{
-                marginBottom: 22,
-            }}
         >
             <Stack horizontalFill>
                 <Text
