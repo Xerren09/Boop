@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Table, TableHeader, TableRow, TableHeaderCell, TableBody, SearchBox, type SearchBoxChangeEvent, type InputOnChangeData } from "@fluentui/react-components";
+import { Table, TableHeader, TableRow, TableHeaderCell, TableBody, SearchBox, type SearchBoxChangeEvent, type InputOnChangeData, TableCellLayout } from "@fluentui/react-components";
 import ProjectListItem from "./item";
 import Stack from "../../stack";
 import type { ProjectEntry } from "../../../api/api";
@@ -10,26 +10,28 @@ const HeaderCells: HeaderCell[] = [
         label: "Name"
     },
     {
-        id: "status",
-        label: "Status",
-        width: 40
-    },
-    {
         id: "lastCommitId",
         label: "Commit",
-        width: 60
+        style: {
+            width: 60,
+            minWidth: 60
+        }
     },
     {
         id: "lastEventTime",
         label: "Last Event",
-        width: 80
+        style: {
+            width: 90,
+            maxWidth: 140,
+            minWidth: 90
+        }
     },
 ];
 
 type HeaderCell = {
     id: string,
     label: string,
-    width?: React.CSSProperties["width"]
+    style?: React.CSSProperties,
 }
 
 export default function ProjectList(props: Props) {
@@ -37,8 +39,10 @@ export default function ProjectList(props: Props) {
 
     const headerCells = useMemo(() => {
         return HeaderCells.map((column) => (
-            <TableHeaderCell key={column.id} style={column.width ? {width: column.width} : undefined}>
-                {column.label}
+            <TableHeaderCell key={column.id} style={{ whiteSpace: "nowrap", ...column.style }}>
+                <TableCellLayout truncate>
+                    {column.label}
+                </TableCellLayout>
             </TableHeaderCell>
         ))
     }, [])

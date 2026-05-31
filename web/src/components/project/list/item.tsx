@@ -2,7 +2,6 @@ import { Link, Menu, MenuButton, MenuList, MenuPopover, MenuTrigger, TableCell, 
 import Runtime from "../../runtime";
 import { useProjectStreamer } from "../../../api/streamers/useProjectStreamer";
 import { ProjectStatusIcon } from "../statusIcon";
-import { ProjectIcon } from "../typeIcon";
 import { Link as RouterLink } from "react-router"; 
 import ProjectControlButton from "../controlButton";
 import type { ProjectType } from "../../../api/api";
@@ -17,7 +16,8 @@ export default function ProjectListItem(props: Props) {
         }}>
             <TableCell>
                 <TableCellLayout
-                    media={<ProjectIcon type={props.type} filled />}
+                    media={<ProjectStatusIcon status={ projectStatus } size="tiny"/>}
+                    description={props.type === "service" ? "Service" : "Web application"}
                     truncate
                 >
                     <RouterLink to={`/${props.name}`}>
@@ -42,9 +42,6 @@ export default function ProjectListItem(props: Props) {
                         </TableCellActions>
                     )
                 }
-            </TableCell>
-            <TableCell>
-                <ProjectStatusIcon status={ projectStatus } size="tiny"/>
             </TableCell>
             <TableCell>
                 {
