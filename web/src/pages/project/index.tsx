@@ -17,14 +17,7 @@ import ProjectLogTab from "./logTab";
 import ProjectDeployTab from "./deployTab";
 import { useProjectStreamer } from "../../api/streamers/useProjectStreamer";
 import ProjectInstallerTab from "./installerTab";
-
-enum Tabs {
-    "deploy",
-    "install",
-    "environment",
-    "events",
-    "log"
-}
+import { Tabs } from "./tabs";
 
 function getFirstNavTargetTab() {
     const hashTab = window.location.hash.substring(1, window.location.hash.length);
