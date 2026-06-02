@@ -24,28 +24,25 @@ const statusDescriptionMap: { [key in NonNullable<InstallerStatus>]: string } = 
 export default function ProjectInstallerTab(props: { projectId: string }) {
     const { steps, status, triggerEvent } = useInstallStreamer(props.projectId);
 
+    const [isLive, setLiveStatus] = useState<boolean>(true);
     const [selectedFileHandle, setSelectedFileHandle] = useState<EventLog | null>(null);
-
-    const [logTime, setlogTime] = useState<number|null>(null);
     const [logSteps, setLogSteps] = useState<CompletedProcess[]>([]);
 
     const project = useContext(ProjectProvider);
 
-    // TODO: Add installer ref to the build group subtitle that links to the corresponding webhook event that triggered it
-
     async function onSelect(file: EventLog | null) {
         if (!file) {
             console.log("Live selected");
+            setLiveStatus(true);
             setSelectedFileHandle(null);
-            setlogTime(null);
             setLogSteps([]);
             return;
         }
         if (file.time) {
             console.log("Selected file:", file);
+            setLiveStatus(false);
             setSelectedFileHandle(file);
             const _steps = await getLogFile(file);
-            setlogTime(() => file.time);
             setLogSteps(() => _steps);
         }
     }
@@ -63,7 +60,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
     }
 
     async function onTerminalContentRequested(idx: number) {
-        if (logSteps.length === 0 || logTime === null) {
+        if (logSteps.length === 0 || selectedFileHandle === null) {
             return;
         }
         if (logSteps[idx].output != null) {
@@ -71,7 +68,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
         }
         const _steps = [...logSteps];
         const step = _steps[idx];
-        step.output = (await project?.getInstallLog(logTime, idx)) ?? "";
+        step.output = (await project?.getInstallLog(selectedFileHandle.time, idx)) ?? "";
         setLogSteps(() => _steps);
     }
 
@@ -87,14 +84,16 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
             // Pull the latest log as the value of live
             project.listInstallLogs().then(logs => logs.reduce((prev, curr) => prev.time > curr.time ? prev : curr)).then(async log => {
                 const _steps = await getLogFile(log);
-                setlogTime(() => log.time);
+                setSelectedFileHandle(() => log);
                 setLogSteps(() => _steps);
             }).catch(err => console.error(err));
         }
     }, [steps, selectedFileHandle]);
 
-    const processList = (steps.length > 0 && selectedFileHandle == null) || logSteps.length === 0 ? steps : logSteps;
-    const eventRef = (steps.length > 0 && selectedFileHandle == null) || logSteps.length === 0 ? triggerEvent : selectedFileHandle?.eventReference;
+    const liveHasContent = (steps.length > 0 && selectedFileHandle == null);
+
+    const eventRef = liveHasContent && isLive ? triggerEvent : selectedFileHandle?.eventReference;
+    const processList = liveHasContent && isLive ? steps : logSteps;
 
     return (
         <Stack horizontalFill gap={24}>
