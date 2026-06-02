@@ -113,6 +113,7 @@ export function ProjectPage() {
             if (window.location.hash == tabHash) {
                 return;
             }
+            console.log("changing tabs", "from", `#${Tabs[currentTab]}`, "to", window.location.hash);
             const hashTargetTab = window.location.hash.substring(1, window.location.hash.length);
             const tabIdx = Tabs[hashTargetTab as keyof typeof Tabs] as number;
             setCurrentTab(() => tabIdx);
@@ -120,9 +121,9 @@ export function ProjectPage() {
         window.addEventListener('hashchange', handleHashChange);
 
         return () => {
-          window.removeEventListener('hashchange', handleHashChange);
+            window.removeEventListener('hashchange', handleHashChange);
         };
-    }, []);
+    }, [currentTab]);
     
     if (!project || !projectId) {
         return <ProjectPageSkeleton/>
