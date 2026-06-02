@@ -89,6 +89,10 @@ export function ProjectPage() {
             return;
         }
         window.location.hash = tabHash;
+        // HACK: Clear out any query params when navigating between tabs
+        const newUrl = new URL(window.location.href);
+        newUrl.search = "";
+        window.history.pushState(null, '', newUrl);
     }, [currentTab]);
 
     /**
