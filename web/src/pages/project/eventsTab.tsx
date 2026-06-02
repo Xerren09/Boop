@@ -1,15 +1,19 @@
 import { Text, Link, Tooltip, Table, TableHeaderCell, TableHeader, TableRow, TableBody, TableCell, TableCellLayout, useApplyScrollbarWidth } from "@fluentui/react-components";
 import Stack from "../../components/stack";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState, type JSX } from "react";
 import Runtime from "../../components/runtime";
 import { ProjectProvider, type WebhookEvent } from "../../api/api";
 import { WarningColor } from "@fluentui/react-icons";
 import Section from "../../components/section";
 
-const HeaderCells: HeaderCell[] = [
+const HeaderCellDefs: HeaderCell[] = [
     {
-        id: "type",
-        label: "Type"
+        id: "event",
+        label: "Event",
+    },
+    {
+        id: "id",
+        label: "ID",
     },
     {
         id: "commit",
@@ -34,27 +38,42 @@ const HeaderCells: HeaderCell[] = [
     },
 ];
 
+const HeaderCells: JSX.Element[] = HeaderCellDefs.map((column) => (
+    <TableHeaderCell key={column.id} style={column.style}>
+        {column.label}
+    </TableHeaderCell>
+));
+
 type HeaderCell = {
     id: string,
     label: string,
     style?: React.CSSProperties
 }
 
+function ScrollToEventRow(events: WebhookEvent[], eventRef: string) {
+    if (eventRef) {
+        const eventTimeId = events.find(el => el.id === eventRef)?.time ?? -1;
+        if (eventTimeId === -1) {
+            return;
+        }
+        console.log("scrolling to event", eventTimeId);
+        const element = document.getElementById(`${eventTimeId}`);
+        element?.scrollIntoView();
+    }
+}
+
 export default function ProjectWebhookEventsTab() {
     const project = useContext(ProjectProvider);
     const [events, setEvents] = useState<WebhookEvent[]>([]);
 
-    const headerCells = useMemo(() => {
-        return HeaderCells.map((column) => (
-            <TableHeaderCell key={column.id} style={column.style}>
-                {column.label}
-            </TableHeaderCell>
-        ))
+    const referredEventRef = useMemo(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("eventRef") ?? "";
     }, []);
 
     const rows = useMemo(() => {
         return events.reverse().map((event) => (
-            <TableRow key={event.time}>
+            <TableRow key={event.time} id={`${event.time}`} appearance={referredEventRef === event.id ? "neutral" : "none"}>
                 <TableCell>
                     <TableCellLayout
                         media={
@@ -74,6 +93,11 @@ export default function ProjectWebhookEventsTab() {
                         truncate
                     >
                         {event.type}
+                    </TableCellLayout>
+                </TableCell>
+                <TableCell>
+                    <TableCellLayout truncate title={event.id}>
+                        {event.id}
                     </TableCellLayout>
                 </TableCell>
                 <TableCell>
@@ -97,7 +121,7 @@ export default function ProjectWebhookEventsTab() {
                 </TableCell>
             </TableRow>
         ))
-    }, [events]);
+    }, [events, referredEventRef]);
 
     useEffect(() => {
         async function getEvents() {
@@ -108,6 +132,17 @@ export default function ProjectWebhookEventsTab() {
         }
         getEvents();
     }, [project]);
+
+    const _shouldScrollToEvent = useRef<boolean>(true);
+    useEffect(() => {
+        if (events.length != 0 && _shouldScrollToEvent.current && referredEventRef.length != 0) {
+            _shouldScrollToEvent.current = false;
+            ScrollToEventRow(events, referredEventRef);
+        }
+        else if (window.location.search.length == 0) {
+            _shouldScrollToEvent.current = false;
+        }
+    }, [events, referredEventRef]);
 
     const scrollWidthAlignRef = useApplyScrollbarWidth();
 
@@ -120,10 +155,10 @@ export default function ProjectWebhookEventsTab() {
         >
             <Stack horizontalFill verticalFill>
                 <Table noNativeElements>
-                    <TableHeader >
+                    <TableHeader>
                         <TableRow>
                             {
-                                ...headerCells
+                                ...HeaderCells
                             }
                             <div role="presentation" ref={scrollWidthAlignRef} />
                         </TableRow>
