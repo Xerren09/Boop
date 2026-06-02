@@ -8,6 +8,8 @@ import { ProjectProvider, RemoteProcess, type EventLog } from "../../api/api";
 import { useContext, useEffect, useState } from "react";
 import StatusIcon from "../../components/statusIcon";
 import { lastValueFrom } from "rxjs";
+import ProjectTabLink from "./tabLink";
+import { Tabs } from "./tabs";
 
 const statusHeadingMap: { [key in NonNullable<InstallerStatus>]: string } = {
     "pending": "Building",
@@ -116,7 +118,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
             <RemoteProcessGroup
                 title="Steps"
                 subtitle={
-                    eventRef && <Caption1>Triggered by event {eventRef}</Caption1>
+                    eventRef && <Caption1>Triggered by event <ProjectTabLink target={Tabs.events} params={{eventRef: eventRef}}>{ eventRef }</ProjectTabLink></Caption1>
                 }
                 processes={processList}
                 onTerminalContentRequest={onTerminalContentRequested}
