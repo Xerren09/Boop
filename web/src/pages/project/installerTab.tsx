@@ -1,15 +1,16 @@
 import { useInstallStreamer, type InstallerStatus } from "../../api/streamers/useInstallStreamer";
 import Section from "../../components/section";
 import Stack from "../../components/stack";
-import RemoteProcessGroup, { type CompletedProcess } from "../../components/processGroup";
+import RemoteProcessGroup from "../../components/processGroup";
 import { Caption1, Field, ProgressBar, Text } from "@fluentui/react-components";
-import ProjectLogSelect from "../../components/projectLogSelect";
+import ProjectLogSelect from "../../components/project/logSelect/projectLogSelect";
 import { ProjectProvider, RemoteProcess, type EventLog } from "../../api/api";
 import { useContext, useEffect, useState } from "react";
 import StatusIcon from "../../components/statusIcon";
 import { lastValueFrom } from "rxjs";
 import ProjectTabLink from "./tabLink";
 import { Tabs } from "./tabs";
+import useProjectProcessLog from "../../components/project/logSelect/useProjectProcessLog";
 
 const statusHeadingMap: { [key in NonNullable<InstallerStatus>]: string } = {
     "pending": "Building",
@@ -24,54 +25,25 @@ const statusDescriptionMap: { [key in NonNullable<InstallerStatus>]: string } = 
 }
 
 export default function ProjectInstallerTab(props: { projectId: string }) {
+    const project = useContext(ProjectProvider);
     const { steps, status, triggerEvent } = useInstallStreamer(props.projectId);
 
     const [isLive, setLiveStatus] = useState<boolean>(true);
     const [selectedFileHandle, setSelectedFileHandle] = useState<EventLog | null>(null);
-    const [logSteps, setLogSteps] = useState<CompletedProcess[]>([]);
-
-    const project = useContext(ProjectProvider);
+    const { processes, requestProcessOutput } = useProjectProcessLog("build", selectedFileHandle);
 
     async function onSelect(file: EventLog | null) {
         if (!file) {
             console.log("Live selected");
             setLiveStatus(true);
             setSelectedFileHandle(null);
-            setLogSteps([]);
             return;
         }
         if (file.time) {
             console.log("Selected file:", file);
             setLiveStatus(false);
             setSelectedFileHandle(file);
-            const _steps = await getLogFile(file);
-            setLogSteps(() => _steps);
         }
-    }
-
-    async function getLogFile(file: EventLog) {
-        const log = await project?.getInstallLog(file.time);
-        const _steps: CompletedProcess[] = [];
-        for (const step of log!.steps) {
-            _steps.push({
-                ...step,
-                output: null
-            });
-        }
-        return _steps;
-    }
-
-    async function onTerminalContentRequested(idx: number) {
-        if (logSteps.length === 0 || selectedFileHandle === null) {
-            return;
-        }
-        if (logSteps[idx].output != null) {
-            return;
-        }
-        const _steps = [...logSteps];
-        const step = _steps[idx];
-        step.output = (await project?.getInstallLog(selectedFileHandle.time, idx)) ?? "";
-        setLogSteps(() => _steps);
     }
 
     /**
@@ -81,21 +53,26 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
         if (!project) {
             return;
         }
-        if (steps.length == 0 && selectedFileHandle == null && logSteps.length == 0) {
+        if (steps.length == 0 && selectedFileHandle == null) {
             console.log("No installer in this session, getting latest log");
             // Pull the latest log as the value of live
-            project.listInstallLogs().then(logs => logs.reduce((prev, curr) => prev.time > curr.time ? prev : curr)).then(async log => {
-                const _steps = await getLogFile(log);
-                setSelectedFileHandle(() => log);
-                setLogSteps(() => _steps);
+            project.listInstallLogs().then(logs => {
+                if (logs.length == 0) {
+                    throw "No logs available";
+                }
+                return logs;
+            }).then(logs => logs.reduce((prev, curr) => prev.time > curr.time ? prev : curr)).then(async log => {
+                if (!log) {
+                    setSelectedFileHandle(() => log);
+                }
             }).catch(err => console.error(err));
         }
-    }, [steps, selectedFileHandle]);
+    }, [steps, selectedFileHandle, project]);
 
-    const liveHasContent = (steps.length > 0 && selectedFileHandle == null);
-
-    const eventRef = liveHasContent && isLive ? triggerEvent : selectedFileHandle?.eventReference;
-    const processList = liveHasContent && isLive ? steps : logSteps;
+    const shouldUseLiveBackup = steps.length == 0 && selectedFileHandle != null && isLive == true;
+    
+    const eventRef = !shouldUseLiveBackup && isLive ? triggerEvent : selectedFileHandle?.eventReference;
+    const processList = !shouldUseLiveBackup && isLive ? steps : processes;
 
     return (
         <Stack horizontalFill gap={24}>
@@ -121,7 +98,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
                     eventRef && <Caption1>Triggered by event <ProjectTabLink target={Tabs.events} params={{eventRef: eventRef}}>{ eventRef }</ProjectTabLink></Caption1>
                 }
                 processes={processList}
-                onTerminalContentRequest={onTerminalContentRequested}
+                onTerminalContentRequest={(shouldUseLiveBackup || isLive == false) ? requestProcessOutput : undefined}
             />
         </Stack>
     );

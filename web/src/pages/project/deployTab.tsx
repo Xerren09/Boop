@@ -1,11 +1,13 @@
-import { useContext } from "react";
-import { ProjectProvider, RemoteProcess } from "../../api/api";
+import { useContext, useState } from "react";
+import { ProjectProvider, RemoteProcess, type EventLog } from "../../api/api";
 import Section from "../../components/section";
 import { Link, Text } from "@fluentui/react-components";
 import type { ProjectStatus } from "../../api/streamers/types";
 import Stack from "../../components/stack";
 import RemoteProcessGroup from "../../components/processGroup";
 import { ProjectStatusIcon } from "../../components/project/statusIcon";
+import ProjectLogSelect from "../../components/project/logSelect/projectLogSelect";
+import useProjectProcessLog from "../../components/project/logSelect/useProjectProcessLog";
 
 const statusHeadingMap: { [key in NonNullable<ProjectStatus>]: string } = {
     "deployed": "Deployed",
@@ -19,17 +21,40 @@ const statusHeadingMap: { [key in NonNullable<ProjectStatus>]: string } = {
 export default function ProjectDeployTab(props: { status: ProjectStatus, process?: RemoteProcess | null, directUrlHref?: string }) {
     const project = useContext(ProjectProvider);
 
+    const [selectedFileHandle, setSelectedFileHandle] = useState<EventLog | null>(null);
+    const { processes, requestProcessOutput } = useProjectProcessLog("deploy", selectedFileHandle);
+
+    function OnLogSelect(file: EventLog | null) {
+        if (!file) {
+            console.log("Live selected");
+            setSelectedFileHandle(null);
+            return;
+        }
+        if (file.time) {
+            console.log("Selected file:", file);
+            setSelectedFileHandle(file);
+        }
+    }
+
+    const proxyUrl = project!.proxyUrl.toString();
+
     if (!props.status || !project) {
         return null;
     }
 
-    const proxyUrl = project.proxyUrl.toString();
+    const useLog = selectedFileHandle != null;
+    const processArr = useLog ? processes : [props.process!];
 
     return (
         <Stack horizontalFill gap={24}>
             <Section
                 title={statusHeadingMap[props.status]}
                 icon={<ProjectStatusIcon status={props.status} />}
+                right={
+                    props.process ? 
+                        <ProjectLogSelect build onSelect={OnLogSelect} style={{ width: "35%", minWidth: 120, maxWidth: 190 }} />
+                    : undefined
+                }
             >
                 {
                     props.status === "deployed" &&
@@ -74,8 +99,14 @@ export default function ProjectDeployTab(props: { status: ProjectStatus, process
                     </Text>
                 }            
             </Section>
+
             {
-                props.process ? <RemoteProcessGroup title="Service" processes={[props.process]}/> : null
+                props.process ?
+                    <RemoteProcessGroup
+                        title="Service"
+                        processes={processArr}
+                        onTerminalContentRequest={useLog ? requestProcessOutput : undefined}
+                    /> : null
             }
         </Stack>    
     );

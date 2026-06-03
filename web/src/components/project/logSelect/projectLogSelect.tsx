@@ -1,6 +1,6 @@
 import { Divider, Dropdown, Listbox, Option, type ComboboxOpenChangeData, type ComboboxOpenEvents } from "@fluentui/react-components";
 import { useContext, useState } from "react";
-import { ProjectProvider, type EventLog } from "../api/api";
+import { ProjectProvider, type EventLog } from "../../../api/api";
 
 const PLACEHOLDER_DEFAULT = "Live";
 
