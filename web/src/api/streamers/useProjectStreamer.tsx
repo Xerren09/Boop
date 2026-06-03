@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type ProjectStateEvent, type ProjectStatus } from "./types";
 import { BoopAPI, RemoteProcess, type WebhookEvent } from "../api";
 
@@ -13,7 +13,7 @@ export function useProjectStreamer(projectId: string, withProcess?: boolean) {
 
     const _process = useRef<RemoteProcess | null>(null);
 
-    const onMessage = useCallback((msg: string) => {
+    const onMessage = (msg: string) => {
         const message: ProjectStateEvent = JSON.parse(msg) as ProjectStateEvent;
         switch (message.type) {
             case "install": {
@@ -59,7 +59,7 @@ export function useProjectStreamer(projectId: string, withProcess?: boolean) {
                 console.log(message);
             }
         }
-    }, [])
+    }
 
     useEffect(() => {
         if (socket.current !== null && socket.current.readyState === WebSocket.OPEN) {
@@ -73,8 +73,7 @@ export function useProjectStreamer(projectId: string, withProcess?: boolean) {
         return () => {
             ws.close(1000, "client dispose");
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [projectId, withProcess]);
 
     if (withProcess === undefined) {
         return {

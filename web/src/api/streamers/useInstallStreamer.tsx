@@ -67,8 +67,7 @@ export function useInstallStreamer(projectId: string) {
             _socket.current?.removeEventListener("message", handler);
             _socket.current = null;
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [projectId]);
 
     return {
         steps: installer,
