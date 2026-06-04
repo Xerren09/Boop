@@ -139,12 +139,14 @@ export class BoopProject {
         return ret ?? [];
     }
 
-    async getDeployLog(log: string, withProcess?: boolean) : Promise<string | undefined> {
+    async getDeployLog(log: number) : Promise<ServiceDeployLog>
+    async getDeployLog(log: number, processOutput: true) : Promise<string>
+    async getDeployLog(log: number, processOutput?: boolean) : Promise<ServiceDeployLog | string | undefined> {
         // logs/deploy/:log
-        if (withProcess) {
+        if (processOutput) {
             return makeRequest<string>(this.getRequestUrl(`logs/deploy/${log}`, {process: true}), "GET", undefined);
         }
-        return makeRequest<string>(this.getRequestUrl(`logs/deploy/${log}`), "GET", undefined);
+        return makeRequest<ServiceDeployLog>(this.getRequestUrl(`logs/deploy/${log}`), "GET", undefined);
     }
 
     async listInstallLogs() : Promise<EventLog[]> {
@@ -297,6 +299,13 @@ export interface InstallerLog {
         startTime: number,
         exitTime: number
     }[]
+}
+
+export interface ServiceDeployLog {
+    time: number,
+    ref?: string | null,
+    process: InstallerLog["steps"][number],
+    killed: boolean
 }
 
 export type ProjectType = "webapp" | "service";
