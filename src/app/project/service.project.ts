@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import { once } from "node:events";
 import { makeLogDirName } from "../../logger.js";
+import { InstallerLog } from "../shell/installRunner.js";
 
 export class ServiceProject extends BoopProject {
     public override get deployed(): boolean {
@@ -98,13 +99,17 @@ export class ServiceProject extends BoopProject {
 
     private async saveResultLog(file: string, eventReference?: string) {
         try {
-            const log: ServiceProcessResultLog = {
+            const logDir = join(this.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, makeLogDirName(this.deployedAt, eventReference));
+            const log: ServiceDeployLog = {
                 time: this.deployedAt,
-                eventReference: eventReference ?? null,
-                cmd: this._process!.childProcess.spawnargs.join(" "),
-                start: this._process!.startTime,
-                end: this._process!.exitTime,
-                code: this._process!.exitCode,
+                ref: eventReference ?? null,
+                process: {
+                    cmd: this._process!.childProcess.spawnargs.join(" "),
+                    startTime: this._process!.startTime,
+                    exitTime: this._process!.exitTime,
+                    exitCode: this._process!.exitCode,
+                    log: join(logDir, `output.log`)
+                },
                 killed: this._process!.wasKilled
             }
             await writeFile(file, JSON.stringify(log));
@@ -130,12 +135,9 @@ export class ServiceProject extends BoopProject {
     }
 }
 
-interface ServiceProcessResultLog {
+interface ServiceDeployLog {
     time: number,
-    eventReference: string | null,
-    cmd: string,
-    start: number,
-    end: number,
-    code: number | null,
+    ref?: string | null,
+    process: InstallerLog["steps"][number],
     killed: boolean
 }
