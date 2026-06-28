@@ -78,7 +78,7 @@ export function ProjectPage() {
             }
         }
         getProject();
-    }, [projectId]);
+    }, [navigation, projectId]);
 
     /**
      * Effect for synchronising window location hash with the current tab
