@@ -16,9 +16,9 @@ export default function Section(props: SectionComponentProps) {
             }}
         >
             <Stack horizontal horizontalFill horizontalAlign="space-between" verticalAlign='start' gap={8} style={{ marginBottom: props.headerMargin ?? 20 }}>
-                <Stack horizontalAlign="start" gap={8}>
-                    <Stack horizontal horizontalAlign="center" verticalAlign="end" gap={8}>
-                        <Stack horizontal horizontalAlign="center" verticalAlign="center" gap={8}>
+                <Stack horizontalAlign="start" horizontalFill gap={8}>
+                    <Stack horizontal horizontalFill horizontalAlign="center" verticalAlign="end" gap={8}>
+                        <Stack horizontal horizontalFill verticalAlign="center" gap={8}>
                             {
                                 props.icon
                             }
