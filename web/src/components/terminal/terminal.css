@@ -14,3 +14,7 @@
     overflow: hidden;
     transition: max-height 0.25s ease-out;
 }
+
+.xterm-screen {
+    padding: 0px 0 0 8px !important;
+}

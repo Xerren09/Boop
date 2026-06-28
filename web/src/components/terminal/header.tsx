@@ -39,7 +39,7 @@ export default function TerminalHeader(props: HeaderProps) {
                 }}
             >
                 {
-                    <StatusIcon size="extra-tiny" status={ getStatusFromExitCode(props.exitCode) } />
+                    <StatusIcon size="extra-tiny" status={ props.dud ? "warning" : getStatusFromExitCode(props.exitCode) } />
                 }
                 <Text title={props.title || "Terminal Output"} style={{ color: "#dddddd", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{props.title || "Terminal Output"}</Text>
             </Stack>
@@ -49,7 +49,7 @@ export default function TerminalHeader(props: HeaderProps) {
                 verticalAlign="center"
             >
                 {
-                    props.startTime !== undefined ? <Runtime short start={props.startTime} end={props.exitCode == null ? undefined :  props.exitTime} style={{color: "#dddddd"}}></Runtime> : null
+                    props.startTime && props.startTime != 0  ? <Runtime short start={props.startTime} end={props.exitCode == null ? undefined :  (props.exitTime ?? undefined)} style={{color: "#dddddd"}}></Runtime> : null
                 }
                 {
                     props.collapsed ? 
@@ -75,6 +75,7 @@ interface HeaderProps {
     title: string | undefined,
     collapsed: boolean,
     onCollapse: (collapsed: boolean) => void,
-    startTime?: number | Date,
-    exitTime?: number | Date
+    startTime?: number | Date | null,
+    exitTime?: number | Date | null,
+    dud?: boolean,
 }

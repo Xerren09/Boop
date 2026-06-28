@@ -1,68 +1,18 @@
-import { Text } from "@fluentui/react-components";
 import { useEffect, useRef, useState } from "react";
 import './terminal.css';
 import Stack from "../stack";
 import TerminalHeader from "./header";
 import { RemoteProcess } from "../../api/api";
+import TerminalFooter from "./footer";
+import TerminalScreen from "./content";
+import { Text } from "@fluentui/react-components";
+import StatusIcon from "../statusIcon";
 
 export default function Terminal(props: Props) {
-    const [autoScroll, enableAutoscroll] = useState<boolean>(true);
     const [collapsed, setCollapsed] = useState<boolean>(props.startCollapsed ?? true);
-
-    const lineCount = useRef<number>(0);
-
-    const [code, setCode] = useState<number | null>(null);
-    const [startTime, setStartAt] = useState<number>(0);
-    const [exitTime, setExitedAt] = useState<number>(0);
-
-    const textArea = useRef<HTMLTextAreaElement>(null);
     const container = useRef<HTMLDivElement>(null);
 
-    function onNewLine(line: string, clear?: boolean) {
-        if (textArea.current == null) {
-            return;
-        }
-        if (clear) {
-            lineCount.current = 0;
-            textArea.current.value = "";
-        }
-        if (lineCount.current > RemoteProcess.MAX_OUTPUT_HISTORY)
-        {
-            // HACK: set the textArea text directly because its might be large and we want to avoid duplicating it in both the state + htmlelement
-            textArea.current.value = textArea.current.value.substring(line.length) + line;
-        }
-        else {
-            lineCount.current++;
-            textArea.current.value += line;
-        }
-    }
-
-    function onCodeChange(exitCode: number | null) {
-        if (exitCode === null) {
-            textArea.current!.value = "";
-            lineCount.current = 0;
-        }
-        setCode(exitCode);
-    }
-
-    function onScroll() {
-        if (textArea.current) {
-            const lineHeightPx = Math.abs(textArea.current.scrollHeight / textArea.current.value.length);
-            const height = textArea.current.getBoundingClientRect().height;
-            const delta = Math.abs(textArea.current.scrollHeight - (textArea.current.scrollTop + (height * 1.05)));
-            const isAtBottom = textArea.current.scrollHeight <= textArea.current.scrollTop + (height * 1.05);
-            if (autoScroll === false) {
-                if (isAtBottom) {
-                    enableAutoscroll(true);
-                }
-            }
-            else {
-                if (delta > (lineHeightPx * 2)) {
-                    enableAutoscroll(false);
-                }
-            }
-        }
-    }
+    const [code, setCode] = useState<number | null>(null);
 
     function onCollapseClick(_collapsed: boolean) {
         setCollapsed(_collapsed);
@@ -75,12 +25,15 @@ export default function Terminal(props: Props) {
      * NOTE: this only applies when props.stream is used, otherwise the content is pulled from props.process.
      */
     useEffect(() => {
-        if (props.stream === null && collapsed === false) {
+        if (props.process) {
+            return;
+        }
+        if (props.content === null && collapsed === false) {
             if (props.onContentRequested) {
                 props.onContentRequested();
             }
         }
-    }, [props.stream, props.onContentRequested, collapsed]);
+    }, [props.content, props.onContentRequested, collapsed]);
 
     /**
      * Effect for handling a RemoteProcess passed via props.process. This will hook the process up to the terminal's state.
@@ -91,28 +44,14 @@ export default function Terminal(props: Props) {
         }
         let shouldClear = true;
         const sub = props.process.output.subscribe({
-            next(value) {
+            next() {
                 if (shouldClear) {
                     shouldClear = false;
-                    setStartAt(props.process.startTime!);
-                    onCodeChange(props.process.exitCode);
-                    setExitedAt(props.process.exitTime!);
-                    onNewLine(value, true);
-                }
-                else {
-                    onNewLine(value);
+                    setCode(props.process.exitCode);
                 }
             },
             complete() {
-                if (props.process.dud) {
-                    // Never started
-                    onCodeChange(props.process.exitCode);
-                }
-                else {
-                    // Normal process
-                    onCodeChange(props.process.exitCode);
-                    setExitedAt(props.process.exitTime!);
-                }
+                setCode(props.process.exitCode);
             },
         });
         return () => {
@@ -130,18 +69,8 @@ export default function Terminal(props: Props) {
         }
     }, [collapsed, container]);
 
-    /**
-     * Autoscroll.
-     */
-    useEffect(() => {
-        if (textArea.current) {
-            if (autoScroll === true) {
-                textArea.current.scrollTop = textArea.current.scrollHeight;
-            }
-        }
-    }, [autoScroll, textArea]);
-
     const exitCode = props.process ? code : props.exitCode;
+    const isDeadProcess = props.process ? props.process.dud : (props.exitCode === null && props.startTime == 0);
 
     return (
         <Stack
@@ -152,45 +81,26 @@ export default function Terminal(props: Props) {
                 collapsed={ collapsed }
                 onCollapse={ onCollapseClick }
                 exitCode={exitCode}
-                startTime={props.process ? (startTime == 0 ? undefined : startTime) : props.startTime}
-                exitTime={props.process ? (exitTime == 0 ? undefined : exitTime) : props.exitTime}
+                startTime={props.process ? props.process.startTime : props.startTime}
+                exitTime={props.process ? props.process.exitTime : props.exitTime}
+                dud={isDeadProcess}
             />
             <div
                 className="content"
                 ref={container}
             >
                 <Stack >
-                    <textarea
-                        onScroll={ onScroll }
-                        ref={textArea}
-                        name="terminalOutput"
-                        value={props.process ? undefined : (props.stream ?? "")}
-                        readOnly={true}
-                        rows={props.maxHeightRows ?? 15}
-                        className="terminal-content"
-                        placeholder="Waiting for process output..."
-                        style={{
-                            backgroundColor: "black",
-                            color: "white"
-                        }}
-                    />
-                    <Text
-                        style={{
-                            color: "#dddddd",
-                            paddingLeft: "12px",
-                            marginBottom: "8px",
-                            paddingTop: "8px",
-                            width: "100%",
-                            textAlign: "start",
-                            borderTopColor: "black",
-                            borderTopWidth: 1,
-                            borderTopStyle: "solid",
-                        }}
-                    >
-                        {
-                            exitCode === null ? "Running..." : `Exited with code: ${exitCode}`
-                        }
-                    </Text>
+                    {
+                        isDeadProcess &&
+                        <Stack horizontalFill verticalFill style={{minHeight: 150}} horizontalAlign="center" verticalAlign="center" gap={4}>
+                                <StatusIcon status="warning"/>
+                                <Text>No content; this process never started.</Text>
+                        </Stack>
+                    }
+                    {
+                        isDeadProcess == false && <TerminalScreen value={ props.content } stream={ props.process?.output }/>
+                    }
+                    <TerminalFooter exitCode={exitCode} dud={ isDeadProcess } />
                 </Stack>
             </div>
         </Stack>
@@ -214,7 +124,7 @@ type CommonProps = {
      */
     startCollapsed?: boolean,
     /**
-     * Called when the terminal is expanded and its static {@link StaticProps.stream} property is `null`.
+     * Called when the terminal is expanded and its static {@link StaticProps.content} property is `null`.
      * 
      * The steam property's value should then be updated with the actual terminal output.
      */
@@ -227,7 +137,7 @@ type StaticProps = {
      * 
      * Each entry should be started with `\n` if a new line is desired.
      */
-    stream: string | null,
+    content: string | null,
     /**
      * The terminal's exit code. Determines the icon shown before the title.
      * 
@@ -243,7 +153,7 @@ type StaticProps = {
 }
 
 type RemoteProcessProps = {
-    stream?: never,
+    content?: never,
     exitCode?: never,
     startTime?: never,
     exitTime?: never,

@@ -116,7 +116,7 @@ export default function ProcessGroup(props: Props) {
                                     startTime={process.startTime ?? 0}
                                     exitTime={process.exitTime ?? 0}
                                     exitCode={process.exitCode}
-                                    stream={process.output}
+                                    content={process.output}
                                     onContentRequested={() => {
                                         if (props.onTerminalContentRequest) {
                                             props.onTerminalContentRequest(idx);
