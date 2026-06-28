@@ -6,6 +6,7 @@ import Runtime from "../runtime";
 import { firstValueFrom, lastValueFrom } from "rxjs";
 import { RemoteProcess } from "../../api/api";
 import StatusIcon, { type Status } from "../statusIcon";
+import { Text } from "@fluentui/react-components";
 
 function parseExitCode(val: number | null): Status {
     if (val === null) {
@@ -80,18 +81,18 @@ export default function ProcessGroup(props: Props) {
                 <StatusIcon size="extra-small" status={ groupStatus } />
             }
             subTitle={
-                props.subtitle
-            }
-            right={
-                // Time since completion of the group
-                <Stack horizontalAlign="end">
-                    {
-                        (exitTime !== 0) ? <Runtime since start={exitTime}></Runtime> : null
-                    }
-                    {
-                        (startTime !== 0) ? <Runtime start={startTime} end={exitTime != 0 ? exitTime : undefined} short /> : null
-                    }
+                <Stack gap={6}>
+                    <Stack horizontal gap={4}>
+                        {
+                            (exitTime !== 0) ? <Text> Finished <Runtime since start={exitTime}></Runtime> in <Runtime start={startTime} end={exitTime} short /></Text> : undefined
+                        }
+                    </Stack>
+                    {props.subtitle}
                 </Stack>
+            }
+            titleExtras={
+                // Time since start of the first process; total runtime of the group
+                (startTime !== 0) && (exitTime == 0) ? <Runtime start={startTime} end={exitTime != 0 ? exitTime : undefined} short /> : undefined
             }
         >
             <Stack gap={12} horizontalFill>
