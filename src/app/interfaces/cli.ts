@@ -130,20 +130,24 @@ async function start(command: string, args: string[]) {
     const projectName = args[0] ?? "";
     const project = Manager.Find(projectName);
     throwIfProjectNotFound(project, projectName);
+    console.log("Deploying...");
     await project.deploy();
+    console.log("Deployed!");
 }
 
 async function stop(command: string, args: string[]) {
     throwIfNoArgs(args, "projectId");
     if (args[0] == "all") {
-        const force = args[1] == "force"
+        const force = args[1] == "-force"
         await Manager.StopAll(force);
         return;
     }
     const projectName = args[0] ?? "";
     const project = Manager.Find(projectName);
     throwIfProjectNotFound(project, projectName);
+    console.log("Stopping...");
     await project.stop();
+    console.log("Stopped!");
 }
 
 async function restart(command: string, args: string[]) {
@@ -151,7 +155,9 @@ async function restart(command: string, args: string[]) {
     const projectName = args[0] ?? "";
     const project = Manager.Find(projectName);
     throwIfProjectNotFound(project, projectName);
+    console.log("Restarting...");
     await project.restart();
+    console.log("Restart...");
 }
 
 async function status(command: string, args: string[]) {
@@ -192,9 +198,15 @@ async function add(command: string, args: string[]) {
     if (URL.canParse(remote) == false || name === null) {
         throw new Error(`Invalid URL, '${remote}' is a not valid github repository.`);;
     }
+    console.log("Adding project from ", remote, branch, "...");
     const fresh = await Manager.Create(remote, branch);
+    console.log("Project successfully created.");
+    console.log("Installing...");
     await fresh.install();
+    console.log("Installed!");
+    console.log("Deploying...");
     await fresh.deploy();
+    console.log("Deployed!");
 }
 
 async function remove(command: string, args: string[]) {
@@ -204,7 +216,9 @@ async function remove(command: string, args: string[]) {
     throwIfProjectNotFound(project, projectName);
     const answer = (await cli.question(`Are you sure you want to remove '${projectName}'? This will delete all project files and can not be undone. (y/n)\n`)).toLowerCase();
     if (answer === "y" || answer === "yes") {
+        console.log("Removing project...");
         await Manager.Delete(project);
+        console.log("Removed!");
     }
 }
 
