@@ -296,12 +296,11 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * Stops the project's handler and removes its router.
      */
     public async stop(eventReference?: string): Promise<void> {
-        if (this.deployed == false) {
-            return;
-        }
         try {
-            await this._stop();
-            this.log.info(`Stopped.`, { event: eventReference });
+            if (this.deployed) {
+                await this._stop();
+                this.log.info(`Stopped.`, { event: eventReference });
+            }
         }
         catch (err) {
             const error = new Error(`Failed to stop project.`, { cause: err });
@@ -340,7 +339,8 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         this._webhookQueue = null;
         const res = await Promise.allSettled([
             this.installer.kill(true),
-            this.stop()
+            this.stop(),
+            this.environment.save()
         ]);
         const errs: any[] = res.filter(el => el.status == "rejected").map(el => el.reason);
         try {

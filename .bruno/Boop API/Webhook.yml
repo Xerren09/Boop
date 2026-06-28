@@ -179,6 +179,14 @@ http:
       }
   auth: inherit
 
+runtime:
+  scripts:
+    - type: before-request
+      code: |-
+        const uuid = require('uuid');
+
+        req.setHeader('X-Github-Delivery', uuid.v4());
+
 settings:
   encodeUrl: true
   timeout: 0
