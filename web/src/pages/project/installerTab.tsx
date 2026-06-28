@@ -62,7 +62,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
                 }
                 return logs;
             }).then(logs => logs.reduce((prev, curr) => prev.time > curr.time ? prev : curr)).then(async log => {
-                if (!log) {
+                if (log) {
                     setSelectedFileHandle(() => log);
                 }
             }).catch(err => console.error(err));
