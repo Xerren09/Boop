@@ -3,16 +3,35 @@ import type { LogEntry } from "../../api/api";
 import { BugRegular, DismissCircleColor, InfoRegular, WarningColor } from "@fluentui/react-icons";
 import Stack from "../stack";
 import Runtime from "../runtime";
+import { List, useDynamicRowHeight, type RowComponentProps } from "react-window";
 
-export default function LogList(props: { log: LogEntry[]}) {
+export default function LogList(props: { log: LogEntry[] }) {
+    const rowHeight = useDynamicRowHeight({
+        defaultRowHeight: 44
+    });
     return (
-        <Accordion collapsible multiple>
-            {
-                props.log.map((entry, index) => 
-                    <LogItem key={index} item={entry} accordionId={`${index}`}/>
-                )
-            }
-        </Accordion>
+        <Accordion multiple collapsible style={{maxHeight: "inherit"}}>
+            <List
+                rowComponent={RenderItem}
+                rowCount={props.log.length}
+                rowHeight={rowHeight}
+                rowProps={{ items: props.log }}
+                style={{maxHeight: "inherit"}}
+            /> 
+        </Accordion> 
+    );
+}
+
+function RenderItem({
+    index,
+    style,
+        items
+    }: RowComponentProps<{
+        items: LogEntry[];
+    }>) {
+    
+    return (
+        <div style={style}><LogItem item={items[index]} accordionId={`${index}`}/></div>
     );
 }
 
