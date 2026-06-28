@@ -7,6 +7,8 @@ import Stack from "../../components/stack";
 import RemoteProcessGroup from "../../components/processGroup";
 import { ProjectStatusIcon } from "../../components/project/statusIcon";
 import ProjectLogSelect from "../../components/project/logSelect/projectLogSelect";
+import ProjectTabLink from "./tabLink";
+import { Tabs } from "./tabs";
 import useProjectProcessLog from "../../components/project/logSelect/useProjectProcessLog";
 
 const statusHeadingMap: { [key in NonNullable<ProjectStatus>]: string } = {
@@ -59,7 +61,7 @@ export default function ProjectDeployTab(props: { status: ProjectStatus, process
                 {
                     props.status === "deployed" &&
                     <Text>
-                        This project is currently deployed. You can access it via Boop's HTTP proxy at <Link href={proxyUrl}> {proxyUrl} </Link>{ props.directUrlHref && <Text> or directly at <Link href={props.directUrlHref}> {props.directUrlHref} </Link></Text> }.
+                        This project is currently deployed. You can access it via Boop's HTTP proxy at <Link href={proxyUrl}>{proxyUrl}</Link>{props.directUrlHref && <Text> or directly at <Link href={props.directUrlHref}> {props.directUrlHref} </Link></Text>}.
                     </Text>
                 }
                 {
@@ -73,15 +75,14 @@ export default function ProjectDeployTab(props: { status: ProjectStatus, process
                     <Text>
                         This project is currently stopped due to an error.
                         {
-                            props.process &&
-                            "Check the terminal window below to see what went wrong, or the <em>log</em> tab for further information."
+                            props.process && <Text> Check the terminal window below to see what went wrong, or the <ProjectTabLink target={Tabs.install}><em>installer</em></ProjectTabLink> tab for further information. </Text>
                         }
                     </Text>
                 }
                 {
                     props.status === "installing" &&
                     <Text>
-                        This project is currently installing. You can follow the progress using the <em>installer</em> tab. Once the installer completed, it will be automatically deployed if successful.
+                        This project is currently installing. You can follow the progress using the <ProjectTabLink target={Tabs.install}><em>installer</em></ProjectTabLink> tab. Once the installer completed, it will be automatically deployed if successful.
                     </Text>
                 }
                 {
@@ -89,13 +90,13 @@ export default function ProjectDeployTab(props: { status: ProjectStatus, process
                     <Text>
                         The project installer has failed. This means your build is failing. Typically you can fix it by pushing a commit to the target branch of your repository.
                 
-                        Check the <em>installer</em> tab to see what went wrong.
+                        Check the <ProjectTabLink target={Tabs.install}><em>installer</em></ProjectTabLink> tab to see what went wrong.
                     </Text>
                 }
                 {
                     props.status === "installSuccess" &&
                     <Text>
-                        This project has just been installed, and will be deployed momentarily. Check the install log via the <em>installer</em> tab, or stay here to wait for deployment information.
+                        This project has just been installed, and will be deployed momentarily. Check the install log via the <ProjectTabLink target={Tabs.install}><em>installer</em></ProjectTabLink> tab, or stay here to wait for deployment information.
                     </Text>
                 }            
             </Section>
