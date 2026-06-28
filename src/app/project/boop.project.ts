@@ -340,7 +340,8 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         this._webhookQueue = null;
         const res = await Promise.allSettled([
             this.installer.kill(true),
-            this.stop()
+            this.stop(),
+            this.environment.save()
         ]);
         const errs: any[] = res.filter(el => el.status == "rejected").map(el => el.reason);
         try {
