@@ -19,7 +19,7 @@ body {
 }
 
 #mainContentContainer {
-    max-width: 60vw;
+    max-width: 65vw;
     transition-duration: 1s;
 }
 
@@ -28,6 +28,13 @@ body {
     :root {
         color: #213547;
         background-color: #ffffff;
+    }
+}
+
+@media screen and (width <= 1150px) {
+    #mainContentContainer {
+        max-width: 85vw;
+        transition-duration: 1s;
     }
 }
 
