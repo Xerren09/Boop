@@ -1,5 +1,5 @@
 import { Subtitle2, Title3 } from '@fluentui/react-components';
-import React, { type JSX } from "react";
+import React from "react";
 import Stack from './stack';
 
 export default function Section(props: SectionComponentProps) {
@@ -15,8 +15,8 @@ export default function Section(props: SectionComponentProps) {
                 ...props.style
             }}
         >
-            <Stack horizontal horizontalFill horizontalAlign="space-between" verticalAlign='start' gap={8} style={{ marginBottom: props.headerMargin ?? 20 }}>
-                <Stack horizontalAlign="start" horizontalFill gap={8}>
+            <Stack horizontalFill horizontalAlign="space-between" verticalAlign='start' gap={8} style={{ marginBottom: props.headerMargin ?? 20 }}>
+                <Stack horizontal horizontalAlign="start" horizontalFill gap={4}>
                     <Stack horizontal horizontalFill horizontalAlign="center" verticalAlign="end" gap={8}>
                         <Stack horizontal horizontalFill verticalAlign="center" gap={8}>
                             {
@@ -31,11 +31,11 @@ export default function Section(props: SectionComponentProps) {
                         }
                     </Stack>
                     {
-                        typeof props.subTitle === "string" ? <Subtitle2>{ props.subTitle }</Subtitle2> : props.subTitle
+                        props.right
                     }
                 </Stack>
                 {
-                    props.right
+                    typeof props.subTitle === "string" ? <Subtitle2>{ props.subTitle }</Subtitle2> : props.subTitle
                 }
             </Stack>
             {
@@ -53,19 +53,19 @@ interface SectionComponentProps extends React.PropsWithChildren {
     /**
      * Icon to be displayed before the title.
      */
-    icon?: JSX.Element,
+    icon?: React.ReactNode,
     /**
      * Additional content displayed after the title.
      */
-    titleExtras?: JSX.Element,
+    titleExtras?: React.ReactNode,
     /**
      * Subtitle displayed under the title row. If `string`, it will be displayed as a {@link Subtitle2}.
      */
-    subTitle?: JSX.Element | string,
+    subTitle?: React.ReactNode | string,
     /**
      * Content to be displayed to the right border of the section's title.
      */
-    right?: JSX.Element,
+    right?: React.ReactNode,
     style?: React.CSSProperties,
     headerMargin?: number
 }

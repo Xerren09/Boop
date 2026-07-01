@@ -1,4 +1,4 @@
-import React from "react";
+import React, { type Ref } from "react";
 import styles from "./stack.module.css";
 
 function computedStyle(props: StackProps) : React.CSSProperties {
@@ -18,7 +18,7 @@ function computedStyle(props: StackProps) : React.CSSProperties {
 
 export default function Stack(props: StackProps) {
     return (
-        <div id={ props.id } className={props.className ? `${styles.stack} ${props.className}` : styles.stack} style={{...computedStyle(props), ...props.style}}>
+        <div ref={props.ref} id={ props.id } className={props.className ? `${styles.stack} ${props.className}` : styles.stack} style={{...computedStyle(props), ...props.style}}>
             {props.children}
         </div>
     );
@@ -33,5 +33,6 @@ interface StackProps extends React.PropsWithChildren {
     horizontalFill?: boolean,
     style?: React.CSSProperties,
     id?: string,
-    className?: string
+    className?: string,
+    ref?: Ref<HTMLDivElement> | null
 }
