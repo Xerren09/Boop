@@ -1,11 +1,11 @@
-import Section from "../section";
-import Stack from "../stack";
+import Section from "../../section";
+import Stack from "../../stack";
 import Terminal from "../terminal";
 import { useEffect, useMemo, useState } from "react";
-import Runtime from "../runtime";
+import Runtime from "../../runtime";
 import { firstValueFrom, lastValueFrom } from "rxjs";
-import { RemoteProcess } from "../../api/api";
-import StatusIcon, { type Status } from "../statusIcon";
+import { RemoteProcess } from "../../../api/api";
+import StatusIcon, { type Status } from "../../statusIcon";
 import { Text } from "@fluentui/react-components";
 
 function parseExitCode(val: number | null): Status {
@@ -16,7 +16,7 @@ function parseExitCode(val: number | null): Status {
         return "ok";
     }
     else {
-        return "warning"
+        return "error"
     }
 }
 
@@ -80,19 +80,22 @@ export default function ProcessGroup(props: Props) {
             icon={
                 <StatusIcon size="extra-small" status={ groupStatus } />
             }
+            right={
+                props.right
+            }
             subTitle={
                 <Stack gap={6}>
                     <Stack horizontal gap={4}>
                         {
-                            (exitTime !== 0) ? <Text> Finished <Runtime since start={exitTime}></Runtime> in <Runtime start={startTime} end={exitTime} short /></Text> : undefined
+                            (exitTime !== 0) ? <Text> { groupStatus === "ok" ? "Completed" : "Failed" } <Runtime since start={exitTime}></Runtime> in <Runtime start={startTime} end={exitTime} short /></Text> : undefined
+                        }
+                        {
+                            // Time since start of the first process; total runtime of the group
+                            (startTime !== 0) && (exitTime == 0) ? <Text> Runtime: <Runtime start={startTime} end={exitTime != 0 ? exitTime : undefined} short /></Text> : undefined
                         }
                     </Stack>
                     {props.subtitle}
                 </Stack>
-            }
-            titleExtras={
-                // Time since start of the first process; total runtime of the group
-                (startTime !== 0) && (exitTime == 0) ? <Runtime start={startTime} end={exitTime != 0 ? exitTime : undefined} short /> : undefined
             }
         >
             <Stack gap={12} horizontalFill>
@@ -111,7 +114,7 @@ export default function ProcessGroup(props: Props) {
                         else {
                             return (
                                 <Terminal
-                                    key={`${process.cmd}-${idx}`}
+                                    key={`${process.cmd}-${idx}-${process.exitCode}`}
                                     title={process.cmd}
                                     startCollapsed={ props.startCollapsed }
                                     startTime={process.startTime ?? 0}
@@ -136,6 +139,7 @@ export default function ProcessGroup(props: Props) {
 interface Props {
     title: string,
     subtitle?: React.ReactNode,
+    right?: React.ReactNode,
     processes: CompletedProcess[] | RemoteProcess[],
     startCollapsed?: boolean;
     onTerminalContentRequest?: (processIndex: number) => void;

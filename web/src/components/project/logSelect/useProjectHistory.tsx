@@ -1,14 +1,14 @@
 import { useContext, useState, useEffect, useCallback } from "react";
 import { type EventLog, ProjectProvider } from "../../../api/api";
-import type { CompletedProcess } from "../../processGroup";
+import type { CompletedProcess } from "../../process/group";
 
 /**
  * Gets a list of completed processes from the project logs.
- * @param logType 
- * @param file 
+ * @param logType `build` or `deploy`; the type of logs we're requesting
+ * @param file The EventLog file handle being requested
  * @returns 
  */
-export default function useProjectProcessLog(logType: "build" | "deploy", file: EventLog | null) {
+export default function useProjectHistory(logType: "build" | "deploy", file: EventLog | null) {
     const project = useContext(ProjectProvider);
 
     const [processes, setProcesses] = useState<CompletedProcess[]>([]);

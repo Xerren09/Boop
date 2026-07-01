@@ -2,7 +2,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { useEffect, useRef, useState } from "react";
 import type { Observable } from "rxjs";
-import { RemoteProcess } from '../../api/api';
+import { RemoteProcess } from '../../../api/api';
 import React from 'react';
 
 function createTerminalInstance() {
@@ -35,7 +35,6 @@ function useXterm() {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setInstance(() => terminal);
         return () => {
-            console.log("disposed");
             terminal.dispose();
             setInstance(() => null);
             resizeObserver.current?.disconnect();

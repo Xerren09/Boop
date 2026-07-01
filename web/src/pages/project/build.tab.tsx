@@ -1,27 +1,21 @@
 import { useInstallStreamer, type InstallerStatus } from "../../api/streamers/useInstallStreamer";
-import Section from "../../components/section";
 import Stack from "../../components/stack";
-import RemoteProcessGroup from "../../components/processGroup";
+import RemoteProcessGroup from "../../components/process/group";
 import { Caption1, Field, ProgressBar, Text } from "@fluentui/react-components";
 import ProjectLogSelect from "../../components/project/logSelect/projectLogSelect";
 import { ProjectProvider, RemoteProcess, type EventLog } from "../../api/api";
 import { useContext, useEffect, useState } from "react";
 import StatusIcon from "../../components/statusIcon";
 import { lastValueFrom } from "rxjs";
-import ProjectTabLink from "./tabLink";
-import { Tabs } from "./tabs";
-import useProjectProcessLog from "../../components/project/logSelect/useProjectProcessLog";
+import ProjectTabLink from "./tabs/tabLink";
+import { ProjectTab } from "./tabs/tabs.enum";
+import useProjectHistory from "../../components/project/logSelect/useProjectHistory";
+import { StatusDescription, StatusDescriptionItem } from "../../components/statusDescription";
 
 const statusHeadingMap: { [key in NonNullable<InstallerStatus>]: string } = {
     "pending": "Building",
     "error": "Build failed",
     "ok": "Build complete",
-}
-
-const statusDescriptionMap: { [key in NonNullable<InstallerStatus>]: string } = {
-    "pending": "This project is currently building. You can follow the progress below. Once the project has been successfully built, the project will be automatically deployed.",
-    "error": `The project build has failed. This means your build is failing; typically you can fix this by pushing a commit to the target branch of your repository.\n\nCheck the log below to see which step failed.`,
-    "ok": "The project build completed successfully, and the project is now being deployed."
 }
 
 export default function ProjectInstallerTab(props: { projectId: string }) {
@@ -30,7 +24,7 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
 
     const [isLive, setLiveStatus] = useState<boolean>(true);
     const [selectedFileHandle, setSelectedFileHandle] = useState<EventLog | null>(null);
-    const { processes, requestProcessOutput } = useProjectProcessLog("build", selectedFileHandle);
+    const { processes, requestProcessOutput } = useProjectHistory("build", selectedFileHandle);
 
     async function onSelect(file: EventLog | null) {
         if (!file) {
@@ -76,27 +70,40 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
 
     return (
         <Stack horizontalFill gap={24}>
-            <Section
+            <StatusDescription
                 title={statusHeadingMap[status]}
                 icon={<StatusIcon status={ status } />}
-                right={ <ProjectLogSelect install onSelect={onSelect} style={{ width: "35%", minWidth: 120, maxWidth: 190}}/> }
+                selectedItem={status}
             >
-                <Stack gap={8}>
+                <StatusDescriptionItem<InstallerStatus> value={"ok"}>
                     <Text>
-                        { statusDescriptionMap[status] }
+                        The project build completed successfully, and the project is now being deployed.
                     </Text>
-                    {
-                        status === "pending" && steps.length > 0 &&
-                        <InstallerProgressBar processes={steps}/>
-                    }
-                </Stack>
-            </Section>
+                </StatusDescriptionItem>
+                <StatusDescriptionItem<InstallerStatus> value={"error"}>
+                    <Text>
+                        The project build has failed. This means your build is failing; typically you can fix this by pushing a commit to the target branch of your repository.
+                    </Text>
+                    <Text>
+                        Check the log below to see which step failed.
+                    </Text>
+                </StatusDescriptionItem>
+                <StatusDescriptionItem<InstallerStatus> value={"pending"}>
+                    <Stack gap={8}>
+                        <Text>
+                            This project is currently building. You can follow the progress below. Once the project has been successfully built, the project will be automatically deployed.
+                        </Text>
+                        { steps.length > 0 && <InstallerProgressBar processes={steps}/>}
+                    </Stack>
+                </StatusDescriptionItem>
+            </StatusDescription>
             
             <RemoteProcessGroup
                 title="Steps"
                 subtitle={
-                    eventRef && <Caption1>Triggered by event <ProjectTabLink target={Tabs.events} params={{eventRef: eventRef}}>{ eventRef }</ProjectTabLink></Caption1>
+                    eventRef && <Caption1>Triggered by event <ProjectTabLink target={ProjectTab.Events} params={{eventRef: eventRef}}>{ eventRef }</ProjectTabLink></Caption1>
                 }
+                right={ <ProjectLogSelect install onSelect={onSelect} style={{ width: "35%", minWidth: 120, maxWidth: 190}}/> }
                 processes={processList}
                 onTerminalContentRequest={(shouldUseLiveBackup || isLive == false) ? requestProcessOutput : undefined}
             />

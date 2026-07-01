@@ -1,15 +1,15 @@
 import type { PropsWithChildren } from "react";
-import { Tabs } from "./tabs";
+import { ProjectTab } from "./tabs.enum";
 import { Link } from "react-router";
 
 export default function ProjectTabLink(props: TabLinkProps) {
     const search = new URLSearchParams(props.params).toString();
     return (
         <Link
-            to={{ hash: `#${Tabs[props.target]}`, search: search }}
+            to={{ hash: `#${ProjectTab[props.target]}`, search: search }}
             onClick={() => {
                 // Force the hashchange event to fire.
-                window.location.hash = `#${Tabs[props.target]}`;
+                window.location.hash = `#${ProjectTab[props.target]}`;
             }}
         >
             {props.children}
@@ -18,6 +18,6 @@ export default function ProjectTabLink(props: TabLinkProps) {
 }
 
 export interface TabLinkProps extends PropsWithChildren {
-    target: Tabs,
+    target: ProjectTab,
     params?: { [key: string]: string }
 }

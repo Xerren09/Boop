@@ -1,10 +1,10 @@
 import { HomeColor } from "@fluentui/react-icons";
-import { useEffect, useMemo, useState } from "react";
-import ProjectWebhookEventsTab from "./eventsTab";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ProjectWebhookEventsTab from "./events.tab";
 import { useNavigate, useParams } from "react-router";
-import EnvironmentVariableEditor from "./variables";
+import EnvironmentVariableEditor from "./environment.tab";
 import  Stack from "../../components/stack";
-import { Breadcrumb, BreadcrumbButton, BreadcrumbDivider, BreadcrumbItem, Link, Tab, TabList, Text, Toolbar, ToolbarGroup, Tooltip } from "@fluentui/react-components";
+import { Breadcrumb, BreadcrumbButton, BreadcrumbDivider, BreadcrumbItem, Link, Tab, TabList, Text, Tooltip } from "@fluentui/react-components";
 import Section from "../../components/section";
 import DataTable, { DataTableRow } from "../../components/dataTable";
 import Runtime from "../../components/runtime";
@@ -13,20 +13,12 @@ import ProjectControlButton from "../../components/project/controlButton";
 import { ProjectStatusIcon } from "../../components/project/statusIcon";
 import { ProjectIcon } from "../../components/project/typeIcon";
 import ProjectPageSkeleton from "./skeleton";
-import ProjectLogTab from "./logTab";
-import ProjectDeployTab from "./deployTab";
+import ProjectLogTab from "./log.tab";
+import ProjectDeployTab from "./deploy.tab";
 import { useProjectStreamer } from "../../api/streamers/useProjectStreamer";
-import ProjectInstallerTab from "./installerTab";
-import { Tabs } from "./tabs";
-
-function getFirstNavTargetTab() {
-    const hashTab = window.location.hash.substring(1, window.location.hash.length);
-    if (hashTab.length == 0) {
-        return 0;
-    }
-    const tabIdx = Tabs[hashTab as keyof typeof Tabs];
-    return tabIdx as number;
-}
+import ProjectInstallerTab from "./build.tab";
+import { ProjectTab } from "./tabs/tabs.enum";
+import useProjectTabs from "./tabs/useProjectTabs";
 
 export function ProjectPage() {
     const { projectId } = useParams<string>();
@@ -35,7 +27,7 @@ export function ProjectPage() {
     const { projectStatus, lastWebhookEvent, mainProcess } = useProjectStreamer(projectId!, true);
 
     const [project, setProject] = useState<BoopProject | null>(null);
-    const [currentTab, setCurrentTab] = useState<number>(getFirstNavTargetTab);
+    const { currentTab, switchTab } = useProjectTabs();
     const [port, setPort] = useState<string | null>(null);
 
     const proxyUrlHref = useMemo(() => { return project?.proxyUrl.toString() }, [project]);
@@ -80,47 +72,31 @@ export function ProjectPage() {
         getProject();
     }, [navigation, projectId]);
 
-    /**
-     * Effect for synchronising window location hash with the current tab
-     */
+    const resizeObserver = useRef<ResizeObserver>(null);
+    const toolbar = useRef<HTMLDivElement>(null);
+    const [compactToolbar, setCompactToolbar] = useState<boolean>(false);
     useEffect(() => {
-        const tabHash = `#${Tabs[currentTab]}`;
-        if (currentTab == undefined || window.location.hash == tabHash) {
-            return;
+        if (!resizeObserver.current) {
+            resizeObserver.current = new ResizeObserver(() => {
+                if (!toolbar.current) {
+                    return;    
+                }
+                if (toolbar.current.offsetWidth < 100 * 4) {
+                    setCompactToolbar(() => true);
+                }
+                else {
+                    setCompactToolbar(() => false);
+                }
+            });
         }
-        window.location.hash = tabHash;
-        // HACK: Clear out any query params when navigating between tabs
-        const newUrl = new URL(window.location.href);
-        newUrl.search = "";
-        window.history.pushState(null, '', newUrl);
-    }, [currentTab]);
-
-    /**
-     * Effect for handling window location hash changes, and switching tabs accordingly
-     */
-    useEffect(() => {
-        const handleHashChange = () => {
-            if (window.location.hash.length == 0) {
-                return;
-            }
-            if (currentTab == undefined) {
-                return;
-            }
-            const tabHash = `#${Tabs[currentTab]}`;
-            if (window.location.hash == tabHash) {
-                return;
-            }
-            console.log("changing tabs", "from", `#${Tabs[currentTab]}`, "to", window.location.hash);
-            const hashTargetTab = window.location.hash.substring(1, window.location.hash.length);
-            const tabIdx = Tabs[hashTargetTab as keyof typeof Tabs] as number;
-            setCurrentTab(() => tabIdx);
-        };
-        window.addEventListener('hashchange', handleHashChange);
-
+        if (toolbar.current) {
+            resizeObserver.current.observe(toolbar.current);
+        }
         return () => {
-            window.removeEventListener('hashchange', handleHashChange);
-        };
-    }, [currentTab]);
+            resizeObserver.current?.disconnect();
+        }
+    }, [project]);
+
     
     if (!project || !projectId) {
         return <ProjectPageSkeleton/>
@@ -148,30 +124,34 @@ export function ProjectPage() {
                     title={project.name}
                     headerMargin={18}
                 >
-                    <Toolbar style={{ justifyContent: "space-between", width: "100%" }}>
-                        <ToolbarGroup>
+                    <Stack ref={toolbar} horizontal horizontalFill horizontalAlign="space-between" gap={6}>
+                        <Stack horizontal gap={6}>
                             <ProjectControlButton
                                 action="start"
                                 appearance="subtle"
+                                hideLabel={ compactToolbar }
                             />
                             <ProjectControlButton
                                 action="stop"
                                 appearance="subtle"
+                                hideLabel={ compactToolbar }
                             />
                             <ProjectControlButton
                                 action="restart"
                                 appearance="subtle"
+                                hideLabel={ compactToolbar }
                             />
-                        </ToolbarGroup>
-                        <ToolbarGroup>
+                        </Stack>
+                        <Stack horizontal>
                             <ProjectControlButton
                                 cancellable
                                 action="delete"
                                 appearance="subtle"
                                 onSettled={onProjectDeleted}
+                                hideLabel={ compactToolbar }
                             />
-                        </ToolbarGroup>
-                    </Toolbar>  
+                        </Stack>
+                    </Stack>
                     <DataTable>
                         <DataTableRow label="Remote">
                             <Text><Link href={project.remote} target="_blank">{project.remote}</Link></Text>
@@ -214,38 +194,39 @@ export function ProjectPage() {
                 >
                     <TabList
                         selectedValue={currentTab}
-                        onTabSelect={(tab, data) => {
-                            setCurrentTab(data.value as number);
+                        onTabSelect={(_, data) => {
+                            switchTab(data.value as number);
                         }}
                         style={{
                             overflowX: "auto"
                         }}
                     >
-                        <Tab value={ Tabs.deploy }>Deploy</Tab>
-                        <Tab value={ Tabs.install }>Build</Tab>
+                        <Tab value={ ProjectTab.Deploy }>Deploy</Tab>
+                        <Tab value={ ProjectTab.Build }>Build</Tab>
                         {
-                            project.type == "service" && <Tab value={ Tabs.environment }>Environment</Tab>
+                            project.type == "service" && <Tab value={ ProjectTab.Environment }>Environment</Tab>
                         }
-                        <Tab value={ Tabs.events }>Webhook Events</Tab>
-                        <Tab value={ Tabs.log }>Log</Tab>
+                        <Tab value={ ProjectTab.Events }>Events</Tab>
+                        <Tab value={ ProjectTab.Log }>Log</Tab>
                     </TabList>
 
                     {
-                        currentTab === Tabs.deploy && <ProjectDeployTab process={mainProcess} status={projectStatus} directUrlHref={ directUrlHref } />
+                        currentTab === ProjectTab.Deploy && <ProjectDeployTab process={mainProcess} status={projectStatus} directUrlHref={ directUrlHref } />
                     }
                     {
-                        currentTab === Tabs.install && <ProjectInstallerTab projectId={ projectId }/>
+                        currentTab === ProjectTab.Build && <ProjectInstallerTab projectId={ projectId }/>
                     }
                     {
-                        currentTab === Tabs.environment && <EnvironmentVariableEditor/>
+                        currentTab === ProjectTab.Environment && <EnvironmentVariableEditor/>
                     }
                     {
-                        currentTab === Tabs.events && <ProjectWebhookEventsTab/>
+                        currentTab === ProjectTab.Events && <ProjectWebhookEventsTab/>
                     }
                     {
-                        currentTab === Tabs.log && <ProjectLogTab/>
+                        currentTab === ProjectTab.Log && <ProjectLogTab/>
                     }
                 </Stack>
+                
             </Stack>
         </ProjectProvider>
     );

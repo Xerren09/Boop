@@ -1,9 +1,9 @@
 import { Text } from "@fluentui/react-components";
 import { ChevronRightRegular, ChevronDownRegular } from '@fluentui/react-icons';
-import Stack from "../stack";
-import Runtime from "../runtime";
-import type { Status } from "../statusIcon";
-import StatusIcon from "../statusIcon";
+import Stack from "../../stack";
+import Runtime from "../../runtime";
+import type { Status } from "../../statusIcon";
+import StatusIcon from "../../statusIcon";
 
 function getStatusFromExitCode(code: number | null): Status {
     if (code === null) {

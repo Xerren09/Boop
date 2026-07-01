@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import './terminal.css';
-import Stack from "../stack";
+import Stack from "../../stack";
 import TerminalHeader from "./header";
-import { RemoteProcess } from "../../api/api";
+import { RemoteProcess } from "../../../api/api";
 import TerminalFooter from "./footer";
 import TerminalScreen from "./content";
 import { Text } from "@fluentui/react-components";
-import StatusIcon from "../statusIcon";
+import StatusIcon from "../../statusIcon";
 
 export default function Terminal(props: Props) {
     const [collapsed, setCollapsed] = useState<boolean>(props.startCollapsed ?? true);
