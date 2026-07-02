@@ -87,7 +87,7 @@ export default function ProcessGroup(props: Props) {
                 <Stack gap={6}>
                     <Stack horizontal gap={4}>
                         {
-                            (exitTime !== 0) ? <Text> { groupStatus === "ok" ? "Completed" : "Failed" } <Runtime since start={exitTime}></Runtime> in <Runtime start={startTime} end={exitTime} short /></Text> : undefined
+                            (exitTime !== 0) ? <Text> { groupStatus === "ok" ? "Completed" : "Failed" } <Runtime since start={exitTime}/> { groupStatus === "ok" ? "in" : "after" } <Runtime start={startTime} end={exitTime} short /></Text> : undefined
                         }
                         {
                             // Time since start of the first process; total runtime of the group
