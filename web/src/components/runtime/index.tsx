@@ -1,67 +1,65 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Text, Tooltip } from "@fluentui/react-components";
+import Stack from "../stack";
 
-function calcInitialValue(start: number | Date, end?: number | Date) {
-    const startMs = typeof (start) === "number" ? start : start.getTime();
-    const endMs = typeof (end) === "number" ? end : end?.getTime();
+const rtf = new Intl.RelativeTimeFormat("en-GB", {
+    numeric: "auto",
+    style: "long",
+});
 
-    const ret = Math.floor((endMs == undefined ? (Date.now() - startMs) : (endMs - startMs)) / 1000);
-    return ret;
-}
+export default function Runtime(props: RuntimeProps) {
+    const [value, setValue] = useState<string>("");
+    const digitalRef = useRef<Array<number>>([]);
 
-function getTimeString(counter: number, short?: boolean) {
-    const minute = Math.floor(counter / 60);
-    const hour = Math.floor(counter / 3600);
-    const day = Math.floor(counter / 86400);
-    const year = Math.floor(counter / 31536000);
-
-    if (counter < 60) 
-        return short ? `${counter}s` : `${counter} seconds`
-    if ((counter >= 60) && (counter < 3600)) 
-        return short ? `${String(minute).padStart(2, "0")}:${String(Math.floor(counter % 60)).padStart(2, "0")}` : `${minute} minute${minute > 1 ? "s" : ""}`
-    if ((counter > 3600) && (counter < 86400))
-        return short ? `${String(hour).padStart(2, "0")}:${String(Math.floor((counter % 3600) / 60)).padStart(2, "0")}:${String(Math.floor(counter % 60)).padStart(2, "0")}` : `${hour} hour${hour > 1 ? "s" : ""}`
-    if ((counter > 86400) && ((counter < 31536000) || short == true)) 
-        return short ? `${String(day).padStart(2, "0")}:${String(Math.floor((counter % 86400) / 3600)).padStart(2, "0")}:${String(Math.floor(((counter % 86400) % 3600) / 60)).padStart(2, "0")}:${String(Math.floor((((counter % 86400) % 3600) % 60) % 60)).padStart(2, "0")}` : `${day} day${day > 1 ? "s" : ""}`
-    if (counter > 31536000) 
-        return `${year} year${year > 1 ? "s" : ""}`
-    return "";
-}
-
-export default function Runtime(props: Props) {
-    const [counter, setCounter] = useState<number>(() => calcInitialValue(props.start, props.end));
-    
-    const timestamp = useMemo(() => {
+    const startTimestamp = useMemo(() => {
         const date = new Date(props.start);
         return date.toLocaleString();
     }, [props.start])
 
-    const timestring = useMemo(() => {
-        return getTimeString(counter, props.short);
-    }, [counter, props.short])
-
-    useEffect(() => {
-        if (props.end === undefined) {
-            const interval = setInterval(() => {
-                setCounter((prev) => prev + 1);
-            }, 1000);
-            return () => clearInterval(interval);
+    const endTimestamp = useMemo(() => {
+        if (!props.end) {
+            return null;
         }
+        const date = new Date(props.end);
+        return date.toLocaleString();
     }, [props.end])
 
     useEffect(() => {
-        //eslint-disable-next-line react-hooks/set-state-in-effect
-        setCounter(() => calcInitialValue(props.start, props.end));
-    }, [props.start, props.end])
+        digitalRef.current = [];
+    }, [props.start, props.end]);
+
+
+    useEffect(() => {
+        if (props.start && props.end && !props.since) {
+            // Static duration, no need for timeout
+            return;
+        }
+        const duration = props.short ? 1000 : (calculateTimeoutDuration(props.end ?? props.start)*1000);
+        const handle = setTimeout(() => { 
+            setValue(formatter(props.start, props.end, props.short ? digitalRef.current : undefined, props.since));
+        }, duration);
+        return () => {
+            clearTimeout(handle);
+        };
+    }, [props.start, props.end, props.since, props.short, value]);
+
+    const content = ((props.start && props.end && !props.since) || (value == "")) ? formatter(props.start, props.end, props.short ? [] : undefined, props.since) : value;
 
     return (
-        <Tooltip content={ timestamp } relationship="label">
+        <Tooltip
+            content={
+                <Stack>
+                    <Text>{props.end && "Start: "}{startTimestamp}</Text>
+                    {
+                        props.end && <Text>End: {endTimestamp}</Text>
+                    }
+                </Stack>
+            }
+            relationship="label"
+        >
             <Text style={props.style}>
                 {
-                    timestring
-                }
-                {
-                    (props.end === undefined) && props.since == true ? " ago" : null
+                    content
                 }
                 {
                     props.children
@@ -71,7 +69,92 @@ export default function Runtime(props: Props) {
     )
 }
 
-interface Props extends React.PropsWithChildren {
+function getTimeUnit(delta: number) {
+    if (delta < 60) 
+        return "second"
+    if (delta < 3600)
+        return "minute"
+    if (delta < 86400)
+        return "hour"
+    if (delta < 31536000)
+        return "day"
+    return "year"
+}
+
+function getDigitalTimeUnitsWithRef(delta: number, ref: Array<number>) {
+    ref[0] = (delta % 60);
+    if (delta >= 60)
+        ref[1] = Math.floor(((delta % 86400) % 3600) / 60);
+    if (delta >= 3600)
+        ref[2] = Math.floor((delta % 86400) / 3600);
+    if (delta >= 86400)
+        ref[3] = Math.floor(delta / 86400);
+}
+
+function getTimeUnitValue(delta: number) {
+    if (delta < 60) 
+        return delta
+    if (delta < 3600) 
+        return Math.floor(delta / 60)
+    if (delta < 86400)
+        return Math.floor(delta / 3600)
+    if (delta < 31536000) 
+        return Math.floor(delta / 86400)
+    return Math.floor(delta / 31536000)
+}
+
+function formatter(start: number | Date, end?: number | Date, digital?: Array<number>, relative?: boolean): string {
+    /*
+        start           - since start
+            relative    - since start + ago
+        start + end     - duration
+            relative    - since end + ago
+    */
+    if (digital) {
+        const secondsDelta = Math.floor(((end ?? Date.now()).valueOf() - start.valueOf()) / 1000);
+        getDigitalTimeUnitsWithRef(secondsDelta, digital);
+        let str = "";
+        if (digital.length == 1) {
+            str = `${digital[0]}s`;
+        }
+        else {
+            for (let index = 0; index < digital.length; index++) {
+                const element = digital[index];
+                str = `${`${element}`.padStart(2, '0')}${index>0 ? ':' : ''}${str}`
+            }
+        }
+        return str;
+    }
+    else {
+        // Use INTL
+        if (relative) {
+            // <Start or End> ago
+            const delta: number = Math.floor((Date.now() - (end ? end : start).valueOf()) / 1000);
+            return rtf.format(getTimeUnitValue(delta) * -1, getTimeUnit(delta));
+        }
+        else {
+            // Duration
+            const delta: number = Math.floor(((end?.valueOf() ?? Date.now()) - start.valueOf()) / 1000);
+            const unit = getTimeUnitValue(delta);
+            return `${`${unit}`.padStart(2, '0')} ${getTimeUnit(delta)}${unit>1 && "s"}`;// df.format({ [`${getTimeUnit(delta)}s`]: getTimeUnitValue(delta) });
+        }
+    }
+}
+
+function calculateTimeoutDuration(start: number | Date) {
+    const delta = Math.floor((Date.now() - (start).valueOf()) / 1000);
+    if (delta < 60) 
+        return delta
+    if (delta < 3600) 
+        return 60 - (delta % 60)
+    if (delta < 86400)
+        return 3600 - (delta % 3600)
+    if (delta < 31536000) 
+        return 86400 - (delta % 86400)
+    return 31536000 - (delta % 31536000)
+}
+
+interface RuntimeProps extends React.PropsWithChildren {
     /**
      * The date or timestamp from which the elapsed time should be calculated from.
      */
@@ -81,9 +164,12 @@ interface Props extends React.PropsWithChildren {
      */
     end?: number | Date,
     /**
-     * If set the text will read "<time> ago", instead of just the time. Ignored when {@link end} is set.
+     * If set the text be relative to {@link start}, or {@link end} if set.
      */
     since?: boolean,
+    /**
+     * If set the elapsed time will be displayed in digital format.
+     */
     short?: boolean,
     style?: React.CSSProperties
 }
