@@ -124,7 +124,7 @@ export function ProjectPage() {
                     title={project.name}
                     headerMargin={18}
                 >
-                    <Stack ref={toolbar} horizontal horizontalFill horizontalAlign="space-between" gap={6}>
+                    <Stack ref={toolbar} horizontal horizontalFill horizontalAlign="space-between" gap={6} style={{margin: "6px 0px 6px 0px"}}>
                         <Stack horizontal gap={6}>
                             <ProjectControlButton
                                 action="start"
