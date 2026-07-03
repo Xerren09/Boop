@@ -9,7 +9,7 @@ const rtf = new Intl.RelativeTimeFormat("en-GB", {
 
 export default function Runtime(props: RuntimeProps) {
     const [value, setValue] = useState<string>("");
-    const digitalRef = useRef<Array<number>>([]);
+    const digitalRef = useRef<Array<number>>([0]);
 
     const startTimestamp = useMemo(() => {
         const date = new Date(props.start);
@@ -25,7 +25,7 @@ export default function Runtime(props: RuntimeProps) {
     }, [props.end])
 
     useEffect(() => {
-        digitalRef.current = [];
+        digitalRef.current = [0];
     }, [props.start, props.end]);
 
 
