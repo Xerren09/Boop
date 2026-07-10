@@ -297,15 +297,15 @@ export interface InstallerLog {
         log: string,
         exitCode: number | null,
         startTime: number,
-        exitTime: number
+        exitTime: number,
+        killed: boolean
     }[]
 }
 
 export interface ServiceDeployLog {
     time: number,
     ref?: string | null,
-    process: InstallerLog["steps"][number],
-    killed: boolean
+    process: InstallerLog["steps"][number]
 }
 
 export type ProjectType = "webapp" | "service";
