@@ -1,4 +1,4 @@
-import { Spinner, type SpinnerProps } from "@fluentui/react-components";
+import { Spinner, Tooltip, type SpinnerProps } from "@fluentui/react-components";
 import { CheckmarkCircleColor, DismissCircleColor, ErrorCircleColor, FlashFilled, PauseFilled, WarningColor } from "@fluentui/react-icons";
 
 export default function StatusIcon(props: StatusIconProps) {
@@ -25,9 +25,11 @@ export default function StatusIcon(props: StatusIconProps) {
 
     return (
         <div style={{ display: "flex" }}>
-            {
-                getIcon()
-            }
+            <Tooltip content={props.status} relationship="description">
+                {
+                    getIcon()
+                }
+            </Tooltip>
         </div>
     );
 }
