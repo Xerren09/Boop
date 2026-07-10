@@ -17,8 +17,8 @@ import ProjectLogTab from "./log.tab";
 import ProjectDeployTab from "./deploy.tab";
 import { useProjectStreamer } from "../../api/streamers/useProjectStreamer";
 import ProjectInstallerTab from "./build.tab";
-import { ProjectTab } from "./tabs/tabs.enum";
-import useProjectTabs from "./tabs/useProjectTabs";
+import { ProjectTab } from "./tabs/projectTabs.enum";
+import useHashTabs from "../../components/useHashTabs";
 
 export function ProjectPage() {
     const { projectId } = useParams<string>();
@@ -27,7 +27,7 @@ export function ProjectPage() {
     const { projectStatus, lastWebhookEvent, mainProcess } = useProjectStreamer(projectId!, true);
 
     const [project, setProject] = useState<BoopProject | null>(null);
-    const { currentTab, switchTab } = useProjectTabs();
+    const { currentTab, switchTab } = useHashTabs(ProjectTab);
     const [port, setPort] = useState<string | null>(null);
 
     const proxyUrlHref = useMemo(() => { return project?.proxyUrl.toString() }, [project]);

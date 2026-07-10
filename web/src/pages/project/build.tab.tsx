@@ -8,7 +8,7 @@ import { useContext, useEffect, useState } from "react";
 import StatusIcon from "../../components/statusIcon";
 import { lastValueFrom } from "rxjs";
 import ProjectTabLink from "./tabs/tabLink";
-import { ProjectTab } from "./tabs/tabs.enum";
+import { ProjectTab } from "./tabs/projectTabs.enum";
 import useProjectHistory from "../../components/project/logSelect/useProjectHistory";
 import { StatusDescription, StatusDescriptionItem } from "../../components/statusDescription";
 

@@ -1,23 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
-import { ProjectTab } from "./tabs.enum";
 
-function getFirstNavTargetTab() {
+type Enum<E> = Record<keyof E, number | string> & { [k: number]: string };
+
+function getHashNavTargetValue<T extends Enum<T>>(tabs: T) {
     const hashTab = window.location.hash.substring(1, window.location.hash.length);
     if (hashTab.length == 0) {
         return 0;
     }
-    const tabIdx = ProjectTab[(hashTab) as keyof typeof ProjectTab];
-    return tabIdx;
+    const value = tabs[hashTab as keyof typeof tabs];
+    return value;
 }
 
-export default function useProjectTabs() {
-    const [currentTab, setCurrentTab] = useState<ProjectTab>(getFirstNavTargetTab);
+export default function useHashTabs<T extends Enum<T>>(tabs: T) {
+    const [currentTab, setCurrentTab] = useState<number | string>(() => getHashNavTargetValue(tabs));
     
     /**
      * Effect for synchronising window location hash with the current tab
      */
     useEffect(() => {
-        const tabHash = `#${ProjectTab[currentTab]}`;
+        const tabHash = `#${tabs[currentTab as keyof typeof tabs]}`;
         if (currentTab == undefined || window.location.hash == tabHash) {
             return;
         }
@@ -39,14 +40,13 @@ export default function useProjectTabs() {
             if (currentTab == undefined) {
                 return;
             }
-            const tabHash = `#${ProjectTab[currentTab] ?? ''}`;
+            const tabHash = `#${tabs[currentTab as number] ?? ''}`;
             if (window.location.hash == tabHash) {
                 return;
             }
-            console.log("changing tabs", "from", `${ProjectTab[currentTab]}`, "to", window.location.hash);
-            const hashTargetTab = window.location.hash.substring(1, window.location.hash.length);
-            const tabIdx = ProjectTab[hashTargetTab as keyof typeof ProjectTab] as number;
-            setCurrentTab(() => tabIdx);
+            console.log("hashchange:", "changing tabs", "from", `${tabs[currentTab as number]}`, "to", `${window.location.hash}`);
+            const hashEnumValue = getHashNavTargetValue(tabs);
+            setCurrentTab(() => hashEnumValue);
         };
         window.addEventListener('hashchange', handleHashChange);
 
@@ -55,7 +55,7 @@ export default function useProjectTabs() {
         };
     }, [currentTab]);
 
-    const switchTab = useCallback((tab: ProjectTab) => {setCurrentTab(() => tab)}, [])
+    const switchTab = useCallback((tab: number | string) => {setCurrentTab(() => tab)}, [])
 
     return {
         currentTab,

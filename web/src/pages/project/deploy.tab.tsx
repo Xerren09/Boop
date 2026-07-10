@@ -7,7 +7,7 @@ import RemoteProcessGroup from "../../components/process/group";
 import { ProjectStatusIcon } from "../../components/project/statusIcon";
 import ProjectLogSelect from "../../components/project/logSelect/projectLogSelect";
 import ProjectTabLink from "./tabs/tabLink";
-import { ProjectTab } from "./tabs/tabs.enum";
+import { ProjectTab } from "./tabs/projectTabs.enum";
 import useProjectHistory from "../../components/project/logSelect/useProjectHistory";
 import { StatusDescription, StatusDescriptionItem } from "../../components/statusDescription";
 

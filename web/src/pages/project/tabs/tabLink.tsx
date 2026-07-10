@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from "react";
-import { ProjectTab } from "./tabs.enum";
+import { ProjectTab } from "./projectTabs.enum";
 import { Link } from "react-router";
 
 export default function ProjectTabLink(props: TabLinkProps) {
