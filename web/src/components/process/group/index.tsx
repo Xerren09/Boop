@@ -45,7 +45,13 @@ export default function ProcessGroup(props: Props) {
             await lastValueFrom(last.output, { defaultValue: null });
             const lastExitedIdx = getLastExitIdx(list);
             const groupStatus = list[lastExitedIdx].exitCode;
-            setStatus(() => parseExitCode(groupStatus));
+            const wasKilled = list[lastExitedIdx].killed;
+            if (wasKilled) {
+                setStatus(() => "killed");
+            }
+            else {
+                setStatus(() => parseExitCode(groupStatus));
+            }
             const groupStopTime = list[lastExitedIdx].exitTime ?? 0;
             setCompletedAt(() => groupStopTime);
         }
@@ -72,7 +78,7 @@ export default function ProcessGroup(props: Props) {
 
     const startTime = (isRemoteProcessArray ? startedAt : (props.processes[0]?.startTime)) ?? 0;
     const exitTime = (isRemoteProcessArray ? completedAt : (completedProcessListLastProcess?.exitTime)) ?? 0;
-    const groupStatus = (isRemoteProcessArray ? status : parseExitCode(completedProcessListLastProcess?.exitCode ?? null))
+    const groupStatus = (isRemoteProcessArray ? status : (completedProcessListLastProcess?.killed ? "killed" : parseExitCode(completedProcessListLastProcess?.exitCode ?? null)));
 
     return (
         <Section
@@ -121,6 +127,7 @@ export default function ProcessGroup(props: Props) {
                                     exitTime={process.exitTime ?? 0}
                                     exitCode={process.exitCode}
                                     content={process.output}
+                                    killed={process.killed}
                                     onContentRequested={() => {
                                         if (props.onTerminalContentRequest) {
                                             props.onTerminalContentRequest(idx);
@@ -145,6 +152,6 @@ interface Props {
     onTerminalContentRequest?: (processIndex: number) => void;
 }
 
-export interface CompletedProcess extends Pick<RemoteProcess, "cmd" | "exitCode" | "exitTime" | "startTime">{
+export interface CompletedProcess extends Pick<RemoteProcess, "cmd" | "exitCode" | "exitTime" | "startTime" | "killed">{
     output: string | null;
 }
