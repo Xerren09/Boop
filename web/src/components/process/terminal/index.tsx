@@ -71,6 +71,7 @@ export default function Terminal(props: Props) {
 
     const exitCode = props.process ? code : props.exitCode;
     const isDeadProcess = props.process ? props.process.dud : (props.exitCode === null && props.startTime == 0);
+    const killed = props.process ? props.process.killed : props.killed;
 
     return (
         <Stack
@@ -78,12 +79,13 @@ export default function Terminal(props: Props) {
         >
             <TerminalHeader
                 title={props.title}
-                collapsed={ collapsed }
-                onCollapse={ onCollapseClick }
+                collapsed={collapsed}
+                onCollapse={onCollapseClick}
                 exitCode={exitCode}
                 startTime={props.process ? props.process.startTime : props.startTime}
                 exitTime={props.process ? props.process.exitTime : props.exitTime}
                 dud={isDeadProcess}
+                killed={killed}
             />
             <div
                 className="content"
@@ -100,7 +102,7 @@ export default function Terminal(props: Props) {
                     {
                         isDeadProcess == false && <TerminalScreen value={ props.content } stream={ props.process?.output }/>
                     }
-                    <TerminalFooter exitCode={exitCode} dud={ isDeadProcess } />
+                    <TerminalFooter exitCode={exitCode} dud={isDeadProcess} killed={killed} />
                 </Stack>
             </div>
         </Stack>
@@ -149,6 +151,7 @@ type StaticProps = {
     exitCode: number | null,
     startTime: number | Date,
     exitTime: number | Date,
+    killed?: boolean,
     process?: never
 }
 

@@ -21,11 +21,15 @@ export default function TerminalFooter(props: TerminalFooterProps) {
             {
                 !props.dud && (props.exitCode === null ? "Running..." : `Exited with code: ${props.exitCode}`)
             }
+            {
+                props.killed ? " (killed)" : null
+            }
         </Text>
     )
 }
 
 interface TerminalFooterProps {
     exitCode: number | null,
-    dud?: boolean
+    dud?: boolean,
+    killed?: boolean
 }

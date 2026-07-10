@@ -39,7 +39,7 @@ export default function TerminalHeader(props: HeaderProps) {
                 }}
             >
                 {
-                    <StatusIcon size="extra-tiny" status={ props.dud ? "warning" : getStatusFromExitCode(props.exitCode) } />
+                    <StatusIcon size="extra-tiny" status={ props.dud ? "warning" : (props.killed ? "killed" : getStatusFromExitCode(props.exitCode)) } />
                 }
                 <Text title={props.title || "Terminal Output"} style={{ color: "#dddddd", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{props.title || "Terminal Output"}</Text>
             </Stack>
@@ -78,4 +78,5 @@ interface HeaderProps {
     startTime?: number | Date | null,
     exitTime?: number | Date | null,
     dud?: boolean,
+    killed?: boolean
 }
