@@ -220,7 +220,7 @@ export function ProjectPage() {
                         currentTab === ProjectTab.Environment && <EnvironmentVariableEditor/>
                     }
                     {
-                        currentTab === ProjectTab.Events && <ProjectWebhookEventsTab/>
+                        currentTab === ProjectTab.Events && <ProjectWebhookEventsTab refreshKey={lastWebhookEvent}/>
                     }
                     {
                         currentTab === ProjectTab.Log && <ProjectLogTab refreshKey={projectStatus}/>

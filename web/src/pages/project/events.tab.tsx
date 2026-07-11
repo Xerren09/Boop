@@ -62,7 +62,9 @@ function ScrollToEventRow(events: WebhookEvent[], eventRef: string) {
     }
 }
 
-export default function ProjectWebhookEventsTab() {
+const REFRESH_DEBOUNCE_MS = 1500;
+
+export default function ProjectWebhookEventsTab(props: {refreshKey?: unknown}) {
     const project = useContext(ProjectProvider);
     const [events, setEvents] = useState<WebhookEvent[]>([]);
 
@@ -123,13 +125,14 @@ export default function ProjectWebhookEventsTab() {
         ))
     }, [events, referredEventRef]);
 
-    useEffect(() => {
-        async function getEvents() {
-            const webhookEvents = await project?.getWebhookLog();
-            if (webhookEvents) {
-                setEvents(webhookEvents);
-            }
+    async function getEvents() {
+        const webhookEvents = await project?.getWebhookLog();
+        if (webhookEvents) {
+            setEvents(webhookEvents);
         }
+    }
+
+    useEffect(() => {
         getEvents();
     }, [project]);
 
@@ -143,6 +146,15 @@ export default function ProjectWebhookEventsTab() {
             _shouldScrollToEvent.current = false;
         }
     }, [events, referredEventRef]);
+
+    useEffect(() => { 
+        const id = setTimeout(() => {
+            getEvents();
+        }, REFRESH_DEBOUNCE_MS);
+        return () => {
+            clearTimeout(id);
+        };
+    }, [props.refreshKey]);
 
     const scrollWidthAlignRef = useApplyScrollbarWidth();
 
