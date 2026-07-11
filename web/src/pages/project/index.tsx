@@ -223,7 +223,7 @@ export function ProjectPage() {
                         currentTab === ProjectTab.Events && <ProjectWebhookEventsTab/>
                     }
                     {
-                        currentTab === ProjectTab.Log && <ProjectLogTab/>
+                        currentTab === ProjectTab.Log && <ProjectLogTab refreshKey={projectStatus}/>
                     }
                 </Stack>
                 

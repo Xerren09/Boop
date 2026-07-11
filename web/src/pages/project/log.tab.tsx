@@ -4,19 +4,33 @@ import { ProjectProvider, type LogEntry } from "../../api/api";
 import Stack from "../../components/stack";
 import LogList from "../../components/logList";
 
+const REFRESH_DEBOUNCE_MS = 1500;
 
-export default function ProjectLogTab() {
+export default function ProjectLogTab(props: {refreshKey?: unknown}) {
     const project = useContext(ProjectProvider);
     const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
 
-    useEffect(() => {
+    function getLog() {
         if (project) {
             project.getProjectLog().then((logs) => {
                 if (logs) {
-                    setLogEntries(() => logs.reverse());
+                    setLogEntries(() => logs);
                 }
             })
         }
+    }
+
+    useEffect(() => { 
+        const id = setTimeout(() => {
+            getLog();
+        }, REFRESH_DEBOUNCE_MS);
+        return () => {
+            clearTimeout(id);
+        };
+    }, [props.refreshKey]);
+
+    useEffect(() => {
+        getLog();
     }, [project]);
 
     return (
