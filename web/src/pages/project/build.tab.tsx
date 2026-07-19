@@ -16,6 +16,7 @@ const statusHeadingMap: { [key in NonNullable<InstallerStatus>]: string } = {
     "pending": "Building",
     "error": "Build failed",
     "ok": "Build complete",
+    "killed": "Build aborted"
 }
 
 export default function ProjectInstallerTab(props: { projectId: string }) {
@@ -95,6 +96,11 @@ export default function ProjectInstallerTab(props: { projectId: string }) {
                         </Text>
                         { steps.length > 0 && <InstallerProgressBar processes={steps}/>}
                     </Stack>
+                </StatusDescriptionItem>
+                <StatusDescriptionItem<InstallerStatus> value={"killed"}>
+                    <Text>
+                        The project build was aborted. This usually means a newer incoming webhook request aborted it to start a new build.
+                    </Text>
                 </StatusDescriptionItem>
             </StatusDescription>
             
