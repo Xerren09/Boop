@@ -20,8 +20,8 @@ export default function ProjectListItem(props: Props) {
                     description={props.type === "service" ? "Service" : "Web application"}
                     truncate
                 >
-                    <RouterLink to={`/${props.name}`}>
-                        {props.name}
+                    <RouterLink to={`/${props.name}`} style={{textDecoration: "none"}}>
+                        <Link>{props.name}</Link>
                     </RouterLink>
                 </TableCellLayout>
                 {

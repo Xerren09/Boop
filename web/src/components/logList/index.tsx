@@ -51,7 +51,7 @@ function LogItem(props: { item: LogEntry, accordionId: string }) {
     }
     return (
         <AccordionItem value={props.accordionId} disabled={isMetadataEmpty}>
-            <AccordionHeader expandIconPosition="end" icon={<LogItemIcon level={ props.item.level } />} style={{color: "white", fill: "white"}}>
+            <AccordionHeader expandIconPosition="end" icon={<LogItemIcon level={ props.item.level } />} >
                 <Stack gap={8} horizontal horizontalFill horizontalAlign="space-between" verticalAlign="center" style={{minWidth: 0}}>
                     <Text style={{whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%"}}>{ props.item.message }</Text>
                     <Runtime since start={new Date(timestamp)} style={{whiteSpace: "nowrap"}}/>

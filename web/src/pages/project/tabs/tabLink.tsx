@@ -1,19 +1,23 @@
 import type { PropsWithChildren } from "react";
 import { ProjectTab } from "./projectTabs.enum";
-import { Link } from "react-router";
+import { Link } from "@fluentui/react-components";
+import { Link as NavLink } from "react-router";
 
 export default function ProjectTabLink(props: TabLinkProps) {
     const search = new URLSearchParams(props.params).toString();
     return (
-        <Link
+        <NavLink
             to={{ hash: `#${ProjectTab[props.target]}`, search: search }}
             onClick={() => {
                 // Force the hashchange event to fire.
                 window.location.hash = `#${ProjectTab[props.target]}`;
             }}
+            style={{
+                textDecoration: "none"
+            }}
         >
-            {props.children}
-        </Link>
+            <Link>{props.children}</Link>
+        </NavLink>
     );
 }
 
