@@ -31,7 +31,7 @@ const logger = winston.createLogger({
                 winston.format.colorize(),
                 winston.format.simple()
             ),
-            level: "info"
+            level: isDevEnv() ? "silly" : "warn"
         })
     ],
 });
