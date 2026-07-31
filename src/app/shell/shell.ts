@@ -309,20 +309,16 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
                             if (this.exited) {
                                 return resolve();
                             }
-                            reject(new Error(`Process "${this._process.spawnargs.join(" ")}" (${this.pid}) could not be stopped.`, { cause: err }));
                             logger.debug(`Failed to kill process.`, {
                                 pid: this.pid,
                                 forced: force,
                                 error: err,
                                 args: this._process.spawnargs.join(" ")
                             });
+                            reject(new Error(`Process "${this._process.spawnargs.join(" ")}" (${this.pid}) could not be stopped.`, { cause: err }));
                         }
                         else {
                             resolve();
-                            logger.debug(`Killed process.`, {
-                                pid: this.pid,
-                                forced: force
-                            });
                         }
                     });
                 }
