@@ -130,10 +130,24 @@ export function makeLogDirName(time: number, ref?: string | null) {
     return `${time}${(ref == undefined || ref == null || ref.length == 0) ? "" : `-${ref}`}`
 }
 
-export interface EventLog {
+interface EventLogDirHandle {
     time: number,
     eventReference?: string,
     dir: string
+}
+
+export interface EventLog {
+    time: number,
+    ref?: string | null
+}
+
+export interface ProcessLog {
+    cmd: string,
+    log: string,
+    exitCode: number | null,
+    startTime: number,
+    exitTime: number,
+    killed: boolean,
 }
 
 /**
@@ -142,13 +156,13 @@ export interface EventLog {
  * @param category 
  * @returns List of per-event directories.
  */
-export async function listProjectLogs(project: BoopProject, category: 'installer' | 'output') : Promise<EventLog[]> {
+export async function listProjectLogs(project: BoopProject, category: 'installer' | 'output') : Promise<EventLogDirHandle[]> {
     const logTypeDir = category == "installer" ? PROJECT_LOGS_INSTALL_DIR_NAME : PROJECT_LOGS_DEPLOY_DIR_NAME;
     const searchDir = join(project.projectDir, PROJECT_LOGS_DIR_NAME, logTypeDir);
     const dirs = await readdir(searchDir);
     const valids = dirs.filter(dir => ProjectLogDirRegex.test(dir) == true).map(dir => {
         const groups = ProjectLogDirRegex.exec(dir)!.groups;
-        const _entry: EventLog = {
+        const _entry: EventLogDirHandle = {
             time: Number(groups!.timestamp),
             eventReference: groups?.reference,
             dir: join(searchDir, dir)

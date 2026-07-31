@@ -6,8 +6,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import { once } from "node:events";
-import { makeLogDirName } from "../../logger.js";
-import { InstallerLog } from "../shell/installRunner.js";
+import { type EventLog, makeLogDirName, type ProcessLog } from "../../logger.js";
 
 export class ServiceProject extends BoopProject {
     public override get deployed(): boolean {
@@ -109,9 +108,9 @@ export class ServiceProject extends BoopProject {
                     startTime: this._process!.startTime,
                     exitTime: this._process!.exitTime,
                     exitCode: this._process!.exitCode,
-                    log: join(logDir, `output.log`)
-                },
-                killed: this._process!.wasKilled
+                    log: join(logDir, `output.log`),
+                    killed: this._process!.wasKilled
+                }
             }
             await writeFile(file, JSON.stringify(log));
         }
@@ -136,9 +135,8 @@ export class ServiceProject extends BoopProject {
     }
 }
 
-interface ServiceDeployLog {
+interface ServiceDeployLog extends EventLog {
     time: number,
     ref?: string | null,
-    process: InstallerLog["steps"][number],
-    killed: boolean
+    process: ProcessLog
 }

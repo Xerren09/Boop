@@ -5,7 +5,7 @@ import { join } from "path";
 import { mkdir, writeFile } from "fs/promises";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
 import { isNodeAbortException } from "../utilities.js";
-import logger, { makeLogDirName } from "../../logger.js";
+import logger, { type EventLog, makeLogDirName, type ProcessLog } from "../../logger.js";
 
 const STEP_EVENT = "step";
 const STEP_EXIT_EVENT = "stepExit";
@@ -23,16 +23,8 @@ export interface InstallerStep {
     process: BoopProcess | null
 }
 
-export interface InstallerLog {
-    time: number,
-    ref?: string | null,
-    steps: {
-        cmd: string,
-        log: string,
-        exitCode: number | null,
-        startTime: number,
-        exitTime: number
-    }[]
+export interface InstallerLog extends EventLog {
+    steps: ProcessLog[]
 }
 
 export interface InstallRunner {
@@ -235,7 +227,8 @@ export class InstallRunner extends EventEmitter {
                 log: `${idx}.log`,
                 exitCode: el.process?.exitCode ?? null,
                 startTime: el.process?.startTime ?? -1,
-                exitTime: el.process?.exitTime ?? -1
+                exitTime: el.process?.exitTime ?? -1,
+                killed: el.process?.wasKilled ?? false
             }))
         };
         const file = join(dir, `result.json`);
