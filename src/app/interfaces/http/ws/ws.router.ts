@@ -2,6 +2,7 @@ import { WebsocketRouter } from "./WebsocketRouter.js";
 import Manager from "../../../project/manager.js";
 import { InstallStreamer } from "./install.streamer.js";
 import { ProjectStreamer } from "./project.streamer.js";
+import { projectWsProxy } from "../proxy.js";
 
 export const wsRouter = new WebsocketRouter();
 
@@ -32,3 +33,4 @@ wsRouter.ws("/boop/api/projects/:projectName/installer", (ws, params) => {
     }
 });
 
+wsRouter.raw(projectWsProxy);
