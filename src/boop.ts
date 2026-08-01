@@ -11,8 +11,8 @@ import logger from './logger.js';
 import { checkGitAvailable } from './app/shell/git.js';
 import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_PORT_KEY, ENV_SECRET, ENV_SECRET_KEY, WEB_INTERFACE_DIR } from './constants.js';
 // Interfaces
-import { cli } from './app/interfaces/cli.js';
-import { server } from './app/interfaces/http/server.js';
+import { createCLI } from './app/interfaces/cli/cli.js';
+import { createHTTPServer } from './app/interfaces/http/server.js';
 
 const boopArgsOptions: ParseArgsOptionsConfig = {
     port: {
@@ -36,28 +36,43 @@ process.env[ENV_PORT_KEY] = `${port}`;
 const secret = args.values.secret ?? ENV_SECRET() ?? "";
 process.env[ENV_SECRET_KEY] = `${secret}`
 
-
-// BOOP!
-const BOOP = server.listen(port, async () => { 
+async function BOOP() {
     console.log(`                         __ `);
     console.log(` _____ _____ _____ _____|  |`);
     console.log(`| __  |     |     |  _  |  |`);
     console.log(`| __ -|  |  |  |  |   __|__|`);
     console.log(`|_____|_____|_____|__|  |__|`);
     console.log(`Tiny CI/CD server for GitHub webhooks!\n`);
-    if (ENV_DISABLE_WEBHOOK_SECURITY) {
-        logger.warn("Webhook security disabled; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
+    // Use a stack to auto dispose of everything in order; get rid of the logger last
+    await using stack = new AsyncDisposableStack();
+    stack.adopt(logger, async () => { logger.end(); await once(logger, "finish") });
+    const cli = stack.use(createCLI());
+    try {
+        stack.use(await createHTTPServer(port));
+        // App info stuff
+        console.log(`====`);
+        console.log(`Boop listening on port`, styleText("blueBright", `${port}`));
+        console.log(`Webhook listener available at`, styleText("blueBright", `http://localhost:${port}/boop/webhook`));
+        if (await pathExists(join(WEB_INTERFACE_DIR, "index.html"))) {
+            console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
+        }
+        // ENV warnings
+        if (ENV_DISABLE_WEBHOOK_SECURITY) {
+            logger.warn("Webhook security disabled; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
+        }
+        else if (secret == "") {
+            logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
+        }
+        console.log(`====\n`);
     }
-    else if (secret == "") {
-        logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
+    catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "EADDRINUSE") {
+            logger.error("HTTP server port already taken.", { port: port });
+        }
+        // A fault here is fatal; rethrow
+        throw err;
     }
-    console.log(`====`);
-    console.log(`Boop listening on port`, styleText("blueBright", `${port}`));
-    console.log(`Webhook listener available at`, styleText("blueBright", `http://localhost:${port}/boop/webhook`));
-    if (await pathExists(join(WEB_INTERFACE_DIR, "index.html"))) {
-        console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
-    }
-    console.log(`====\n`);
+    // Catch and log Load and Deploy exceptions so other functional projects can still run
     try {
         await Manager.LoadAll();
     }
@@ -71,6 +86,7 @@ const BOOP = server.listen(port, async () => {
         logger.logException(err);
     }
     cli.prompt();
+    // Wait for CLI exit or other termination signal
     const abortHandler = new AbortController();
     try {
         await Promise.race([
@@ -89,26 +105,18 @@ const BOOP = server.listen(port, async () => {
     }
     finally {
         abortHandler.abort("exiting");
-        handle_termination();
     }
-});
-
-async function handle_termination(code?: number) {
     console.info("\n====\nPreparing to shut down...");
+    // Manually dispose of Manager so we can keep a log of any dispose errors. 
+    // The other diposables are interfaces that we don't care about if they error out, they won't cause issues and get cleaned up by Node when the process exits.
     try {
-        await Manager.Dispose();
+        await Manager[Symbol.asyncDispose]();
     }
     catch (err) {
         logger.logException(err);
-        logger.warn("Not all project shut down. This might mean some processes will be left alive after Boop shuts down...");
+        process.exitCode = 1;
     }
-    cli.close();
-    logger.end();
-    BOOP.close();
-    await Promise.all([
-        once(logger, "finish"),
-        once(BOOP, "close"),
-    ]);
     console.info("Boop going to rest...");
-    process.exit(code ?? process.exitCode);
 }
+
+BOOP();
