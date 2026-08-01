@@ -4,14 +4,19 @@ import logger from "../../logger.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js";
 import { ServiceProject } from "./service.project.js";
 import { mkdir, rm, writeFile, readdir } from "fs/promises";
-import { getProjectNameFromRemote, pathExists } from "../utilities.js";
+import { getProjectNameFromRemote, IAsyncDisposable, pathExists } from "../utilities.js";
 import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow, WorkflowConfig } from "../workflow.js";
 import { InstantiateProject } from "./instantiate.js";
 import { InstallStreamerCollection } from "../interfaces/http/ws/install.streamer.js";
 import { ProjectStreamerCollection } from "../interfaces/http/ws/project.streamer.js";
 
-class ProjectManager {
+class ProjectManager implements IAsyncDisposable {
+    private _disposed = false;
+    get disposed(): boolean {
+        return this._disposed;
+    }
+    
     private _projects: BoopProject[] = [];
     /**
      * The list of all loaded projects known to Boop.
@@ -214,12 +219,11 @@ class ProjectManager {
         }
     }
 
-    private _disposed = false;
     /**
      * Stops and disposes of all loaded projects, effectively shutting down the whole system.
      * @returns 
      */
-    public async Dispose() {
+    public async [Symbol.asyncDispose]() {
         if (this._disposed) {
             return;
         }
