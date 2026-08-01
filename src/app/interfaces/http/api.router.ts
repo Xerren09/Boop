@@ -1,6 +1,4 @@
 import express from "express";
-import expressWs from "express-ws";
-import cors from "cors";
 import { createReadStream } from "fs";
 import { finished } from "stream/promises";
 import { readFile } from "fs/promises";
@@ -9,15 +7,11 @@ import { join } from "path";
 import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME, PROJECT_LOG_FILE_NAME, PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../../constants.js";
 import Manager from "../../project/manager.js";
 import { ServiceProject } from "../../project/service.project.js";
-import { InstallStreamer } from "./ws/install.streamer.js";
-import { ProjectStreamer } from "./ws/project.streamer.js";
 import { listProjectLogs } from "../../../logger.js";
 import { pathExists } from "../../utilities.js";
 
+
 export const apiRouter = express.Router();
-//@ts-expect-error
-expressWs(apiRouter);
-apiRouter.use(cors());
 
 apiRouter.use("/projects/:projectName", (req, res, next) => {
     const project = Manager.projects.find(item => item.name === req.params.projectName);
@@ -248,33 +242,6 @@ apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
     }
     catch (err) {
         res.status(500).json(err);
-    }
-});
-
-apiRouter.ws("/projects/:projectName", (ws, req) => {
-    const project = Manager.projects.find(item => item.name === req.params["projectName"]);
-    if (project) {
-        const withServiceProcess = (req.query["withProcess"] ?? false) == "true";
-        const streamer = new ProjectStreamer(ws, project, withServiceProcess);
-        ws.once("close", () => {
-            streamer[Symbol.dispose]();
-        });
-    }
-    else {
-        ws.close();
-    }
-});
-
-apiRouter.ws("/projects/:projectName/installer", (ws, req) => {
-    const project = Manager.projects.find(item => item.name === req.params["projectName"]);
-    if (project) {
-        const streamer = new InstallStreamer(ws, project)
-        ws.once("close", () => {
-            streamer[Symbol.dispose]();
-        });
-    }
-    else {
-        ws.close();
     }
 });
 

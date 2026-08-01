@@ -5,6 +5,7 @@ import { createServer } from "http";
 import logger from "../../../logger.js";
 import { webhookHandler } from "../../webhook.js";
 import { apiRouter } from "./api.router.js";
+import { wsRouter } from './ws/ws.router.js';
 import { projectSelector } from "./selector.js";
 import { uiRouter } from "./ui.router.js";
 import { pathExists } from '../../utilities.js';
@@ -59,5 +60,12 @@ export async function createHTTPServer(port: number) {
     const expressInstance = await createExpressServer();
     const server = createServer(expressInstance).listen(port);
     await once(server, "listening");
+    // Configure websocket routers
+    server.on("upgrade", (req, socket, head) => {
+        const handled = wsRouter.handleUpgrade(req, socket, head);
+        if (handled === false) {
+            socket.destroy();
+        }
+    });
     return server;
 }
