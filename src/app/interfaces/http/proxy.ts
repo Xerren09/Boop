@@ -1,4 +1,4 @@
-import { type NextFunction, type Request, type Response } from 'express';
+import { type Request, type Response } from 'express';
 import httpProxy from 'http-proxy-3';
 import { IncomingMessage } from 'node:http';
 import Stream from 'node:stream';
@@ -11,10 +11,26 @@ const projectIdFromUrlSegments = /^\/*(?<projectID>[\w-]+)\/?/;
 const proxy = httpProxy.createProxyServer();
 
 export function projectHttpProxy(project: ServiceProject, req: Request, res: Response) {
-    const port = project.environment.get("port");
-    if (port === null) {
-        // TODO: add message explaining that the port is missing
-        res.sendStatus(503);
+    if (project.deployed === false) {
+        res.status(503).send("Project not deployed.");
+        return;
+    }
+    const port = Number(project.environment.get("PORT") ?? -1);
+    if (port == -1 || Number.isNaN(port)) {
+        res.status(503).send(`
+            <h1>503 - Service port not specified.</h1>
+
+            <p>Can&#39;t proxy requests for this project (${project.name}); it did not specify a port.</p>
+
+            <p>Boop normally provides a proxy router for services, but this requires the project to specify the port the service is listening at.</p>
+
+            <p>Either:</p>
+
+            <ul>
+                <li>Set the <code>PORT</code> environment variable in the project&#39;s config.yaml file (<a href="https://github.com/Xerren09/Boop#project-configuration">example</a>).</li>
+                <li>Or through the Boop web UI at <a href="http://${req.host}/boop/${project.name}">${project.name}</a>, by setting a <code>PORT</code> variable in the &quot;Environment&quot; tab.</li>
+            </ul>
+        `);
         return;
     }
     req.url = replaceInternalRouteFragment(project.name, req);
@@ -27,11 +43,14 @@ export function projectWsProxy(req: IncomingMessage, socket: Stream.Duplex, head
     if (!project) {
         return false;
     }
+    if (project.deployed === false) {
+        return false;
+    }
     if (project instanceof AppProject) {
         return false;
     }
-    const port = project.environment.get("port");
-    if (port === null) {
+    const port = Number(project.environment.get("PORT") ?? -1);
+    if (port == -1 || Number.isNaN(port)) {
         return false;
     }
     req.url = replaceInternalRouteFragment(project.name, req);

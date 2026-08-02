@@ -1,8 +1,6 @@
 import { join } from "path";
-import { Router } from "express";
 import EventEmitter, { once } from "events";
-import * as express from "express";
-
+import { type Response } from "express";
 import type { WebhookEvent } from "../webhook.js";
 import { DEBUG_ENV_BYPASS_GIT_PULL, PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECTS_DIR } from "../../constants.js";
 import { InstallRunner } from "../shell/installRunner.js";
@@ -38,7 +36,6 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     private _webhookProcessCancellationController = new AbortController();
     protected readonly log: BoopLogger;
     protected _installer: InstallRunner;
-    protected _router: Router | null = null;
     private _disposed: boolean = false;
 
     protected get webhookEventsFile(): string {
@@ -93,13 +90,6 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     public abstract get deployed(): boolean;
 
     /**
-     * The express router serving this project when deployed. Will be `null` if not deployed.
-     */
-    public get router(): Router | null {
-        return this._router;
-    }
-
-    /**
      * The internal type of the project, which determines how it behaves. See {@link ProjectType}.
      */
     public get type(): ProjectType {
@@ -146,7 +136,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * @param evt The event that triggered the handler.
      * @param res Optional `express.Response` event used to provide immediate configuration response (like if the branch is correct). Does not actually wait for completion of the handler.
      */
-    public async onWebhookEvent(evt: WebhookEvent, res?: express.Response | undefined) {
+    public async onWebhookEvent(evt: WebhookEvent, res?: Response | undefined) {
         if (isDevEnv() == false) {
             if (this.webhookEvents.exists(evt.id)) {
                 const msg = `Event refused; repeat delivery.`;
@@ -280,7 +270,6 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             this.log.info(`Deployed.`, { event: eventReference });
         }
         catch (err) {
-            this._router = null;
             const error = new Error(`Failed to deploy project.`, { cause: err });
             this.log.logException(error);
             throw error;
@@ -294,6 +283,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     
     /**
      * Stops the project's handler and removes its router.
+     * @param eventReference [Optional] The ID of the event that triggered the event.
      */
     public async stop(eventReference?: string): Promise<void> {
         try {
@@ -310,7 +300,6 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         finally {
             // Always send stop because a failed stop is likely an invalid state; better safe than sorry.
             this.emit("stop");
-            this._router = null;
         }
     }    
     protected abstract _stop(): Promise<void>;

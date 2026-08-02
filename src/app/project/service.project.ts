@@ -1,7 +1,6 @@
 import { shellExecuteAsync, type BoopProcess } from "../shell/shell.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js"
 import { getWorkflowFile, parseWorkflow } from "../workflow.js";
-import { createServiceRouter } from "../interfaces/http/service.router.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
@@ -10,7 +9,7 @@ import { type EventLog, makeLogDirName, type ProcessLog } from "../../logger.js"
 
 export class ServiceProject extends BoopProject {
     public override get deployed(): boolean {
-        return this._router != undefined && this._process != null && this._process.exitCode == null;
+        return this._process != null && this._process.exitCode == null;
     }
     private _process: BoopProcess | null = null;
     /**
@@ -63,15 +62,10 @@ export class ServiceProject extends BoopProject {
         const port = Number(this.environment.get("PORT") ?? -1);
         // Even if no port is specified, the project might have a hardcoded one. 
         // This is a misconfiguration, but not a fatal error.
-        if (port > -1) {
-            this._router = createServiceRouter(this.name, port);
-        }
-        else {
+        if (port == -1 || Number.isNaN(port)) {
             this.log.warn(`No PORT environment variable is specified; can't create proxy router.`);
         }
         this._process.once("exit", (code) => {
-            // Destroy the router so we don't end up trying to connect to a server that doesn't exist
-            this._router = null;
             if (this._process!.wasKilled) {
                 this.log.debug(`Project process exited.`, { pid: this._process?.pid, code: code, killed: true });
             }

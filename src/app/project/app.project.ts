@@ -2,8 +2,10 @@ import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import { BoopProject, type ProjectConfig } from "./boop.project.js"
 import { createAppRouter } from "../interfaces/http/app.router.js";
 import path from "path";
+import { type Router } from "express";
 
 export class AppProject extends BoopProject {
+    protected _router: Router | null = null;
     private _stopTime: number = -1;
     private _startTime: number = -1;
     public get deployedAt(): number {
@@ -24,6 +26,13 @@ export class AppProject extends BoopProject {
         return this._indexPath;
     }
 
+    /**
+     * The express router serving this project when deployed. Will be `null` if not deployed.
+     */
+    public get router(): Router | null {
+        return this._router;
+    }
+
     constructor(config: ProjectConfig){
         super(config);
     }
@@ -37,5 +46,6 @@ export class AppProject extends BoopProject {
 
     protected async _stop(): Promise<void> {
         this._stopTime = Date.now();
+        this._router = null;
     }
 }
