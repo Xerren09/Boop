@@ -67,7 +67,7 @@ export interface BoopProcess {
  * designed for processes spawned with the `shell` option set to `true`.
  */
 export class BoopProcess extends EventEmitter implements IAsyncDisposable {
-
+    private _killTask: Promise<void> | null = null;
     private _process: ChildProcess;
     private _startTime: number = 0;
     private _endTime: number = 0;
@@ -285,57 +285,63 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
         if (this._spawnFailed || this._wasKilled || this.exited) {
             return Promise.resolve();
         }
-        return new Promise((resolve, reject) => {
-            if (this._process != undefined && this._process.pid !== undefined && this.exited == false) {
-                try {
-                    process.kill(this._process.pid, 0);
-                }
-                catch {
-                    // Process isnt running so there it nothing to stop, call this a win
-                    return resolve();
-                }
-                const __signal = force === true ? 'SIGKILL' : 'SIGTERM';
-                this._wasKilled = true;
-                if (entireProcessTree === true) {
-                    treeKill(this._process.pid, __signal, (err?: Error | null) => {
-                        if (err) {
-                            if (process.platform === "win32") {
-                                if ((err as KillError).code === 128) {
-                                    // https://stackoverflow.com/questions/18682681/what-are-exit-codes-from-the-taskkill-utility
-                                    // 128 is "no task found" in windows, meaning our process exited before kill went through
+        // Keep reference to the kill task and return it while its live on any duplicate calls to avoid
+        // killing a process with the name pid that might spawn between two overlapping calls
+        if (this._killTask == null) {
+            this._killTask = new Promise((resolve, reject) => {
+                if (this._process != undefined && this._process.pid !== undefined && this.exited == false) {
+                    try {
+                        process.kill(this._process.pid, 0);
+                    }
+                    catch {
+                        // Process isnt running so there it nothing to stop, call this a win
+                        return resolve();
+                    }
+                    const __signal = force === true ? 'SIGKILL' : 'SIGTERM';
+                    this._wasKilled = true;
+                    if (entireProcessTree === true) {
+                        treeKill(this._process.pid, __signal, (err?: Error | null) => {
+                            if (err) {
+                                if (process.platform === "win32") {
+                                    if ((err as KillError).code === 128) {
+                                        // https://stackoverflow.com/questions/18682681/what-are-exit-codes-from-the-taskkill-utility
+                                        // 128 is "no task found" in windows, meaning our process exited before kill went through
+                                        return resolve();
+                                    }
+                                }
+                                if (this.exited) {
                                     return resolve();
                                 }
+                                logger.debug(`Failed to kill process.`, {
+                                    pid: this.pid,
+                                    forced: force,
+                                    error: err,
+                                    args: this._process.spawnargs.join(" ")
+                                });
+                                reject(new Error(`Process "${this._process.spawnargs.join(" ")}" (${this.pid}) could not be stopped.`, { cause: err }));
                             }
-                            if (this.exited) {
-                                return resolve();
+                            else {
+                                resolve();
                             }
-                            logger.debug(`Failed to kill process.`, {
-                                pid: this.pid,
-                                forced: force,
-                                error: err,
-                                args: this._process.spawnargs.join(" ")
-                            });
-                            reject(new Error(`Process "${this._process.spawnargs.join(" ")}" (${this.pid}) could not be stopped.`, { cause: err }));
+                        });
+                    }
+                    else {
+                        try {
+                            const result = this._process.kill(__signal);
+                            result ? resolve() : reject();
                         }
-                        else {
-                            resolve();
+                        catch (err) {
+                            reject(err);
                         }
-                    });
+                    }
                 }
                 else {
-                    try {
-                        const result = this._process.kill(__signal);
-                        result ? resolve() : reject();
-                    }
-                    catch (err) {
-                        reject(err);
-                    }
+                    resolve();
                 }
-            }
-            else {
-                resolve();
-            }
-        });
+            });
+            this._killTask.finally(() => { this._killTask = null; });
+        }
+        return this._killTask;
     }
 
     async [Symbol.asyncDispose]() {
