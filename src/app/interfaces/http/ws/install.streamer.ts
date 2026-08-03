@@ -83,6 +83,9 @@ export class InstallStreamer implements IDisposable {
      * where it hands it off to the live data stream like if this was a normal run.
      */
     private sendHistory = async () => {
+        if (this.project.installer.steps.length == 0) {
+            return;
+        }
         const installer = this.project.installer;
         const installerTime = installer.startedAt;
         const eventRef = installer.eventTrigger;
