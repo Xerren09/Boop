@@ -54,6 +54,33 @@ class ProjectManager implements IAsyncDisposable {
     }
 
     /**
+     * Unloads the given project from memory.
+     * @param target 
+     */
+    public async Unload(target: string | BoopProject) {
+        const project = (typeof (target) == "string") ? this.Find(target) : target;
+        if (project == undefined) {
+            throw new Error(`Project does not exist.`);
+        }
+        try {
+            // Remove project from the list before we unload it so if it fails it doesn't stay available in an invalid state
+            const idx = this._projects.indexOf(project);
+            this._projects.splice(idx, 1);
+            const _disposer = new AsyncDisposableStack();
+            _disposer.use(project);
+            InstallStreamerCollection.filter(streamer => streamer.project == project).forEach(el => _disposer.use(el));
+            ProjectStreamerCollection.filter(streamer => streamer.project == project).forEach(el => _disposer.use(el));
+            await _disposer.disposeAsync();
+            logger.info(`Unloaded project '${project.name}'`);
+        }
+        catch (err) {
+            const error = new Error(`Failed to unload project '${project.name}'`, { cause: err });
+            logger.logException(error);
+            throw error;
+        }
+    }
+
+    /**
      * Creates a new project.
      * @param name 
      * @param remote 
@@ -108,11 +135,7 @@ class ProjectManager implements IAsyncDisposable {
             throw new Error(`Project does not exist.`);
         }
         try {
-            // Remove project from the list before we delete it so if it fails it doesn't stay available in an invalid state
-            const idx = this._projects.indexOf(project);
-            this._projects.splice(idx, 1);
-            //
-            await project[Symbol.asyncDispose]();
+            await this.Unload(target);
             //
             if (await pathExists(project.projectDir)) {
                 await rm(project.projectDir, { recursive: true, force: true });
@@ -120,10 +143,6 @@ class ProjectManager implements IAsyncDisposable {
             else {
                 logger.warn(`Project directory '${project.projectDir}' does not exist: this project only exists in memory.`);
             }
-            const streamers = new DisposableStack();
-            InstallStreamerCollection.filter(streamer => streamer.project == project).forEach(el => streamers.use(el));
-            ProjectStreamerCollection.filter(streamer => streamer.project == project).forEach(el => streamers.use(el));
-            streamers.dispose();
             logger.info(`Deleted project '${project.name}'.`);
         }
         catch (err) {
@@ -229,21 +248,17 @@ class ProjectManager implements IAsyncDisposable {
         }
         this._disposed = true;
         const errors: any[] = [];
-        for (const project of this._projects) {
+        do {
+            const project = this._projects[0];
             try {
-                logger.info(`Disposing project '${project.name}'...`);
-                await project[Symbol.asyncDispose]();
-                const streamers = new DisposableStack();
-                InstallStreamerCollection.filter(streamer => streamer.project == project).forEach(el => streamers.use(el));
-                ProjectStreamerCollection.filter(streamer => streamer.project == project).forEach(el => streamers.use(el));
-                streamers.dispose();
-                logger.info(`Disposed!`);
+                await this.Unload(project);
             }
             catch (e) {
                 errors.push(e);
             }
-        }
+        } while (this._projects.length != 0);
         if (errors.length != 0) {
+            logger.warn("Not all projects shut down. This might mean some processes are still alive after Boop shuts down...");
             throw new AggregateError(errors, `One or more projects failed to dispose properly.`);
         }
     }
