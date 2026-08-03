@@ -9,6 +9,7 @@ import { EventsFile } from "./eventLog.js";
 import { BoopLogger, createProjectLogger } from "../../logger.js";
 import { downloadRemote } from "../shell/git.js";
 import { getProjectNameFromRemote, IAsyncDisposable, isDevEnv } from "../utilities.js";
+import AsyncLock from "async-lock";
 
 interface BoopProjectEvents {
     'deploy': (success: boolean) => void;
@@ -25,6 +26,7 @@ export interface BoopProject {
 }
 
 export abstract class BoopProject extends EventEmitter implements IAsyncDisposable {
+    private lock: AsyncLock = new AsyncLock();
     /**
      * The project's internal configuration (independent from the workflow config)
      */
@@ -212,72 +214,96 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     }
 
     private async processWebhookEvent(ref: string, cancel: AbortSignal): Promise<void> {
-        await this.stop(ref);
-        try {
-            if (DEBUG_ENV_BYPASS_GIT_PULL == false) {
-                await downloadRemote(this.remoteUrl, this._config.acceptBranch, cancel);
+        await this.lock.acquire(["webhook", ref], async () => {
+            this.log.info(`Processing webhook event.`, { event: ref });
+            await this.webhookEvents.save();
+            await this.stop(ref);
+            await this.pull(ref, cancel);
+            await this.install(ref, cancel);
+            // Deploy should be near instanteous since we're running things in a shell, but check cancel first
+            cancel.throwIfAborted();
+            await this.deploy(ref);
+            this.log.info("Webhook event processed.", { event: ref });
+        });   
+    }
+
+    /**
+     * 
+     * @param cancel 
+     */
+    public async pull(eventReference?: string, cancel?: AbortSignal): Promise<void> {
+        this.throwIfDisposed();
+        this.throwIfNotInWebhookContext(eventReference);
+        await this.lock.acquire("pull", async () => { 
+            try {
+                if (DEBUG_ENV_BYPASS_GIT_PULL == false) {
+                    await downloadRemote(this.remoteUrl, this._config.acceptBranch, cancel);
+                }
+                this.log.info(`Remote cloned.`, { event: eventReference });
             }
-        }
-        catch (err) {
-            // All other methods do an internal project log except this one, since its outside of the project scope.
-            if (cancel.aborted == false) {
-                // Supress error if aborted
-                this.log.logException(err);
+            catch (err) {
+                const error = new Error(`Git pull failed.`, { cause: err });
+                this.log.logException(error);
+                throw error;
             }
-            throw err;
-        }
-        await this.install(ref, cancel);
-        cancel.throwIfAborted();
-        await this.deploy(ref);
+        });
     }
 
     /**
      * Runs the project's installer with the currently available build file.
-     * @param eventReference [Optional] The ID of the event that triggered the install workflow.
+     * @param eventReference [Optional] The ID of the event that triggered the event.
+     * @param cancel 
      */
     public async install(eventReference?: string, cancel?: AbortSignal): Promise<void> {
-        this.log.info(`Install process started.`, { event: eventReference });
-        // Stop project and installer if its running.
-        await this.stop(eventReference);
-        if (this._installer.running) {
-            await this._installer.kill(true);
-        }
-        try {
-            await this._installer.loadConfiguration();
-            await this._installer.run(eventReference, cancel);
-            this.log.info(`Installer finished.`, { event: eventReference });
-        }
-        catch (err) {
-            const error = new Error(`Installer failed.`, { cause: (cancel && cancel.aborted) ? "Cancelled" : err });
-            this.log.logException(error);
-            throw error;
-        }
+        this.throwIfDisposed();
+        this.throwIfNotInWebhookContext(eventReference);
+        await this.lock.acquire("install", async () => {
+            this.log.info(`Install process started.`, { event: eventReference });
+            // Stop project and installer if its running.
+            await this.stop(eventReference);
+            if (this._installer.running) {
+                await this._installer.kill(true);
+            }
+            try {
+                await this._installer.loadConfiguration();
+                await this._installer.run(eventReference, cancel);
+                this.log.info(`Installer finished.`, { event: eventReference });
+            }
+            catch (err) {
+                this.log.logException(err);
+                throw err;
+            }
+        });
     }
 
     /**
      * Deploys the project and enables its router.
+     * @param eventReference [Optional] The ID of the event that triggered the event.
      * @returns 
      */
     public async deploy(eventReference?: string): Promise<void> {
-        if (this.deployed) {
-            return;
-        }
-        if (this.installing == true) {
-            throw new Error("Project installer is currently running.");
-        }
-        try {
-            await this._deploy(eventReference);
-            this.log.info(`Deployed.`, { event: eventReference });
-        }
-        catch (err) {
-            const error = new Error(`Failed to deploy project.`, { cause: err });
-            this.log.logException(error);
-            throw error;
-        }
-        finally {
-            this.emit("deploy", this.deployed);
-        }
-        
+        this.throwIfDisposed();
+        this.throwIfNotInWebhookContext(eventReference);
+        await this.lock.acquire("deploy", async () => {
+            if (this.deployed) {
+                return;
+            }
+            if (this.installing == true) {
+                throw new Error("Project installer is currently running.");
+            }
+            try {
+                await this._deploy(eventReference);
+                this.log.info(`Deployed.`, { event: eventReference });
+            }
+            catch (err) {
+                const error = new Error(`Failed to deploy project.`, { cause: err });
+                this.log.logException(error);
+                throw error;
+            }
+            finally {
+                this.emit("deploy", this.deployed);
+            }
+        });
     }
     protected abstract _deploy(eventReference?: string): Promise<void>;
     
@@ -286,21 +312,23 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * @param eventReference [Optional] The ID of the event that triggered the event.
      */
     public async stop(eventReference?: string): Promise<void> {
-        try {
-            if (this.deployed) {
-                await this._stop();
-                this.log.info(`Stopped.`, { event: eventReference });
+        await this.lock.acquire("stop", async () => { 
+            try {
+                if (this.deployed) {
+                    await this._stop();
+                    this.log.info(`Stopped.`, { event: eventReference });
+                }
             }
-        }
-        catch (err) {
-            const error = new Error(`Failed to stop project.`, { cause: err });
-            this.log.logException(error);
-            throw error;
-        }
-        finally {
-            // Always send stop because a failed stop is likely an invalid state; better safe than sorry.
-            this.emit("stop");
-        }
+            catch (err) {
+                const error = new Error(`Failed to stop project.`, { cause: err });
+                this.log.logException(error);
+                throw error;
+            }
+            finally {
+                // Always send stop because a failed stop is likely an invalid state; better safe than sorry.
+                this.emit("stop");
+            }
+        });
     }    
     protected abstract _stop(): Promise<void>;
 
@@ -308,15 +336,53 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * Starts the project. Calls {@link stop} and {@link deploy} in series.
      */
     public async restart(): Promise<void> {
-        try {
-            await this.stop();
-            await this.deploy();
-            this.log.info(`Restarted.`);
+        this.throwIfDisposed();
+        this.throwIfNotInWebhookContext();
+        await this.lock.acquire("restart", async () => {
+            try {
+                await this.stop();
+                await this.deploy();
+                this.log.info(`Restarted.`);
+            }
+            catch (err) {
+                const error = new Error(`Failed to restart project.`, { cause: err });
+                this.log.logException(error);
+                throw error;
+            }
+        });
+    }
+
+    protected throwIfDisposed() {
+        if (this._disposed) {
+            throw new Error("Project instance disposed.");
         }
-        catch (err) {
-            const error = new Error(`Failed to restart project.`, { cause: err });
-            this.log.logException(error);
-            throw error;
+    }
+
+    protected throwIfNotInWebhookContext(contextKey?: string | string[]) {
+        const isWebhookActive = this.lock.isBusy("webhook");
+        if (!contextKey && isWebhookActive) {
+            throw new Error("Project instance busy.");
+        }
+        if (Array.isArray(contextKey)) {
+            const locked = contextKey.every(k => this.lock.isBusy(k) == true);
+            if (locked == false && isWebhookActive) {
+                throw new Error("Project instance busy.");
+            }
+        }
+        else if (isWebhookActive && this.lock.isBusy(contextKey) == false) {
+            throw new Error("Project instance busy.");
+        }
+    }
+
+    protected throwIfLocked(key?: string | string[]) {
+        if (Array.isArray(key)) {
+            const locked = key.findIndex(k => this.lock.isBusy(k) == true);
+            if (locked != -1) {
+                throw new Error("Project instance busy.");
+            }
+        }
+        else if (this.lock.isBusy(key)) {
+            throw new Error("Project instance busy.");
         }
     }
 
