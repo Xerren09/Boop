@@ -6,7 +6,9 @@ import { mkdir, writeFile } from "fs/promises";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
 import { isNodeAbortException } from "../utilities.js";
 import logger, { type EventLog, makeLogDirName, type ProcessLog } from "../../logger.js";
+import AsyncLock from "async-lock";
 
+const LOCK_RUN_KEY = "run";
 const STEP_EVENT = "step";
 const STEP_EXIT_EVENT = "stepExit";
 const EXIT_EVENT = "exit";
@@ -36,10 +38,9 @@ export interface InstallRunner {
 }
 
 export class InstallRunner extends EventEmitter {
+    private _lock: AsyncLock = new AsyncLock();
     private projectBinDir: string;
-    private _runLock: boolean = false;
     private _currentStep: InstallerStep | null = null;
-    private _running: boolean = false;
     private _endTime: number = 0;
     private _startTime: number = 0;
     private _eventReference: string | null = null;
@@ -57,7 +58,7 @@ export class InstallRunner extends EventEmitter {
      * Whether the installer is currently running.
      */
     public get running(): boolean {
-        return this._running;
+        return this._lock.isBusy(LOCK_RUN_KEY);
     }
 
     /**
@@ -99,9 +100,7 @@ export class InstallRunner extends EventEmitter {
      * Loads the currently present build configuration from the project directory.
      */
     public async loadConfiguration(): Promise<void> {
-        if (this._running) {
-            throw new Error("Installer instance already running.");
-        }
+        this.throwIfRunning();
         const buildFile = await getWorkflowFile(this.projectBinDir);
         const buildConfig = await parseWorkflow(buildFile);
         this.steps = buildConfig.build.map(el => ({
@@ -118,80 +117,77 @@ export class InstallRunner extends EventEmitter {
      * @returns 
      */
     public async run(eventReference?: string, cancel?: AbortSignal): Promise<void> {
-        if (this._running || this._runLock) {
-            throw new Error("Installer already running.");
-        }
-        this._runLock = true;
-        cancel?.throwIfAborted();
-        this._running = true;
-        this._startTime = Date.now();
-        this._eventReference = eventReference ?? null;
-        const cancelHandler = () => {
-            this.kill(true);
-        };
-        cancel?.addEventListener("abort", cancelHandler);
-        //
-        this.emit("start", eventReference ?? null);
-        //
-        const logDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeLogDirName(this._startTime, eventReference));
-        try {
-            await mkdir(logDir);
-        }
-        catch (err) {
-            throw new Error("Installer log directory could not be created", {cause: err});
-        }
-        let stepIdx = 0;
-        for (; stepIdx < this.steps.length; stepIdx++) {
-            const step = this.steps[stepIdx];
+        this.throwIfRunning();
+        await this._lock.acquire(LOCK_RUN_KEY, async () => {
+            cancel?.throwIfAborted();
+            this._startTime = Date.now();
+            this._eventReference = eventReference ?? null;
+            const cancelHandler = () => {
+                this.kill(true);
+            };
+            cancel?.addEventListener("abort", cancelHandler);
+            //
+            this.emit("start", eventReference ?? null);
+            //
+            const logDir = join(this.projectBinDir, "..", PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, makeLogDirName(this._startTime, eventReference));
             try {
-                await using proc = shellExecuteAsync(step.cmd, this.projectBinDir);
-                step.process = proc;
-                this._currentStep = step;
-                const filePath = join(logDir, `${stepIdx}.log`);
-                proc.redirectToFile(filePath);
-                this.emit(STEP_EVENT, this._currentStep);
-                await proc.waitForExit();
+                await mkdir(logDir);
             }
             catch (err) {
-                // Consume errors on purpose. run() is like a container method so we only really care about the whole process,
-                // not individual steps. Any specific error is up to the user to handle and sort out, so they'll be packaged
-                // into the error in the end.
-                if (isNodeAbortException(err instanceof SuppressedError ? err.suppressed : err)) {
-                    logger.warn(`Installer failed because step process was disposed of independently.`, { step: stepIdx, cmd: this.steps[stepIdx].cmd, projectContext: this.projectBinDir });
-                }
+                throw new Error("Installer log directory could not be created", {cause: err});
             }
-            finally {
-                this.emit(STEP_EXIT_EVENT, step);
-                if (step.process == null || step.process?.exitCode != 0) {
-                    break;
+            let stepIdx = 0;
+            for (; stepIdx < this.steps.length; stepIdx++) {
+                const step = this.steps[stepIdx];
+                try {
+                    cancel?.throwIfAborted();
+                    await using proc = shellExecuteAsync(step.cmd, this.projectBinDir);
+                    step.process = proc;
+                    this._currentStep = step;
+                    const filePath = join(logDir, `${stepIdx}.log`);
+                    proc.redirectToFile(filePath);
+                    this.emit(STEP_EVENT, this._currentStep);
+                    await proc.waitForExit();
                 }
-            }   
-        }
-        cancel?.removeEventListener("abort", cancelHandler);
-        this._endTime = Date.now();
-        this._currentStep = null;
-        this._running = false;
-        //
-        this.emit(EXIT_EVENT, this.success);
-        //
-        try {
-            await this.saveLog(logDir, this._startTime, eventReference);
-        }
-        catch (err) {
-            logger.logException(new Error("Installer log could not be saved", { cause: err }));
-        }
-        // Throw a wrapped error if the installer didn't complete with success.
-        // This will be a lot more useful than throwing whatever happens on its own.
-        this._runLock = false;
-        if (this.success == false) {
-            const ret = {
-                project: this.projectBinDir,
-                step: stepIdx,
-                cmd: this.steps[stepIdx].cmd,
-                exitCode: this.steps[stepIdx].process?.exitCode ?? null
+                catch (err) {
+                    // Consume errors on purpose. run() is like a container method so we only really care about the whole process,
+                    // not individual steps. Any specific error is up to the user to handle and sort out, so they'll be packaged
+                    // into the error in the end.
+                    if (isNodeAbortException(err instanceof SuppressedError ? err.suppressed : err)) {
+                        logger.warn(`Installer failed because step process was disposed of independently.`, { step: stepIdx, cmd: this.steps[stepIdx].cmd, projectContext: this.projectBinDir });
+                    }
+                }
+                finally {
+                    this.emit(STEP_EXIT_EVENT, step);
+                    if (step.process == null || step.process?.exitCode != 0) {
+                        break;
+                    }
+                }   
             }
-            throw new Error("Installer failed to complete.", { cause: ret });
-        }
+            cancel?.removeEventListener("abort", cancelHandler);
+            this._endTime = Date.now();
+            this._currentStep = null;
+            //
+            try {
+                await this.saveLog(logDir, this._startTime, eventReference);
+            }
+            catch (err) {
+                logger.logException(new Error("Installer log could not be saved", { cause: err }));
+            }
+            this.emit(EXIT_EVENT, this.success);
+            // Throw a wrapped error if the installer didn't complete with success.
+            // This will be a lot more useful than throwing whatever happens on its own.
+            if (this.success == false) {
+                const cause = {
+                    project: this.projectBinDir,
+                    step: stepIdx,
+                    cmd: this.steps[stepIdx].cmd,
+                    exitCode: this.steps[stepIdx].process?.exitCode ?? null
+                }
+                const err = new Error("Installer failed to complete.", { cause: cause });
+                throw err;
+            }
+        });
     }
 
     /**
@@ -215,10 +211,13 @@ export class InstallRunner extends EventEmitter {
         }
     }
 
-    private async saveLog(dir: string, time: number, ref?: string) {
-        if (this._running) {
-            throw new Error("InstallRunner is currently busy. Wait for the runner to complete before attempting to export.");
+    private throwIfRunning() {
+        if (this._lock.isBusy(LOCK_RUN_KEY)) {
+            throw new Error("Installer run is in progress; busy.");
         }
+    }
+
+    private async saveLog(dir: string, time: number, ref?: string) {
         const log: InstallerLog = {
             time: time,
             ref: ref,
