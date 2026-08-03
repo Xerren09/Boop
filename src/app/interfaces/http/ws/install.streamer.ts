@@ -118,7 +118,7 @@ export class InstallStreamer implements IDisposable {
             return;
         }
         if (installer.running == false) {
-            this.onInstallerComplete(installer.success);
+            this.onInstallerComplete(installer.success ? undefined : false);
         }
     }
 
@@ -133,10 +133,10 @@ export class InstallStreamer implements IDisposable {
         this._ws.send(JSON.stringify(msg));
     }
 
-    private onInstallerComplete = (success: boolean) => {
+    private onInstallerComplete = (error?: Error | boolean) => {
         const msg: InstallerResult = {
             type: "installerResult",
-            success: success,
+            success: error === undefined,
             time: this.project.installer.exitedAt
         };
         this._ws.send(JSON.stringify(msg));

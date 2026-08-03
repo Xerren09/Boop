@@ -15,7 +15,7 @@ const EXIT_EVENT = "exit";
 
 interface InstallRunnerEvents {
     'start': (eventReference: string | null) => void;
-    'exit': (success: boolean) => void;
+    'exit': (error?: Error) => void;
     'step': (step: InstallerStep) => void;
     'stepExit': (step: InstallerStep) => void;
 }
@@ -174,7 +174,6 @@ export class InstallRunner extends EventEmitter {
             catch (err) {
                 logger.logException(new Error("Installer log could not be saved", { cause: err }));
             }
-            this.emit(EXIT_EVENT, this.success);
             // Throw a wrapped error if the installer didn't complete with success.
             // This will be a lot more useful than throwing whatever happens on its own.
             if (this.success == false) {
@@ -185,7 +184,11 @@ export class InstallRunner extends EventEmitter {
                     exitCode: this.steps[stepIdx].process?.exitCode ?? null
                 }
                 const err = new Error("Installer failed to complete.", { cause: cause });
+                this.emit(EXIT_EVENT, err);
                 throw err;
+            }
+            else {
+                this.emit(EXIT_EVENT);
             }
         });
     }
