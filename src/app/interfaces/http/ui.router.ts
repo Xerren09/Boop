@@ -1,7 +1,7 @@
 import express from "express";
 import { join } from "path";
 import cors from "cors";
-import { BOOP_BASE_DIR, WEB_INTERFACE_DIR } from "../../../constants.js";
+import { WEB_INTERFACE_DIR } from "../../../constants.js";
 
 export const uiRouter = express.Router();
 uiRouter.use(cors());
