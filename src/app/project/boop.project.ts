@@ -1,6 +1,5 @@
 import { join } from "path";
 import EventEmitter, { once } from "events";
-import { type Response } from "express";
 import { WebhookEvent, WebhookEventQueue } from "../webhook.js";
 import { DEBUG_ENV_BYPASS_GIT_PULL, PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECTS_DIR } from "../../constants.js";
 import { InstallRunner } from "../shell/installRunner.js";
@@ -8,8 +7,17 @@ import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
 import { BoopLogger, createProjectLogger } from "../../logger.js";
 import { downloadRemote } from "../shell/git.js";
-import { getProjectNameFromRemote, IAsyncDisposable, isDevEnv } from "../utilities.js";
+import { getProjectNameFromRemote, IAsyncDisposable } from "../utilities.js";
 import AsyncLock from "async-lock";
+
+enum LockKeys {
+    Webhook = "webhook",
+    Deploy = "deploy",
+    Stop = "stop",
+    Restart = "restart",
+    Install = "install",
+    Pull = "pull"
+}
 
 interface BoopProjectEvents {
     'deploy': (success: boolean) => void;
@@ -155,7 +163,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     }
 
     private async processWebhookEvent(ref: string, cancel: AbortSignal): Promise<void> {
-        await this.lock.acquire(["webhook", ref], async () => {
+        await this.lock.acquire([LockKeys.Webhook, ref], async () => {
             this.log.info(`Processing webhook event.`, { event: ref });
             await this.webhookEvents.save();
             await this.stop(ref);
@@ -176,7 +184,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     public async pull(eventReference?: string, cancel?: AbortSignal): Promise<void> {
         this.throwIfDisposed();
         this.throwIfNotInWebhookContext(eventReference);
-        await this.lock.acquire("pull", async () => { 
+        await this.lock.acquire(LockKeys.Pull, async () => { 
             try {
                 if (DEBUG_ENV_BYPASS_GIT_PULL == false) {
                     await downloadRemote(this.remoteUrl, this._config.acceptBranch, cancel);
@@ -199,7 +207,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     public async install(eventReference?: string, cancel?: AbortSignal): Promise<void> {
         this.throwIfDisposed();
         this.throwIfNotInWebhookContext(eventReference);
-        await this.lock.acquire("install", async () => {
+        await this.lock.acquire(LockKeys.Install, async () => {
             this.log.info(`Install process started.`, { event: eventReference });
             // Stop project and installer if its running.
             await this.stop(eventReference);
@@ -226,7 +234,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     public async deploy(eventReference?: string): Promise<void> {
         this.throwIfDisposed();
         this.throwIfNotInWebhookContext(eventReference);
-        await this.lock.acquire("deploy", async () => {
+        await this.lock.acquire(LockKeys.Deploy, async () => {
             if (this.deployed) {
                 return;
             }
@@ -258,7 +266,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         // Stop is a logically safe action in every situation, as it won't do anything on a disposed instance
         // if there were no leftovers, otherwise it'd solve a problem. It's also used during disposal, so it
         // needs to be allowed to run. During webhook locks it also has minimal impact.
-        await this.lock.acquire("stop", async () => { 
+        await this.lock.acquire(LockKeys.Stop, async () => { 
             try {
                 if (this.deployed) {
                     await this._stop();
@@ -284,7 +292,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     public async restart(): Promise<void> {
         this.throwIfDisposed();
         this.throwIfNotInWebhookContext();
-        await this.lock.acquire("restart", async () => {
+        await this.lock.acquire(LockKeys.Restart, async () => {
             try {
                 await this.stop();
                 await this.deploy();
@@ -314,7 +322,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * @param contextKey The `eventReference` value used by the current `webhook` lock as the secondary key.
      */
     protected throwIfNotInWebhookContext(contextKey?: string | string[]) {
-        const isWebhookActive = this.lock.isBusy("webhook");
+        const isWebhookActive = this.lock.isBusy(LockKeys.Webhook);
         if (!contextKey && isWebhookActive) {
             throw new Error("Project instance busy.");
         }
