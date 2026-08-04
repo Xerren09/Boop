@@ -15,6 +15,7 @@ interface BoopProjectEvents {
     'deploy': (success: boolean) => void;
     'stop': () => void;
     'webhook': (webhookEvent: WebhookEvent) => void;
+    'dispose': () => void;
 }
 
 export interface BoopProject {
@@ -355,6 +356,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         try {
             this.log.end();
             await once(this.log, "finish");
+            this.emit("dispose");
         }
         catch (e) {
             errs.push(e);
