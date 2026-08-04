@@ -3,7 +3,83 @@ import * as express from "express";
 import ProjectManager from "./project/manager.js";
 import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_SECRET } from "../constants.js";
 import logger from "../logger.js";
+import AsyncLock from "async-lock";
 
+class WebhookTask {
+    private _cancel: AbortController;
+    private _task?: Promise<void>;
+    private _event: WebhookEvent;
+    public get event() {
+        return this._event;
+    }
+    public get pending() {
+        return this._task !== undefined;
+    }
+
+    constructor(evt: WebhookEvent, task: (cancel: AbortSignal) => Promise<void>) {
+        this._event = evt;
+        this._cancel = new AbortController();
+        this._task = task(this._cancel.signal);
+        this._task.catch(() => {}).finally(() => { this._task = undefined; });
+    }
+
+    public async cancel(): Promise<void> {
+        if (this._cancel.signal.aborted || this._task === undefined) {
+            return;
+        }
+        return new Promise((resolve, reject) => { 
+            if (this._task) {
+                this._task?.catch(() => {}).finally(resolve);
+            }
+            else {
+                resolve();
+            }
+            this._cancel.abort("webhook_queue_cancel");
+        });
+    }
+
+    public async finally(cleanup: () => void) {
+        this._task?.catch(() => {}).finally(cleanup);
+    }
+}
+
+export class WebhookEventQueue {
+    private _active: WebhookTask | null = null;
+    private _next: WebhookEvent | null = null;
+    private _nextFunc?: (cancel: AbortSignal) => Promise<void>;
+
+    public async cancelAll(): Promise<void> {
+        this._next = null;
+        this._nextFunc = undefined;
+        await this._active?.cancel();
+    }
+
+    public push(evt: WebhookEvent, task: (cancel: AbortSignal) => Promise<void>) {
+        this._next = evt;
+        this._nextFunc = task;
+        if (this._active) {
+            logger.info(`Cancelling ${evt.repository.name} event "${this._active.event.id}" in favour of "${this._next.id}"`, { event: this._active.event.id, cancelledBy: this._next.id });
+            this._active.cancel();
+        }
+        else {
+            this.next();
+        }
+    }
+
+    private next() {
+        if (this._next) {
+            this._active = new WebhookTask(this._next, this._nextFunc!);
+            this._active.finally(() => {this.next()});
+            this._next = null;
+            this._nextFunc = undefined;
+        }
+        else {
+            this._active = null;
+        }
+    }
+}
+
+const webhookLock: AsyncLock = new AsyncLock();
 /**
  * Handles the Webhook event, then installs and runs the application.
  * @param req 
@@ -11,42 +87,56 @@ import logger from "../logger.js";
  * @returns 
  */
 export async function webhookHandler(req: express.Request, res: express.Response) {
-    if (req.get('X-GitHub-Event') !== undefined) {
-        if (isSignatureValid(req)) {
-            const webhookEvent = parseWebhookEvent(req);
-            //
-            logger.info(`Incoming webhook event from ${webhookEvent.repository.url}.`, {event: webhookEvent.id});
-            //
-            const project = ProjectManager.projects.find(el => el.name == webhookEvent.repository.name);
-            if (project) {
-                // Designed to not throw so no need to await try
-                project.onWebhookEvent(webhookEvent, res);
+    if (req.get('X-GitHub-Event') == undefined) {
+        // Not a webhook; drop request.
+        res.end();
+        return;
+    }
+    if (isSignatureValid(req) === false) {
+        const err = "Unauthorized webhook request, signature invalid.";
+        logger.error(err);
+        res.status(401).send(err);
+        return;
+    }
+    const webhookEvent = parseWebhookEvent(req);
+    //
+    logger.info(`Incoming webhook event from ${webhookEvent.repository.url}.`, { event: webhookEvent.id });
+    //
+    let project = ProjectManager.projects.find(el => el.name == webhookEvent.repository.name);
+    if (project) {
+        if (project.webhookEvents.exists(webhookEvent.id)) {
+            const msg = `Event refused; repeat delivery.`;
+            res?.status(400).send(msg);
+            logger.warn(msg, { event: webhookEvent.id });
+            return;
+        }
+        if (project.branch !== webhookEvent.repository.branch) {
+            const msg = `Event refused; wrong branch (accepts "${project.branch}" but got "${webhookEvent.repository.branch}").`;
+            // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/422
+            res?.status(422).send(msg);
+            logger.warn(msg, { event: webhookEvent.id });
+            return;
+        }
+        res.status(202).send(`Webhook event received and will be processed shortly.`);
+    }
+    await webhookLock.acquire(webhookEvent.repository.name, async () => {
+        if (!project) {
+            // Project doesn't yet exists on this machine; create it
+            logger.info(`First time setup started for '${webhookEvent.repository.name}'.`, {event: webhookEvent.id});
+            res.status(202).send(`Accepted, creating Boop project.`);
+            try {
+                project = await ProjectManager.Create(webhookEvent.repository.url, webhookEvent.repository.branch);
             }
-            else {
-                // Project doesn't yet exists on this machine; create it
-                logger.info(`First time setup started for '${webhookEvent.repository.name}'.`, {event: webhookEvent.id});
-                res.status(202).send(`Accepted, creating Boop project.`);
-                try {
-                    const fresh = await ProjectManager.Create(webhookEvent.repository.url, webhookEvent.repository.branch);
-                    fresh.onWebhookEvent(webhookEvent);
-                }
-                catch (err) {
-                    // If Create throws we can't handle it any better than it already does on its own; catch and ignore the re-throw.
-                    // This is because github only waits a few seconds for a webhook response, so we can only do immediate checks
-                    // and a proper error return would probably be too drawn out before res gets dropped.
-                    // See https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks#respond-within-10-seconds
-                }
+            catch (err) {
+                // If Create throws we can't handle it any better than it already does on its own; catch and ignore the re-throw.
+                // This is because github only waits a few seconds for a webhook response, so we can only do immediate checks
+                // and a proper error return would probably be too drawn out before res gets dropped.
+                // See https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks#respond-within-10-seconds
+                return;
             }
         }
-        else {
-            const err = "Unauthorized webhook request, signature invalid.";
-            logger.error(err);
-            res.status(401).send(err);
-        }
-    }
-    else {
-        res.status(400).send("Invalid.");
-    }
+        project.onWebhookEvent(webhookEvent);
+    });
 }
 
 /**

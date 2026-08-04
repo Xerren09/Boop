@@ -1,7 +1,7 @@
 import { join } from "path";
 import EventEmitter, { once } from "events";
 import { type Response } from "express";
-import type { WebhookEvent } from "../webhook.js";
+import { WebhookEvent, WebhookEventQueue } from "../webhook.js";
 import { DEBUG_ENV_BYPASS_GIT_PULL, PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECTS_DIR } from "../../constants.js";
 import { InstallRunner } from "../shell/installRunner.js";
 import { EnvFile } from "./env.js";
@@ -32,10 +32,9 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      */
     private readonly _config: ProjectConfig;
     private readonly _name: string;
-    private _webhookLock: boolean = false;
-    private _webhookQueue: WebhookEvent | null = null;
-    private _webhookProcess: Promise<void> | null = null;
-    private _webhookProcessCancellationController = new AbortController();
+
+    private _webhookQueue: WebhookEventQueue = new WebhookEventQueue();
+
     protected readonly log: BoopLogger;
     protected _installer: InstallRunner;
     private _disposed: boolean = false;
@@ -106,6 +105,13 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     }
 
     /**
+     * The brancg of the {@link remoteUrl} repository the project is built and accepts event from.
+     */
+    public get branch(): string {
+        return this._config.acceptBranch;
+    }
+
+    /**
      * Environment variables set for this project. They will be passed to the launch process during {@link deploy}.
      */
     public readonly environment: EnvFile;
@@ -138,79 +144,13 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
      * @param evt The event that triggered the handler.
      * @param res Optional `express.Response` event used to provide immediate configuration response (like if the branch is correct). Does not actually wait for completion of the handler.
      */
-    public async onWebhookEvent(evt: WebhookEvent, res?: Response | undefined) {
-        if (isDevEnv() == false) {
-            if (this.webhookEvents.exists(evt.id)) {
-                const msg = `Event refused; repeat delivery.`;
-                res?.status(400).send(msg);
-                this.log.warn(msg, { event: evt.id });
-                return;
-            }
-        }
-        if (this._config.acceptBranch != evt.repository.branch)
-        {
-            const msg = `Event refused; wrong branch (accepts "${this._config.acceptBranch}" but got "${evt.repository.branch}").`;
-            // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/422
-            res?.status(422).send(msg);
-            this.log.warn(msg, { event: evt.id });
-            return;
-        }
-        else if (this._webhookLock) {
-            this.log.warn(`Webhook processor is busy; event added to queue.`, {event: evt.id, discarding: this._webhookQueue?.id ?? null});
-            res?.status(202).send(`Webhook event accepted into queue. If another event is received before the current one completes, this one will be discarded in favour of the new event.`);
-            if (this._webhookQueue != null) {
-                // There is an event already in queue, drop it and replace with the new one
-                this._webhookQueue = evt;
-                return;
-            }
-            else {
-                this._webhookQueue = evt;
-            }
-        }
-        else {
-            // We can't wait for the event to be completed, but at this point its good to run so send 202 ACCEPTED
-            res?.status(202).send(`Webhook event received and will be processed shortly.`);
-        }
-        //
-        if (this._webhookLock == true) {
-            this._webhookProcessCancellationController.abort("cancel");
-            try {
-                await this._webhookProcess;
-            }
-            catch {
-                // Expect fault here since we're killing the previous one
-            }
-        }
-        if (this._webhookLock == false) {
-            this._webhookLock = true;
-            if (this._webhookProcessCancellationController.signal.aborted) {
-                this._webhookProcessCancellationController = new AbortController();
-            }
-            const event = this._webhookQueue ?? evt;
-            this._webhookQueue = null;
-            this.emit("webhook", event);
-            this.log.info(`Processing webhook event.`, { event: event.id });
-            try {
-                this.webhookEvents.add(event);
-                await this.webhookEvents.save();
-                // Save the promise so we can wait it to end if a new request comes in
-                this._webhookProcess = this.processWebhookEvent(event.id, this._webhookProcessCancellationController.signal);
-                await this._webhookProcess;
-                this.log.info("Webhook event processed.", { event: event.id });
-            }
-            catch (err) {
-                if (this._webhookProcessCancellationController.signal.aborted) {
-                    this.log.info(`Cancelled processing webhook event.`, { event: event.id, cancelledBy: this._webhookQueue!.id });
-                }
-                else {
-                    this.log.error(`Error while processing webhook event.`, { event: event.id });
-                }
-            }
-            finally {
-                // Clear webhook queue
-                this._webhookLock = false;
-            }
-        }
+    public onWebhookEvent(evt: WebhookEvent) {
+        this.log.info(`Webhook event queued.`, { event: evt.id });
+        this._webhookQueue.push(evt, (cancel) => {
+            this.webhookEvents.add(evt);
+            this.emit("webhook", evt);
+            return this.processWebhookEvent(evt.id, cancel);
+        });
     }
 
     private async processWebhookEvent(ref: string, cancel: AbortSignal): Promise<void> {
@@ -228,7 +168,8 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     }
 
     /**
-     * 
+     * Pulls the latest version from the project's remote.
+     * @param eventReference [Optional] The ID of the event that triggered the event.
      * @param cancel 
      */
     public async pull(eventReference?: string, cancel?: AbortSignal): Promise<void> {
@@ -277,7 +218,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     }
 
     /**
-     * Deploys the project and enables its router.
+     * Deploys the project so it is available through Boop's proxies.
      * @param eventReference [Optional] The ID of the event that triggered the event.
      * @returns 
      */
@@ -308,10 +249,14 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     protected abstract _deploy(eventReference?: string): Promise<void>;
     
     /**
-     * Stops the project's handler and removes its router.
+     * Stops the project's handler, making it unavailable through Boop's proxies.
      * @param eventReference [Optional] The ID of the event that triggered the event.
      */
     public async stop(eventReference?: string): Promise<void> {
+        // Deliberately don't throw if disposed or not in the right webhook context.
+        // Stop is a logically safe action in every situation, as it won't do anything on a disposed instance
+        // if there were no leftovers, otherwise it'd solve a problem. It's also used during disposal, so it
+        // needs to be allowed to run. During webhook locks it also has minimal impact.
         await this.lock.acquire("stop", async () => { 
             try {
                 if (this.deployed) {
@@ -333,7 +278,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     protected abstract _stop(): Promise<void>;
 
     /**
-     * Starts the project. Calls {@link stop} and {@link deploy} in series.
+     * Restarts the project. Calls {@link stop} and {@link deploy} in series.
      */
     public async restart(): Promise<void> {
         this.throwIfDisposed();
@@ -358,6 +303,15 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         }
     }
 
+    /**
+     * Throws if the `webhook` key is locked, and if the provided {@link contextKey} is not the same as used by the current webhook lock.
+     * 
+     * Methods are allowed to be called during a `webhook` lock, but ***only*** if their context (event reference ID) is the same; hence the "context" of the lock.
+     * 
+     * If the context key is different or empty, throws to prevent the methods from running and potentially faulting the webhook execution.
+     * 
+     * @param contextKey The `eventReference` value used by the current `webhook` lock as the secondary key.
+     */
     protected throwIfNotInWebhookContext(contextKey?: string | string[]) {
         const isWebhookActive = this.lock.isBusy("webhook");
         if (!contextKey && isWebhookActive) {
@@ -391,8 +345,8 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             return;
         }
         this._disposed = true;
-        this._webhookQueue = null;
         const res = await Promise.allSettled([
+            this._webhookQueue.cancelAll(),
             this.installer.kill(true),
             this.stop(),
             this.environment.save()
