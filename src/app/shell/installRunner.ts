@@ -22,7 +22,8 @@ interface InstallRunnerEvents {
 
 export interface InstallerStep {
     cmd: string,
-    process: BoopProcess | null
+    process: BoopProcess | null,
+    success: boolean
 }
 
 export interface InstallerLog extends EventLog {
@@ -106,6 +107,7 @@ export class InstallRunner extends EventEmitter {
         this.steps = buildConfig.build.map(el => ({
             cmd: el,
             process: null,
+            success: false
         }));
     }
 
@@ -148,6 +150,7 @@ export class InstallRunner extends EventEmitter {
                     proc.redirectToFile(filePath);
                     this.emit(STEP_EVENT, this._currentStep);
                     await proc.waitForExit();
+                    step.success = true;
                 }
                 catch (err) {
                     // Consume errors on purpose. run() is like a container method so we only really care about the whole process,
