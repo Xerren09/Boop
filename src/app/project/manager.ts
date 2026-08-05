@@ -82,7 +82,7 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
             const idx = this._projects.indexOf(project);
             this._projects.splice(idx, 1);
             this.emit("unload", project);
-            project[Symbol.asyncDispose]();
+            await project[Symbol.asyncDispose]();
             logger.info(`Unloaded project '${project.name}'`);
         }
         catch (err) {
