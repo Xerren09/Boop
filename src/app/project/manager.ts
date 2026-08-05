@@ -66,7 +66,6 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
         }
         catch (err) {
             const error = new Error(`Failed to load project '${projectName}'`, { cause: err });
-            logger.logException(error);
             throw error;
         }
     }
@@ -153,6 +152,7 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
      * @param target A `BoopProject` instance or its name.
      */
     public async Delete(target: string | BoopProject): Promise<void> {
+        logger.info(`Deleting project '${(typeof (target) == "string") ? target : target.name}'.`);
         const project = (typeof (target) == "string") ? this.Find(target) : target;
         if (project == undefined) {
             throw new Error(`Project does not exist.`);
@@ -179,8 +179,10 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
      * Loads all existing projects.
      */
     public async LoadAll() {
+        logger.info(`Loading all projects.`);
         if (await pathExists(PROJECTS_DIR) == false)
         {
+            logger.info(`Projects directory does not exist, creating it.`);
             await mkdir(PROJECTS_DIR);
             return;
         }
@@ -192,12 +194,16 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
                 await this.Load(name);
             }
             catch (err) {
+                logger.error(`Failed to load project '${name}'.`);
                 errors.push(err);
             }
         }
-        logger.info(`Loaded ${this._projects.length}/${projects.length} projects.`);
         if (errors.length != 0) {
+            logger.warn("Some projects failed to load.");
             throw new AggregateError(errors, `One or more projects could not be loaded.`);
+        }
+        else {
+            logger.info("Loaded all projects.");
         }
     }
 
@@ -206,32 +212,34 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
      */
     public async DeployAll() {
         const errors: any[] = [];
+        logger.info("Deploying all projects.");
         for (const project of this._projects) {
             if (project.deployed == false) {
                 try {
                     await project.deploy();
-                    console.info(`Deployed project '${project.name}'.`);
                 }
                 catch (err) {
                     errors.push(err);
-                    console.error(`Failed to deploy project '${project.name}'.`);
+                    logger.error(`Failed to deploy project '${project.name}'.`);
                 }
             }
-            else {
-                console.info(`Project '${project.name}' already deployed.`);
-            }
         }
-        logger.info(`Deployed ${this._projects.length - errors.length}/${this._projects.length} projects.`);
         if (errors.length != 0) {
+            logger.warn("Some projects failed to deploy.");
             throw new AggregateError(errors, `One or more projects could not be deployed.`);
+        }
+        else {
+            logger.info("Deployed all projects.");
         }
     }
 
     /**
      * Stops all loaded projects' processes if they have one.
+     * @param force Force flag passed to {@link ServiceProject} processes. See `BoopProcess.kill(boolean, boolean);`
      */
     public async StopAll(force: boolean = false) {
         const errors: any[] = [];
+        logger.info("Stopping all projects.");
         for (const project of this._projects) {
             try {
                 if (force === true) {
@@ -248,22 +256,23 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
                 else {
                     await project.stop();
                 }
-                logger.info(`Stopped project '${project.name}'`);
             }
             catch (err) {
                 logger.error(`Failed to stop project '${project.name}'`);
                 errors.push(err);
             }
         }
-        logger.info(`Stopped ${this._projects.length - errors.length}/${this._projects.length} projects.`);
         if (errors.length != 0) {
+            logger.error(`Not all projects were stopped successfully. Some processes may linger.`);
             throw new AggregateError(errors, `One or more projects failed to stop.`);
+        }
+        else {
+            logger.info("Stopped all projects.");
         }
     }
 
     /**
      * Stops and disposes of all loaded projects, effectively shutting down the whole system.
-     * @returns 
      */
     public async [Symbol.asyncDispose]() {
         if (this._disposed) {
