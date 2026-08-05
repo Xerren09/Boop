@@ -9,6 +9,8 @@ import { BoopLogger, createProjectLogger } from "../../logger.js";
 import { downloadRemote } from "../shell/git.js";
 import { getProjectNameFromRemote, IAsyncDisposable } from "../utilities.js";
 import AsyncLock from "async-lock";
+import { writeFile } from "fs/promises";
+import { type WorkflowConfig } from "../workflow.js";
 
 enum LockKeys {
     Webhook = "webhook",
@@ -373,6 +375,16 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
             throw new AggregateError(errs, "One or more exceptions occured during disposal.")
         }
     }
+}
+
+export async function createProjectFile(file: string, remoteUrl: string, config: WorkflowConfig): Promise<ProjectConfig> {
+    const projectFile: ProjectConfig = {
+        repositoryURL: remoteUrl,
+        type: config.type,
+        acceptBranch: config.branch ?? "main"
+    }
+    await writeFile(file, JSON.stringify(projectFile));
+    return projectFile;
 }
 
 export interface ProjectConfig {

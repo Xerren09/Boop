@@ -1,7 +1,7 @@
 import { PROJECT_BIN_DIR_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME, PROJECTS_DIR } from "../../constants.js";
 import { join } from "path";
 import logger from "../../logger.js";
-import { BoopProject, type ProjectConfig } from "./boop.project.js";
+import { BoopProject, createProjectFile, type ProjectConfig } from "./boop.project.js";
 import { ServiceProject } from "./service.project.js";
 import { mkdir, rm, writeFile, readdir } from "fs/promises";
 import { getProjectNameFromRemote, IAsyncDisposable, pathExists } from "../utilities.js";
@@ -262,16 +262,6 @@ class ProjectManager implements IAsyncDisposable {
             throw new AggregateError(errors, `One or more projects failed to dispose properly.`);
         }
     }
-}
-
-async function createProjectFile(file: string, remoteUrl: string, config: WorkflowConfig): Promise<ProjectConfig> {
-    const projectFile: ProjectConfig = {
-        repositoryURL: remoteUrl,
-        type: config.type,
-        acceptBranch: config.branch ?? "main"
-    }
-    await writeFile(file, JSON.stringify(projectFile));
-    return projectFile;
 }
 
 const Manager: ProjectManager = new ProjectManager();
