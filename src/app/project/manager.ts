@@ -46,21 +46,23 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
 
     /**
      * Loads a project with the specified name.
-     * @param projectName 
      */
-    public async Load(projectName: string) {
-        if (this._projects.find(el => el.name === projectName) != undefined) {
-            return;
+    public async Load(projectName: string): Promise<BoopProject> {
+        const _search = this.Find(projectName);
+        if (_search != undefined) {
+            return _search;
         }
-        const projectFile = join(PROJECTS_DIR, projectName, PROJECT_FILE_NAME);
         try {
+            logger.info(`Loading project '${projectName}'.`);
+            const projectFile = join(PROJECTS_DIR, projectName, PROJECT_FILE_NAME);
             if (await pathExists(projectFile) == false) {
-                throw new Error(`Project does not exist.`);
+                throw new Error(`Project does not exist on disk.`);
             }
             const project = await InstantiateProject(projectFile);
             this._projects.push(project);
             logger.info(`Loaded project '${project.name}'`);
             this.emit("load", project);
+            return project;
         }
         catch (err) {
             const error = new Error(`Failed to load project '${projectName}'`, { cause: err });
@@ -71,7 +73,7 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
 
     /**
      * Unloads the given project from memory.
-     * @param target 
+     * @param target A `BoopProject` instance or its name.
      */
     public async Unload(target: string | BoopProject) {
         const project = (typeof (target) == "string") ? this.Find(target) : target;
@@ -87,6 +89,7 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
             InstallStreamerCollection.filter(streamer => streamer.project == project).forEach(el => _disposer.use(el));
             ProjectStreamerCollection.filter(streamer => streamer.project == project).forEach(el => _disposer.use(el));
             await _disposer.disposeAsync();
+            this.emit("unload", project);
             logger.info(`Unloaded project '${project.name}'`);
         }
         catch (err) {
@@ -98,18 +101,21 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
 
     /**
      * Creates a new project.
-     * @param name 
-     * @param remote 
+     * @param remote Git remote to clone the project from.
+     * @param branch [Optional] Target branch to clone.
      * @returns 
      */
     public async Create(remote: string, branch?: string | null): Promise<BoopProject> {
-        const name = getProjectNameFromRemote(remote);
-        if (name == null) {
+        logger.info(`Creating new project from '${remote}'.`);
+        const projectName = getProjectNameFromRemote(remote);
+        if (projectName == null) {
+            logger.error(`Could not extract valid project name from "${remote}"`);
             throw new Error(`Could not extract valid project name from "${remote}"`);
         }
-        const projectDir = join(PROJECTS_DIR, name);
+        const projectDir = join(PROJECTS_DIR, projectName);
         try {
             if (await pathExists(join(projectDir, PROJECT_FILE_NAME))) {
+                logger.error(`Project already exists.`);
                 throw new Error(`Project already exists.`);
             }
             if (await pathExists(projectDir) == false) {
@@ -122,8 +128,7 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
             await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME));
             await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME));
             await mkdir(join(projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME));
-            const project = await InstantiateProject(projectFile);
-            this._projects.push(project);
+            const project = await this.Load(projectName);
             logger.info(`Created new project.`, {
                 remote: remote,
                 branch: branch ?? "main",
@@ -145,6 +150,7 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
 
     /**
      * Deletes a given project, including configuration, logs, and binaries.
+     * @param target A `BoopProject` instance or its name.
      */
     public async Delete(target: string | BoopProject): Promise<void> {
         const project = (typeof (target) == "string") ? this.Find(target) : target;
