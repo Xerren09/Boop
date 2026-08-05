@@ -10,7 +10,7 @@ import { downloadRemote } from "../shell/git.js";
 import { getProjectNameFromRemote, IAsyncDisposable } from "../utilities.js";
 import AsyncLock from "async-lock";
 import { writeFile } from "fs/promises";
-import { type WorkflowConfig } from "../workflow.js";
+import { getWorkflowFile, parseWorkflow, type WorkflowConfig } from "../workflow.js";
 
 enum LockKeys {
     Webhook = "webhook",
@@ -41,7 +41,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
     /**
      * The project's internal configuration (independent from the workflow config)
      */
-    private readonly _config: ProjectConfig;
+    private _config: ProjectConfig;
     private readonly _name: string;
 
     private _webhookQueue: WebhookEventQueue = new WebhookEventQueue();
@@ -191,6 +191,11 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
                 if (DEBUG_ENV_BYPASS_GIT_PULL == false) {
                     await downloadRemote(this.remoteUrl, this._config.acceptBranch, cancel);
                 }
+                const workflow = await parseWorkflow(await getWorkflowFile(this.binDir));
+                if (workflow.branch != this.branch) {
+                    this.log.info(`Project accept-branch value changed.`, {event: eventReference, oldBranch: this.branch, newBranch: workflow.branch});
+                }
+                this._config = await createProjectFile(this.projectFile, this.remoteUrl, workflow);
                 this.log.info(`Remote cloned.`, { event: eventReference });
             }
             catch (err) {
