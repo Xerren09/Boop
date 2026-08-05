@@ -4,8 +4,9 @@ import ProjectManager from "./project/manager.js";
 import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_SECRET } from "../constants.js";
 import logger from "../logger.js";
 import AsyncLock from "async-lock";
+import { IAsyncDisposable } from "./utilities.js";
 
-class WebhookTask {
+class WebhookTask implements IAsyncDisposable {
     private _cancel: AbortController;
     private _task?: Promise<void>;
     private _event: WebhookEvent;
@@ -21,6 +22,9 @@ class WebhookTask {
         this._cancel = new AbortController();
         this._task = task(this._cancel.signal);
         this._task.catch(() => {}).finally(() => { this._task = undefined; });
+    }
+    get disposed(): boolean {
+        return this._task !== undefined;
     }
 
     public async cancel(): Promise<void> {
@@ -41,12 +45,20 @@ class WebhookTask {
     public async finally(cleanup: () => void) {
         this._task?.catch(() => {}).finally(cleanup);
     }
+
+    async [Symbol.asyncDispose](): Promise<void> {
+        await this.cancel();
+    }
 }
 
-export class WebhookEventQueue {
+export class WebhookEventQueue implements IAsyncDisposable{
+    private _disposed: boolean = false;
     private _active: WebhookTask | null = null;
     private _next: WebhookEvent | null = null;
     private _nextFunc?: (cancel: AbortSignal) => Promise<void>;
+    get disposed(): boolean {
+        return this._disposed;
+    }
 
     public async cancelAll(): Promise<void> {
         this._next = null;
@@ -55,6 +67,9 @@ export class WebhookEventQueue {
     }
 
     public push(evt: WebhookEvent, task: (cancel: AbortSignal) => Promise<void>) {
+        if (this.disposed) {
+            throw new Error("Disposed.");
+        }
         this._next = evt;
         this._nextFunc = task;
         if (this._active) {
@@ -76,6 +91,13 @@ export class WebhookEventQueue {
         else {
             this._active = null;
         }
+    }
+
+    async [Symbol.asyncDispose](): Promise<void> {
+        if (this._disposed) {
+            return;
+        }
+        await this.cancelAll();
     }
 }
 
