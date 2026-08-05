@@ -1,7 +1,7 @@
 import WebSocket from "ws"
 import type { BoopProject } from "../../../project/boop.project.js";
 import type { InstallerStep, InstallRunner } from "../../../shell/installRunner.js";
-import { IDisposable, isNodeAbortException } from "../../../utilities.js";
+import { IAsyncDisposable, isNodeAbortException } from "../../../utilities.js";
 import { join } from "node:path";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../../../constants.js";
 import { createReadStream } from "node:fs";
@@ -40,9 +40,7 @@ type ProcessOutput = {
     output: string
 }
 
-export const InstallStreamerCollection: InstallStreamer[] = [];
-
-export class InstallStreamer implements IDisposable {
+export class InstallStreamer implements IAsyncDisposable {
     private _ws: WebSocket;
     private _installer: InstallRunner;
     private _disposed: boolean = false;
@@ -57,10 +55,9 @@ export class InstallStreamer implements IDisposable {
     constructor(ws: WebSocket, project: BoopProject) {
         this._ws = ws;
         this.project = project;
+        this.project.on("dispose", this.onShouldDispose);
         this._installer = project.installer;
         this.wsInit();
-        //
-        InstallStreamerCollection.push(this);
     }
 
     private async wsInit() {
@@ -182,12 +179,17 @@ export class InstallStreamer implements IDisposable {
         }
     }
 
-    public [Symbol.dispose]() {
+    private onShouldDispose = () => {
+        this[Symbol.asyncDispose]();
+    };
+
+    public async [Symbol.asyncDispose]() {
         if (this._disposed) {
             return;
         }
         this._disposed = true;
         this._disposeController.abort();
+        this.project.removeListener("dispose", this.onShouldDispose);
         this._installer.removeListener("start", this.onInstallerStart);
         this._installer.removeListener("exit", this.onInstallerComplete);
         this._installer.removeListener("step", this.onInstallerStepStart);
@@ -197,10 +199,8 @@ export class InstallStreamer implements IDisposable {
         }
         if (this._ws.readyState === this._ws.CONNECTING || this._ws.readyState === this._ws.OPEN) {
             // 1001: resource shutting down
-            this._ws.close(1001, "disposed");
+            this._ws.close(1001, "PROJECT_DISPOSE");
+            await once(this._ws, "close");
         }
-        //
-        const idx = InstallStreamerCollection.indexOf(this);
-        InstallStreamerCollection.splice(idx, 1);
     }
 }

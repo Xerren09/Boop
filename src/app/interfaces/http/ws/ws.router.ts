@@ -12,7 +12,7 @@ wsRouter.ws("/boop/api/projects/:projectName", (ws, params) => {
         const withServiceProcess = (params.query.get("withProcess") ?? false) == "true";
         const streamer = new ProjectStreamer(ws, project, withServiceProcess);
         ws.once("close", () => {
-            streamer[Symbol.dispose]();
+            streamer[Symbol.asyncDispose]();
         });
     }
     else {
@@ -25,7 +25,7 @@ wsRouter.ws("/boop/api/projects/:projectName/installer", (ws, params) => {
     if (project) {
         const streamer = new InstallStreamer(ws, project)
         ws.once("close", () => {
-            streamer[Symbol.dispose]();
+            streamer[Symbol.asyncDispose]();
         });
     }
     else {

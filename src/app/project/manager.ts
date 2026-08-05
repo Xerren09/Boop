@@ -8,8 +8,6 @@ import { getProjectNameFromRemote, IAsyncDisposable, pathExists } from "../utili
 import { downloadRemote } from "../shell/git.js";
 import { getWorkflowFile, parseWorkflow, WorkflowConfig } from "../workflow.js";
 import { InstantiateProject } from "./instantiate.js";
-import { InstallStreamerCollection } from "../interfaces/http/ws/install.streamer.js";
-import { ProjectStreamerCollection } from "../interfaces/http/ws/project.streamer.js";
 import EventEmitter from "events";
 
 interface ProjectManagerEvents {
@@ -83,12 +81,8 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
             // Remove project from the list before we unload it so if it fails it doesn't stay available in an invalid state
             const idx = this._projects.indexOf(project);
             this._projects.splice(idx, 1);
-            const _disposer = new AsyncDisposableStack();
-            _disposer.use(project);
-            InstallStreamerCollection.filter(streamer => streamer.project == project).forEach(el => _disposer.use(el));
-            ProjectStreamerCollection.filter(streamer => streamer.project == project).forEach(el => _disposer.use(el));
-            await _disposer.disposeAsync();
             this.emit("unload", project);
+            project[Symbol.asyncDispose]();
             logger.info(`Unloaded project '${project.name}'`);
         }
         catch (err) {
