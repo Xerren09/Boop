@@ -10,8 +10,23 @@ import { getWorkflowFile, parseWorkflow, WorkflowConfig } from "../workflow.js";
 import { InstantiateProject } from "./instantiate.js";
 import { InstallStreamerCollection } from "../interfaces/http/ws/install.streamer.js";
 import { ProjectStreamerCollection } from "../interfaces/http/ws/project.streamer.js";
+import EventEmitter from "events";
 
-class ProjectManager implements IAsyncDisposable {
+interface ProjectManagerEvents {
+    "create": (project: BoopProject) => void;
+    'unload': (project: BoopProject) => void;
+    'load': (project: BoopProject) => void;
+}
+
+interface ProjectManager {
+    on<EventType extends keyof ProjectManagerEvents>(event: EventType, listener: ProjectManagerEvents[EventType]): this;
+    once<EventType extends keyof ProjectManagerEvents>(event: EventType, listener: ProjectManagerEvents[EventType]): this;
+    emit<EventType extends keyof ProjectManagerEvents>(event: EventType, ...args: Parameters<ProjectManagerEvents[EventType]>): boolean;
+    removeListener<EventType extends keyof ProjectManagerEvents>(event: EventType, listener: ProjectManagerEvents[EventType]): this;
+    removeAllListeners<EventType extends keyof ProjectManagerEvents>(event?: EventType): this;
+}
+
+class ProjectManager extends EventEmitter implements IAsyncDisposable {
     private _disposed = false;
     get disposed(): boolean {
         return this._disposed;
@@ -45,6 +60,7 @@ class ProjectManager implements IAsyncDisposable {
             const project = await InstantiateProject(projectFile);
             this._projects.push(project);
             logger.info(`Loaded project '${project.name}'`);
+            this.emit("load", project);
         }
         catch (err) {
             const error = new Error(`Failed to load project '${projectName}'`, { cause: err });
@@ -113,6 +129,7 @@ class ProjectManager implements IAsyncDisposable {
                 branch: branch ?? "main",
                 dir: projectDir
             });
+            this.emit("create", project);
             return project;
         }
         catch (error) {
