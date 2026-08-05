@@ -274,15 +274,19 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
         }
         this._disposed = true;
         const errors: any[] = [];
-        do {
+        while (this._projects.length != 0)
+        {
             const project = this._projects[0];
+            if (project === undefined) {
+                continue;
+            }
             try {
                 await this.Unload(project);
             }
             catch (e) {
                 errors.push(e);
             }
-        } while (this._projects.length != 0);
+        }
         if (errors.length != 0) {
             logger.warn("Not all projects shut down. This might mean some processes are still alive after Boop shuts down...");
             throw new AggregateError(errors, `One or more projects failed to dispose properly.`);
