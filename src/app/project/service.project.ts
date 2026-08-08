@@ -5,7 +5,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME } from "../constants.js";
 import { once } from "node:events";
-import { type EventLog, makeLogDirName, type ProcessLog } from "../../logger.js";
+import { type EventLog, makeLogDirName, type ProcessLog } from "../log.js";
 
 export class ServiceProject extends BoopProject {
     public override get deployed(): boolean {

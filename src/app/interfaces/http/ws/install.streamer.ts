@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../../constants.js";
 import { createReadStream } from "node:fs";
 import { finished } from "node:stream/promises";
-import { makeLogDirName } from "../../../../logger.js";
+import { makeLogDirName } from "../../../log.js";
 import { once } from "node:events";
 
 type InstallerStart = {

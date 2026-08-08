@@ -4,7 +4,7 @@ import { ServiceProject } from "../../../project/service.project.js";
 import { IAsyncDisposable } from "../../../utilities.js";
 import { WebhookEvent } from "../../../webhook.js";
 import { join } from "node:path";
-import logger, { listProjectLogs } from "../../../../logger.js";
+import logger, { listProjectLogs } from "../../../log.js";
 import { createReadStream } from "node:fs";
 import { finished } from "node:stream/promises";
 import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME } from "../../../constants.js";

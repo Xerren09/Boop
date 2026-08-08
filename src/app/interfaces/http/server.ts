@@ -2,7 +2,7 @@ import express from 'express';
 import morgan from "morgan";
 import cors from "cors";
 import { createServer } from "http";
-import logger from "../../../logger.js";
+import logger from "../../log.js";
 import { webhookHandler } from "../../webhook.js";
 import { apiRouter } from "./api.router.js";
 import { wsRouter } from './ws/ws.router.js';

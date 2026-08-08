@@ -5,7 +5,7 @@ import { PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, 
 import { InstallRunner } from "../shell/installRunner.js";
 import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
-import { BoopLogger, createProjectLogger } from "../../logger.js";
+import { BoopLogger, createProjectLogger } from "../log.js";
 import { downloadRemote } from "../shell/git.js";
 import { getProjectNameFromRemote, IAsyncDisposable } from "../utilities.js";
 import AsyncLock from "async-lock";

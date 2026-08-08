@@ -7,7 +7,7 @@ import { WEB_INTERFACE_DIR } from './app/constants.js';
 import { BOOP_DISABLE_WEBHOOK_SECURITY, BOOP_PORT, BOOP_SECRET } from './app/settings.js';
 // Boop application imports
 import Manager from './app/project/manager.js';
-import logger from './logger.js';
+import logger from './app/log.js';
 import { checkGitAvailable } from './app/shell/git.js';
 // Interfaces
 import { createCLI } from './app/interfaces/cli/cli.js';

@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as express from "express";
 import ProjectManager from "./project/manager.js";
-import logger from "../logger.js";
+import logger from "./log.js";
 import AsyncLock from "async-lock";
 import { IAsyncDisposable } from "./utilities.js";
 import { BOOP_DISABLE_WEBHOOK_SECURITY, BOOP_SECRET } from "./settings.js";

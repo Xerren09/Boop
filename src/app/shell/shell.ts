@@ -1,7 +1,7 @@
 import { ChildProcess, spawn } from "child_process";
 import EventEmitter, { once } from "events";
 import treeKill from "tree-kill";
-import logger from "../../logger.js";
+import logger from "../log.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
 import { IAsyncDisposable } from "../utilities.js";

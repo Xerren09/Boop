@@ -1,9 +1,10 @@
 import winston from "winston";
 import { LOG_FILE, PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "./constants.js";
 import { join } from "path";
-import { isDevEnv } from "./app/utilities.js";
+import { isDevEnv } from "./utilities.js";
 import { readdir } from "fs/promises";
-import { BoopProject } from "./app/project/boop.project.js";
+import { BoopProject } from "./project/boop.project.js";
+import { npm, NpmConfigSetLevels } from "winston/lib/winston/config/index.js";
 
 export interface BoopLogger extends winston.Logger {
     /**
@@ -14,58 +15,42 @@ export interface BoopLogger extends winston.Logger {
     logException: (exception: any) => void
 }
 
-const logger = winston.createLogger({
-    transports: [
-        new winston.transports.File({
-            filename: LOG_FILE,
-            format: winston.format.combine(
-                winston.format.uncolorize(),
-                winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
-                winston.format.metadata(),
-                winston.format.json()
-            ),
-            level: "silly"
-        }),
-        new winston.transports.Console({
-            format: winston.format.combine(
-                winston.format.colorize(),
-                winston.format.simple()
-            ),
-            level: isDevEnv() ? "silly" : "warn"
-        })
-    ],
-});
-
-logger["logException"] = logException;
-
-export default logger as BoopLogger;
-
-export function createProjectLogger(projectRoot: string): BoopLogger {
-    const _logger = winston.createLogger({
+function createLogger(path: string, level?: string | null, devLevel?: string | null) {
+    const instance = winston.createLogger({
         transports: [
             new winston.transports.File({
-                filename: join(projectRoot, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME),
+                filename: path,
                 format: winston.format.combine(
+                    winston.format.uncolorize(),
                     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
-                    winston.format.errors(),
                     winston.format.metadata(),
+                    winston.format.errors(),
                     winston.format.json()
                 ),
-                level: "silly"
+                level: level ?? "silly"
             })
         ],
     });
     if (isDevEnv()) {
-        _logger.add(new winston.transports.Console({
+        instance.add(new winston.transports.Console({
             format: winston.format.combine(
                 winston.format.colorize(),
                 winston.format.simple()
             ),
-            level: "silly"
-        }))
+            level: devLevel ?? "silly"
+        }));
     }
-    _logger["logException"] = logException;
-    return _logger as BoopLogger;
+    instance["logException"] = logException;
+    return instance as BoopLogger;
+}
+
+const logger = createLogger(LOG_FILE);
+export default logger as BoopLogger;
+
+export function createProjectLogger(projectRoot: string): BoopLogger {
+    const path = join(projectRoot, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME);
+    const _logger = createLogger(path);
+    return _logger;
 }
 
 function logException(this: BoopLogger, exception: any) {
