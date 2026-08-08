@@ -7,18 +7,18 @@
         "build:ui": "npm run --prefix ./web build",
         "build:app": "tsc --build",
         "build": "npm run build:app && npm run build:ui",
-        "start": "node ./bin/boop.js",
+        "start": "node ./dist/boop.js",
         "prepublishOnly": "npm run build"
     },
     "type": "module",
     "files": [
-        "bin/"
+        "dist/"
     ],
     "bin": {
-        "boop": "./bin/boop.js"
+        "boop": "dist/boop.js"
     },
     "engines": {
-        "node": ">= 16.9.0"
+        "node": ">= 25.2.1"
     },
     "repository": {
         "type": "git",
