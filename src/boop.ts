@@ -1,42 +1,26 @@
 #!/usr/bin/env node
 import { styleText, parseArgs, type ParseArgsOptionsConfig } from 'node:util';
-import { config } from "dotenv";
-config({ quiet: true });
 import { once } from 'node:events';
 import { pathExists } from './app/utilities.js';
 import { join } from 'node:path';
+import { WEB_INTERFACE_DIR } from './app/constants.js';
+import { BOOP_DISABLE_WEBHOOK_SECURITY, BOOP_PORT, BOOP_SECRET } from './app/settings.js';
 // Boop application imports
 import Manager from './app/project/manager.js';
 import logger from './logger.js';
 import { checkGitAvailable } from './app/shell/git.js';
-import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_PORT, ENV_PORT_KEY, ENV_SECRET, ENV_SECRET_KEY, WEB_INTERFACE_DIR } from './constants.js';
 // Interfaces
 import { createCLI } from './app/interfaces/cli/cli.js';
 import { createHTTPServer } from './app/interfaces/http/server.js';
-
-const boopArgsOptions: ParseArgsOptionsConfig = {
-    port: {
-        type: 'string',
-    },
-    secret: {
-        type: 'string',
-    },
-};
-const args = parseArgs({ options: boopArgsOptions });
 
 if (await checkGitAvailable() == false)
 {
     // Consider this a fatal error since nothing works without git
     throw new Error("Git is not available, but Boop needs it to work. Install git and try again.");
 }
-// Port flag:
-const port = ((Number((args.values.port as string)) || null) ?? ENV_PORT() ?? 8004);
-process.env[ENV_PORT_KEY] = `${port}`;
-// Secret flag:
-const secret = args.values.secret ?? ENV_SECRET() ?? "";
-process.env[ENV_SECRET_KEY] = `${secret}`
 
 async function BOOP() {
+    const port = BOOP_PORT;
     console.log(`                         __ `);
     console.log(` _____ _____ _____ _____|  |`);
     console.log(`| __  |     |     |  _  |  |`);
@@ -56,11 +40,14 @@ async function BOOP() {
         if (await pathExists(join(WEB_INTERFACE_DIR, "index.html"))) {
             console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
         }
+        else {
+            console.warn(`Web interface not installed.`);
+        }
         // ENV warnings
-        if (ENV_DISABLE_WEBHOOK_SECURITY) {
+        if (BOOP_DISABLE_WEBHOOK_SECURITY) {
             logger.warn("Webhook security disabled; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
         }
-        else if (secret == "") {
+        else if (BOOP_SECRET == "") {
             logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
         }
         console.log(`====\n`);

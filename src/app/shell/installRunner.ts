@@ -3,7 +3,7 @@ import { getWorkflowFile, parseWorkflow } from "../workflow.js";
 import EventEmitter from "events";
 import { join } from "path";
 import { mkdir, writeFile } from "fs/promises";
-import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../constants.js";
+import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../constants.js";
 import { isNodeAbortException } from "../utilities.js";
 import logger, { type EventLog, makeLogDirName, type ProcessLog } from "../../logger.js";
 import AsyncLock from "async-lock";

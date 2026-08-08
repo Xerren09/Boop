@@ -1,10 +1,10 @@
 import * as crypto from "crypto";
 import * as express from "express";
 import ProjectManager from "./project/manager.js";
-import { ENV_DISABLE_WEBHOOK_SECURITY, ENV_SECRET } from "../constants.js";
 import logger from "../logger.js";
 import AsyncLock from "async-lock";
 import { IAsyncDisposable } from "./utilities.js";
+import { BOOP_DISABLE_WEBHOOK_SECURITY, BOOP_SECRET } from "./settings.js";
 
 class WebhookTask implements IAsyncDisposable {
     private _cancel: AbortController;
@@ -186,7 +186,7 @@ function parseWebhookEvent(req: express.Request): WebhookEvent {
         },
         security: {
             hash: req.get('X-Hub-Signature-256') ?? null,
-            valid: ENV_DISABLE_WEBHOOK_SECURITY ? false : isSignatureValid(req)
+            valid: BOOP_DISABLE_WEBHOOK_SECURITY ? false : isSignatureValid(req)
         },
         sender: {
             name: req.body.sender.login,  // "Codertocat"
@@ -208,12 +208,12 @@ function parseWebhookEvent(req: express.Request): WebhookEvent {
  * */
 function isSignatureValid(req: express.Request): boolean {
     // Ignore security check
-    if (ENV_DISABLE_WEBHOOK_SECURITY) {
+    if (BOOP_DISABLE_WEBHOOK_SECURITY) {
         return true;
     }
     else {
         // If no SECRET is defined, we can't validate the signature, so reject it.
-        if (!ENV_SECRET()) {
+        if (!BOOP_SECRET) {
             return false;
         }
     }
@@ -222,7 +222,7 @@ function isSignatureValid(req: express.Request): boolean {
     // Discard message if there is no signature
     if (signatureHash.length != 0) {
         const body: string = JSON.stringify(req.body);
-        const WEBHOOK_SECRET = ENV_SECRET() ?? "";
+        const WEBHOOK_SECRET = BOOP_SECRET ?? "";
         const signature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex");
         const trusted = Buffer.from(`sha256=${signature}`, 'ascii');
         const untrusted =  Buffer.from(signatureHash, 'ascii');

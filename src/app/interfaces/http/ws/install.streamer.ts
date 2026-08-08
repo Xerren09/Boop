@@ -3,7 +3,7 @@ import type { BoopProject } from "../../../project/boop.project.js";
 import type { InstallerStep, InstallRunner } from "../../../shell/installRunner.js";
 import { IAsyncDisposable, isNodeAbortException } from "../../../utilities.js";
 import { join } from "node:path";
-import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../../../constants.js";
+import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../../constants.js";
 import { createReadStream } from "node:fs";
 import { finished } from "node:stream/promises";
 import { makeLogDirName } from "../../../../logger.js";

@@ -1,7 +1,7 @@
 import { join } from "path";
 import EventEmitter, { once } from "events";
 import { WebhookEvent, WebhookEventQueue } from "../webhook.js";
-import { DEBUG_ENV_BYPASS_GIT_PULL, PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECTS_DIR } from "../../constants.js";
+import { PROJECT_BIN_DIR_NAME, PROJECT_ENV_FILE_NAME, PROJECT_EVENTS_FILE_NAME, PROJECT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECTS_DIR } from "../constants.js";
 import { InstallRunner } from "../shell/installRunner.js";
 import { EnvFile } from "./env.js";
 import { EventsFile } from "./eventLog.js";
@@ -11,6 +11,7 @@ import { getProjectNameFromRemote, IAsyncDisposable } from "../utilities.js";
 import AsyncLock from "async-lock";
 import { writeFile } from "fs/promises";
 import { getWorkflowFile, parseWorkflow, type WorkflowConfig } from "../workflow.js";
+import { DEBUG_ENV_BYPASS_GIT_PULL } from "../settings.js";
 
 enum LockKeys {
     Webhook = "webhook",

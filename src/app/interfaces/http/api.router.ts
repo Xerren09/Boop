@@ -4,7 +4,7 @@ import { finished } from "stream/promises";
 import { readFile } from "fs/promises";
 import { join } from "path";
 //
-import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME, PROJECT_LOG_FILE_NAME, PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../../constants.js";
+import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME, PROJECT_LOG_FILE_NAME, PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import Manager from "../../project/manager.js";
 import { ServiceProject } from "../../project/service.project.js";
 import { listProjectLogs } from "../../../logger.js";

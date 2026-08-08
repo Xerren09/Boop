@@ -10,7 +10,7 @@ import { projectSelector } from "./selector.js";
 import { uiRouter } from "./ui.router.js";
 import { pathExists } from '../../utilities.js';
 import { join } from 'path';
-import { WEB_INTERFACE_DIR } from '../../../constants.js';
+import { WEB_INTERFACE_DIR } from '../../constants.js';
 import { once } from 'events';
 
 async function createExpressServer() {
@@ -42,9 +42,6 @@ async function createExpressServer() {
     if (await pathExists(join(WEB_INTERFACE_DIR, "index.html"))) {
         // WebUI router
         server.use('/boop/', uiRouter);
-    }
-    else {
-        console.warn(`WebUI component not available.`);
     }
     // Entry point for all other requests, these either get ignored or forwarded to the project hosts
     server.all('/{*splat}', projectSelector);

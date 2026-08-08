@@ -7,7 +7,7 @@ import { join } from "node:path";
 import logger, { listProjectLogs } from "../../../../logger.js";
 import { createReadStream } from "node:fs";
 import { finished } from "node:stream/promises";
-import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME } from "../../../../constants.js";
+import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME } from "../../../constants.js";
 import { once } from "node:events";
 
 type Deploy = {

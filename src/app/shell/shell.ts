@@ -5,7 +5,7 @@ import logger from "../../logger.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
 import { IAsyncDisposable } from "../utilities.js";
-import { ENV_DISABLE_WEBHOOK_SECURITY_KEY, ENV_PORT_KEY, ENV_SECRET_KEY } from "../../constants.js";
+import { ENV_DISABLE_WEBHOOK_SECURITY_KEY, ENV_PORT_KEY, ENV_SECRET_KEY } from "../constants.js";
 import { Readable, Transform } from "stream";
 import { createWriteStream, WriteStream } from "fs";
 
