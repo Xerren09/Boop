@@ -13,13 +13,14 @@ import { checkGitAvailable } from './app/shell/git.js';
 import { createCLI } from './app/interfaces/cli/cli.js';
 import { createHTTPServer } from './app/interfaces/http/server.js';
 
-if (await checkGitAvailable() == false)
-{
-    // Consider this a fatal error since nothing works without git
-    throw new Error("Git is not available, but Boop needs it to work. Install git and try again.");
-}
-
 async function BOOP() {
+    //
+    if (await checkGitAvailable() == false)
+    {
+        // Consider this a fatal error since nothing works without git
+        throw new Error("Git is not available, but Boop needs it to work. Install git and try again.");
+    }
+    //
     const port = BOOP_PORT;
     console.log(`                         __ `);
     console.log(` _____ _____ _____ _____|  |`);
