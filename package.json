@@ -4,21 +4,21 @@
     "description": "A lightweight NodeJS CI/CD server for GitHub repositories ",
     "preferGlobal": true,
     "scripts": {
+        "setup": "npm ci && npm --prefix ./web ci",
         "build:ui": "npm run --prefix ./web build",
         "build:app": "tsc --build",
-        "build": "npm run build:app && npm run build:ui",
-        "start": "node ./dist/boop.js",
+        "build": "npm run build:ui && npm run build:app",
+        "start": "node ./bin/boop.js",
+        "dev:app": "npm run build:app && npm run start",
+        "dev": "npm run build:app && concurrently --kill-others-on-fail --names core,vite \"npm run start\" \"npm run --prefix ./web dev\"",
         "prepublishOnly": "npm run build"
     },
     "type": "module",
     "files": [
-        "dist/"
-    ],
-    "workspaces":[
-        "components/*"
+        "bin/"
     ],
     "bin": {
-        "boop": "dist/boop.js"
+        "boop": "bin/boop.js"
     },
     "engines": {
         "node": ">= 25.2.1"
@@ -35,7 +35,7 @@
     "bugs": {
         "url": "https://github.com/Xerren09/Boop/issues"
     },
-    "homepage": "https://github.com/Xerren09/Boop#readme",
+    "homepage": "https://github.com/Xerren09/Boop",
     "devDependencies": {
         "@eslint/js": "^9.39.2",
         "@types/async-lock": "^1.4.2",
@@ -48,6 +48,7 @@
         "@types/ws": "^8.18.1",
         "@typescript-eslint/eslint-plugin": "^8.53.0",
         "@typescript-eslint/parser": "^8.53.0",
+        "concurrently": "^10.0.4",
         "eslint": "^10.8.0",
         "eslint-import-resolver-typescript": "^4.4.4",
         "globals": "^17.0.0",
@@ -56,14 +57,15 @@
     },
     "keywords": [
         "ci-cd",
-        "utility",
         "github",
         "webhook",
         "server",
-        "build",
-        "host",
         "tool",
-        "development"
+        "build",
+        "development",
+        "nodejs-cli",
+        "cli",
+        "webui"
     ],
     "dependencies": {
         "async-lock": "^1.4.1",
