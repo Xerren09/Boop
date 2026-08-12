@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import styles from "./index.module.css";
 import Stack from "../../components/stack";
 import { Caption1, LargeTitle, Link, Subtitle2 } from "@fluentui/react-components";
 import Runtime from "../../components/runtime";
@@ -31,7 +32,7 @@ export function FrontPage() {
                 <Caption1 italic>Node { status?.nodeVer }  //  { status?.system }-{ status?.arch }  //  <Runtime short start={startupTime}/></Caption1>
             </Stack>
 
-            <Stack gap={16} horizontalAlign="end">
+            <Stack gap={16} horizontalAlign="end" id={styles.frontPageContent}>
                 <ThemeSwitchButton/>
     
                 <BoopProjectsTab />
