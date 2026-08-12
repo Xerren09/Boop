@@ -7,7 +7,7 @@ import { BoopAPI, type BoopStatus } from "../../api/api";
 import BoopProjectsTab from "./tabs/projects.tab";
 import ThemeSwitchButton from "../../components/theme/button";
 
-export function FrontPage() {
+export default function FrontPage() {
     const [status, setStatus] = useState<BoopStatus | null>(null);
 
     useEffect(() => {

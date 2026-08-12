@@ -21,7 +21,7 @@ import { ProjectTab } from "./tabs/projectTabs.enum";
 import useHashTabs from "../../components/useHashTabs";
 import ThemeSwitchButton from "../../components/theme/button";
 
-export function ProjectPage() {
+export default function ProjectPage() {
     const { projectId } = useParams<string>();
     const navigation = useNavigate();
 

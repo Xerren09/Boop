@@ -1,10 +1,8 @@
-import { StrictMode, useState } from 'react'
+import { lazy, StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from "react-router";
 import { FluentProvider, type Theme } from '@fluentui/react-components';
 import './index.css'
-import { FrontPage } from './pages/front/index.tsx';
-import { ProjectPage } from './pages/project/index.tsx';
 import { BoopAPI } from './api/api.ts';
 import Stack from './components/stack/index.tsx';
 import { getBrowserPreferredTheme, ThemeProvider } from './components/theme/context.tsx';
@@ -12,6 +10,9 @@ import { getBrowserPreferredTheme, ThemeProvider } from './components/theme/cont
 if (import.meta.env.DEV) {
     BoopAPI.setOrigin("http://localhost:8004");
 }
+
+const FrontPage = lazy(() => import('./pages/front/index.tsx'));
+const ProjectPage = lazy(() => import('./pages/project/index.tsx'));
 
 // eslint-disable-next-line react-refresh/only-export-components
 function App() {
