@@ -19,6 +19,7 @@ import { useProjectStreamer } from "../../api/streamers/useProjectStreamer";
 import ProjectInstallerTab from "./build.tab";
 import { ProjectTab } from "./tabs/projectTabs.enum";
 import useHashTabs from "../../components/useHashTabs";
+import ThemeSwitchButton from "../../components/theme/button";
 
 export function ProjectPage() {
     const { projectId } = useParams<string>();
@@ -104,16 +105,19 @@ export function ProjectPage() {
 
     return (
         <ProjectProvider value={project}>
-            <Stack horizontalAlign="start" style={{ minWidth: "75%", marginTop: 12, padding: 12 }} gap={12} verticalFill horizontalFill>
-                <Breadcrumb size="large">
-                    <BreadcrumbItem>
-                        <BreadcrumbButton onClick={() => { navigation(".."); }}><HomeColor fontSize={24}/></BreadcrumbButton>
-                    </BreadcrumbItem>
-                    <BreadcrumbDivider />
-                    <BreadcrumbItem>
-                        <BreadcrumbButton current>{ projectId }</BreadcrumbButton>
-                    </BreadcrumbItem>
-                </Breadcrumb>
+            <Stack horizontalAlign="start" style={{ minWidth: "75%", marginTop: 6, padding: 12 }} gap={12} verticalFill horizontalFill>
+                <Stack horizontal horizontalFill horizontalAlign="space-between">
+                    <Breadcrumb size="large">
+                        <BreadcrumbItem>
+                            <BreadcrumbButton onClick={() => { navigation(".."); }}><HomeColor fontSize={24}/></BreadcrumbButton>
+                        </BreadcrumbItem>
+                        <BreadcrumbDivider />
+                        <BreadcrumbItem>
+                            <BreadcrumbButton current>{ projectId }</BreadcrumbButton>
+                        </BreadcrumbItem>
+                    </Breadcrumb>
+                    <ThemeSwitchButton/>
+                </Stack>
                 <Section
                     icon={
                         <>
@@ -172,6 +176,7 @@ export function ProjectPage() {
                         <DataTableRow label="Last Event">
                             <Text>
                                 {
+                                    // FIXME: communicate that the last event might be without a commit ID
                                     lastWebhookEvent === null || lastWebhookEvent.commit.id === null ? "No event received yet."
                                         :
                                     <Stack gap={16} horizontal horizontalFill>
