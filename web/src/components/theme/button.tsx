@@ -9,12 +9,14 @@ export default function ThemeSwitchButton() {
     const isLightTheme = theme == webLightTheme;
 
     return (
-        <ToggleButton
-            appearance="subtle"
-            checked={ !isLightTheme }
-            onClick={() => { setTheme(isLightTheme ? webDarkTheme : webLightTheme) }}
-            icon={ isLightTheme ? <WeatherSunnyRegular/> : <WeatherMoonFilled/> }
-        >
-        </ToggleButton>
+        <div>
+            <ToggleButton
+                appearance="subtle"
+                checked={ !isLightTheme }
+                onClick={() => { setTheme(isLightTheme ? webDarkTheme : webLightTheme) }}
+                icon={ isLightTheme ? <WeatherSunnyRegular/> : <WeatherMoonFilled/> }
+            >
+            </ToggleButton>
+        </div>
     );
 }
