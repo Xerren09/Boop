@@ -1,4 +1,4 @@
-import React, { type Ref } from "react";
+import React from "react";
 import styles from "./stack.module.css";
 
 function computedStyle(props: StackProps) : React.CSSProperties {
@@ -18,13 +18,17 @@ function computedStyle(props: StackProps) : React.CSSProperties {
 
 export default function Stack(props: StackProps) {
     return (
+        // eslint-disable-next-line react-hooks/refs
         <div ref={props.ref} id={ props.id } className={props.className ? `${styles.stack} ${props.className}` : styles.stack} style={{...computedStyle(props), ...props.style}}>
-            {props.children}
+            {
+                // eslint-disable-next-line react-hooks/refs
+                props.children
+            }
         </div>
     );
 }
 
-interface StackProps extends React.PropsWithChildren {
+interface StackProps extends React.RefAttributes<HTMLDivElement>, React.PropsWithChildren {
     horizontal?: boolean,
     gap?: number,
     horizontalAlign?: React.CSSProperties["alignItems"],
@@ -33,6 +37,5 @@ interface StackProps extends React.PropsWithChildren {
     horizontalFill?: boolean,
     style?: React.CSSProperties,
     id?: string,
-    className?: string,
-    ref?: Ref<HTMLDivElement> | null
+    className?: string
 }
