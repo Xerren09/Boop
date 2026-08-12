@@ -33,7 +33,7 @@ function App() {
                         verticalFill
                     >
                         <Stack gap={16} id='mainContentContainer' horizontalFill verticalFill>
-                            <BrowserRouter>
+                            <BrowserRouter basename={`${import.meta.env.BASE_URL}`}>
                                 <Routes>
                                     <Route path="/" Component={FrontPage}/>
                                     <Route path="/:projectId" Component={ProjectPage}/>
