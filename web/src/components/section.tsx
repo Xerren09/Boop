@@ -1,4 +1,4 @@
-import { Subtitle2, Title3 } from '@fluentui/react-components';
+import { Subtitle2, Title3, tokens } from '@fluentui/react-components';
 import React from "react";
 import Stack from './stack';
 
@@ -10,7 +10,7 @@ export default function Section(props: SectionComponentProps) {
             style={{
                 width: "100%",
                 padding: 18,
-                boxShadow: "5px 5px 10px 5px #00000023",
+                boxShadow: `5px 5px 10px 5px #00000023, inset 1px 1px ${tokens.colorSubtleBackgroundSelected}`,
                 borderRadius: 6,
                 ...props.style
             }}
