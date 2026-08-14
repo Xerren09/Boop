@@ -33,7 +33,7 @@ export default function Terminal(props: Props) {
                 props.onContentRequested();
             }
         }
-    }, [props.content, props.onContentRequested, collapsed]);
+    }, [props.process, props.content, props.onContentRequested, collapsed]);
 
     /**
      * Effect for handling a RemoteProcess passed via props.process. This will hook the process up to the terminal's state.
