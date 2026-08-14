@@ -60,6 +60,10 @@ export default function ProjectList(props: Props) {
        
     }, [props.projects, props.disableActions, filter])
 
+    const hasSearchMatches = useMemo(() => {
+        return props.projects.some(el => el.name.includes(filter));
+    }, [props.projects, filter]);
+
     const onChange = (ev: SearchBoxChangeEvent, data: InputOnChangeData) => {
         setFilter(data.value)
     }
@@ -93,6 +97,9 @@ export default function ProjectList(props: Props) {
             </Table>
             {
                 items.length == 0 && <Stack horizontalFill verticalFill verticalAlign="center" horizontalAlign="center" style={{minHeight: "100px"}}><Text>No projects installed.</Text></Stack>
+            }
+            {
+                items.length != 0 && filter.length != 0 && hasSearchMatches == false && <Stack horizontalFill verticalFill verticalAlign="center" horizontalAlign="center" style={{ minHeight: "100px" }}><Text>No results matching "{ filter }".</Text></Stack>
             }
         </Stack>
     )
