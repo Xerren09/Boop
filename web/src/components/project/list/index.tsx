@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Table, TableHeader, TableRow, TableHeaderCell, TableBody, SearchBox, type SearchBoxChangeEvent, type InputOnChangeData, TableCellLayout } from "@fluentui/react-components";
+import { Table, TableHeader, TableRow, TableHeaderCell, TableBody, SearchBox, type SearchBoxChangeEvent, type InputOnChangeData, TableCellLayout, Text } from "@fluentui/react-components";
 import ProjectListItem from "./item";
 import Stack from "../../stack";
 import type { ProjectEntry } from "../../../api/api";
@@ -87,10 +87,13 @@ export default function ProjectList(props: Props) {
                 </TableHeader>
                 <TableBody>
                     {
-                        ...items
+                       ...items
                     }
                 </TableBody>
-            </Table>    
+            </Table>
+            {
+                items.length == 0 && <Stack horizontalFill verticalFill verticalAlign="center" horizontalAlign="center" style={{minHeight: "100px"}}><Text>No projects installed.</Text></Stack>
+            }
         </Stack>
     )
 }
