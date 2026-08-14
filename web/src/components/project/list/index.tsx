@@ -3,6 +3,7 @@ import { Table, TableHeader, TableRow, TableHeaderCell, TableBody, SearchBox, ty
 import ProjectListItem from "./item";
 import Stack from "../../stack";
 import type { ProjectEntry } from "../../../api/api";
+import useMediaQuery from "../../useMediaQuery";
 
 const HeaderCells: HeaderCell[] = [
     {
@@ -22,7 +23,7 @@ const HeaderCells: HeaderCell[] = [
         label: "Last Event",
         style: {
             width: 90,
-            maxWidth: 140,
+            maxWidth: 150,
             minWidth: 90
         }
     },
@@ -36,6 +37,13 @@ type HeaderCell = {
 
 export default function ProjectList(props: Props) {
     const [filter, setFilter] = useState<string>("");
+
+    const touchDevice = useMediaQuery('only screen and (pointer:coarse)');
+
+    const disableActions = useMemo(() => {
+        console.log(touchDevice);
+        return props.disableActions || touchDevice;
+    }, [props.disableActions, touchDevice]);
 
     const headerCells = useMemo(() => {
         return HeaderCells.map((column) => (
@@ -53,12 +61,12 @@ export default function ProjectList(props: Props) {
                 key={project.name}
                 name={project.name}
                 type={project.type}
-                disableActions={props.disableActions}
+                disableActions={disableActions}
                 hidden={ filter.length == 0 ? false : (project.name.includes(filter) == false) }
             />
         ));
        
-    }, [props.projects, props.disableActions, filter])
+    }, [props.projects, disableActions, filter])
 
     const hasSearchMatches = useMemo(() => {
         return props.projects.some(el => el.name.includes(filter));

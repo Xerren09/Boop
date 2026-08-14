@@ -44,14 +44,18 @@ export default function ProjectListItem(props: Props) {
                 }
             </TableCell>
             <TableCell>
-                {
-                    lastWebhookEvent && lastWebhookEvent.commit.url && lastWebhookEvent.commit.id ? <Link href={ lastWebhookEvent.commit.url } target="_blank">{ `${lastWebhookEvent.commit.id.substring(0, 7)}` }</Link> : null
-                }
+                <TableCellLayout truncate>
+                    {
+                        lastWebhookEvent && lastWebhookEvent.commit.url && lastWebhookEvent.commit.id ? <Link href={ lastWebhookEvent.commit.url } target="_blank">{ `${lastWebhookEvent.commit.id.substring(0, 7)}` }</Link> : null
+                    }                    
+                </TableCellLayout>
             </TableCell>
             <TableCell>
-                {
-                    lastWebhookEvent ? <Runtime since start={lastWebhookEvent.time}/> : "never"
-                }
+                <TableCellLayout truncate>
+                    {
+                        lastWebhookEvent ? <Runtime since start={lastWebhookEvent.time}/> : "never"
+                    }
+                </TableCellLayout>
             </TableCell>
         </TableRow>
     )
@@ -60,6 +64,6 @@ export default function ProjectListItem(props: Props) {
 type Props = {
     name: string;
     type: ProjectType;
-    disableActions?: boolean,
-    hidden?: boolean
+    disableActions?: boolean;
+    hidden?: boolean;
 }
