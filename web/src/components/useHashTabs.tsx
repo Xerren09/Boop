@@ -27,7 +27,7 @@ export default function useHashTabs<T extends Enum<T>>(tabs: T) {
         const newUrl = new URL(window.location.href);
         newUrl.search = "";
         window.history.pushState(null, '', newUrl);
-    }, [currentTab]);
+    }, [currentTab, tabs]);
 
     /**
      * Effect for handling window location hash changes, and switching tabs accordingly
@@ -53,7 +53,7 @@ export default function useHashTabs<T extends Enum<T>>(tabs: T) {
         return () => {
             window.removeEventListener('hashchange', handleHashChange);
         };
-    }, [currentTab]);
+    }, [currentTab, tabs]);
 
     const switchTab = useCallback((tab: number | string) => {setCurrentTab(() => tab)}, [])
 
