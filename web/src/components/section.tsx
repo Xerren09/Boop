@@ -3,6 +3,9 @@ import React from "react";
 import Stack from './stack';
 
 export default function Section(props: SectionComponentProps) {
+
+    const shouldRenderHeaderDiv = props.icon || props.title || props.titleExtras || props.right || props.subTitle;
+
     return (
         <Stack
             horizontalAlign="start"
@@ -15,7 +18,7 @@ export default function Section(props: SectionComponentProps) {
                 ...props.style
             }}
         >
-            <Stack horizontalFill horizontalAlign="space-between" verticalAlign='start' gap={8} style={{ marginBottom: props.headerMargin ?? 20 }}>
+            <Stack horizontalFill horizontalAlign="space-between" verticalAlign='start' gap={8} style={{ marginBottom: shouldRenderHeaderDiv ? (props.headerMargin ?? 20) : 0 }}>
                 <Stack horizontal horizontalAlign="start" horizontalFill gap={4}>
                     <Stack horizontal horizontalFill horizontalAlign="center" verticalAlign="end" gap={8}>
                         <Stack horizontal horizontalFill verticalAlign="center" gap={8}>
