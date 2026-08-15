@@ -3,12 +3,29 @@ import type { LogEntry } from "../../api/api";
 import { BugRegular, DismissCircleColor, InfoRegular, WarningColor } from "@fluentui/react-icons";
 import Stack from "../stack";
 import Runtime from "../runtime";
-import { List, useDynamicRowHeight, type RowComponentProps } from "react-window";
+import { List, useDynamicRowHeight, useListRef, type RowComponentProps } from "react-window";
+import { useEffect, useRef } from "react";
 
 export default function LogList(props: { log: LogEntry[] }) {
+    const list = useListRef(null);
+    const _scrolled = useRef(false);
     const rowHeight = useDynamicRowHeight({
         defaultRowHeight: 44
     });
+    useEffect(() => {
+        // Scroll to bottom of the list on mount
+        if (_scrolled.current) {
+            return;
+        }
+        if (props.log.length < 1) {
+            return;
+        }
+        list.current?.scrollToRow({
+            behavior: "instant",
+            index: props.log.length-1
+        });
+        _scrolled.current = true;
+    }, [props.log]);
     return (
         <Accordion multiple collapsible style={{maxHeight: "inherit"}}>
             <List
@@ -16,7 +33,8 @@ export default function LogList(props: { log: LogEntry[] }) {
                 rowCount={props.log.length}
                 rowHeight={rowHeight}
                 rowProps={{ items: props.log }}
-                style={{maxHeight: "inherit"}}
+                style={{ maxHeight: "inherit" }}
+                listRef={list}
             /> 
         </Accordion> 
     );
