@@ -1,15 +1,8 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
     Toolbar,
-    Dialog,
     Text,
     Button,
-    DialogTrigger,
-    DialogActions,
-    DialogBody,
-    DialogContent,
-    DialogSurface,
-    DialogTitle,
     Switch,
     Input,
     ToolbarGroup,
@@ -21,12 +14,14 @@ import {
     TableCell,
     TableCellLayout,
     TableCellActions,
-    useApplyScrollbarWidth
+    useApplyScrollbarWidth,
 } from "@fluentui/react-components";
-import { AddRegular, CheckmarkRegular, DeleteRegular, DismissRegular, EditOffRegular, EditRegular, EyeFilled, EyeOffFilled } from "@fluentui/react-icons";
+import { CheckmarkRegular, DismissRegular, EditOffRegular, EditRegular, EyeFilled, EyeOffFilled } from "@fluentui/react-icons";
 import Stack from "../../components/stack";
 import { ProjectProvider } from "../../api/api";
 import Section from "../../components/section";
+import CancellableDeleteButton from "./tabs/env/CancelDeleteDialog";
+import NewEnvironmentVariableDialog from "./tabs/env/NewEnvDialog";
 
 type EnvironmentVariable  = {
     key: string,
@@ -100,7 +95,7 @@ export default function EnvironmentVariableEditor() {
                 </Text>
                 <Toolbar style={{ justifyContent: "space-between" }}>
                     <ToolbarGroup>
-                        <NewEnvironmentVariableDialog onAdded={refresh} />
+                        <NewEnvironmentVariableDialog onSubmit={onValueChange}/>
                     </ToolbarGroup>
 
                     <ToolbarGroup>
@@ -114,7 +109,7 @@ export default function EnvironmentVariableEditor() {
                                 <TableHeaderCell>
                                     Key
                                 </TableHeaderCell>
-                                <TableHeaderCell>
+                                <TableHeaderCell style={{flexGrow: 3}}>
                                     Value 
                                 </TableHeaderCell>
                                 <div role="presentation" ref={scrollWidthAlignRef} />
@@ -123,7 +118,7 @@ export default function EnvironmentVariableEditor() {
                         <TableBody
                             style={{
                                 display: "block",
-                                overflowY: "scroll",
+                                overflowY: "auto",
                                 height: 250
                             }}
                         >
@@ -173,8 +168,8 @@ function EnvironmentVariable(props: EnvironmentVariableProps) {
     const showContent = ((visible == true) || (props.visible == true));
 
     return (
-        <TableCell>
-            <TableCellLayout truncate>
+        <TableCell style={{flexGrow: 3}}>
+            <TableCellLayout>
                 {
                     !showContent && 
                     <Text>Hidden value. Click <em><EyeOffFilled/></em> to view.</Text>
@@ -223,109 +218,4 @@ interface EnvironmentVariableProps {
     visible: boolean,
     onValueChange: (key: string, value: string) => void
     onDelete: () => void
-}
-
-/**
- * Displays a dialogue window to create a new environment variable.
- * @param props 
- * @returns 
- */
-function NewEnvironmentVariableDialog(props: NewEnvironmentVariableDialogProps) {
-    const project = useContext(ProjectProvider);
-
-    const keyInput = useRef<HTMLInputElement | null>(null);
-    const valueInput = useRef<HTMLInputElement|null>(null);
-
-    if (!project) {
-        throw new Error("No project instance was provided");
-    }
-
-    async function SetServerEnvVariable() {
-        if (!keyInput.current || !valueInput.current) {
-            console.error("key or value input field refs missing.");
-            return;
-        }
-        const key = keyInput.current.value.toUpperCase();
-        const value = valueInput.current.value;
-        await project?.setEnv(key, value);
-        if (props.onAdded) {
-            props.onAdded();
-        }
-    }
-
-    return (
-        <Dialog>
-            <DialogTrigger disableButtonEnhancement>
-                <Button icon={<AddRegular/>} appearance="primary">Create new</Button>
-            </DialogTrigger>
-            <DialogSurface>
-                <DialogBody>
-                    <DialogTitle>Define New Environment Variable</DialogTitle>
-                    <DialogContent>
-                        <Stack gap={12} style={{marginTop: 18, marginBottom: 18}}>
-                            <Input
-                                ref={keyInput}
-                                placeholder="Key"
-                                onChange={(_target, val) => {
-                                    if (!keyInput.current) {
-                                        return;
-                                    }
-                                    keyInput.current.value = val.value.toUpperCase();
-                                }}
-                                
-                            />
-                            <Input
-                                ref={valueInput}
-                                placeholder="Value"
-                            />
-                        </Stack>
-                    </DialogContent>
-                    <DialogActions>
-                        <DialogTrigger disableButtonEnhancement>
-                            <Button appearance="primary" autoFocus onClick={SetServerEnvVariable}>Create</Button>
-                        </DialogTrigger>
-                        <DialogTrigger disableButtonEnhancement>
-                            <Button appearance="secondary">Cancel</Button>
-                        </DialogTrigger>
-                    </DialogActions>
-                </DialogBody>
-            </DialogSurface>
-        </Dialog>
-    );
-}
-
-interface NewEnvironmentVariableDialogProps {
-    onAdded?: () => void
-}
-
-function CancellableDeleteButton(props: { onConfirm: () => void, variableKey: string }) {
-    return (
-        <Dialog modalType="alert">
-            <DialogTrigger disableButtonEnhancement>
-                <Button
-                    appearance="subtle"
-                    icon={<DeleteRegular></DeleteRegular>}
-                />
-            </DialogTrigger>
-            <DialogSurface>
-                <DialogBody>
-                    <DialogTitle>Delete environment variable?</DialogTitle>
-                    <DialogContent>
-                        <Stack gap={12} style={{marginTop: 18, marginBottom: 18}}>
-                            <Text>Are you sure you want to delete <code>{ props.variableKey }</code>?</Text>
-                            <Text weight="bold">This can not be undone.</Text>
-                        </Stack>
-                    </DialogContent>
-                    <DialogActions>
-                        <DialogTrigger disableButtonEnhancement>
-                            <Button appearance="primary" onClick={props.onConfirm}>Delete</Button>
-                        </DialogTrigger>
-                        <DialogTrigger disableButtonEnhancement>
-                            <Button autoFocus appearance="secondary">Cancel</Button>
-                        </DialogTrigger>
-                    </DialogActions>
-                </DialogBody>
-            </DialogSurface>
-        </Dialog>
-    );
 }
