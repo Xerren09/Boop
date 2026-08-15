@@ -8,6 +8,8 @@ export default function useMediaQuery(query: string) {
             setMatch(() => ev.matches);
         };
         const _query = window.matchMedia(query);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setMatch(() => _query.matches);
         _query.addEventListener("change", handler);
         return () => {
             _query.removeEventListener("change", handler);
