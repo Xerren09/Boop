@@ -1,12 +1,12 @@
 import WebSocket from "ws"
 import type { BoopProject } from "../../../project/boop.project.js";
 import type { InstallerStep, InstallRunner } from "../../../shell/installRunner.js";
-import { IDisposable, isNodeAbortException } from "../../../utilities.js";
+import { IAsyncDisposable, isNodeAbortException } from "../../../utilities.js";
 import { join } from "node:path";
-import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../../../constants.js";
+import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../../constants.js";
 import { createReadStream } from "node:fs";
 import { finished } from "node:stream/promises";
-import { makeLogDirName } from "../../../../logger.js";
+import { makeLogDirName } from "../../../log.js";
 import { once } from "node:events";
 
 type InstallerStart = {
@@ -40,9 +40,7 @@ type ProcessOutput = {
     output: string
 }
 
-export const InstallStreamerCollection: InstallStreamer[] = [];
-
-export class InstallStreamer implements IDisposable {
+export class InstallStreamer implements IAsyncDisposable {
     private _ws: WebSocket;
     private _installer: InstallRunner;
     private _disposed: boolean = false;
@@ -57,10 +55,9 @@ export class InstallStreamer implements IDisposable {
     constructor(ws: WebSocket, project: BoopProject) {
         this._ws = ws;
         this.project = project;
+        this.project.on("dispose", this.onShouldDispose);
         this._installer = project.installer;
         this.wsInit();
-        //
-        InstallStreamerCollection.push(this);
     }
 
     private async wsInit() {
@@ -83,6 +80,9 @@ export class InstallStreamer implements IDisposable {
      * where it hands it off to the live data stream like if this was a normal run.
      */
     private sendHistory = async () => {
+        if (this.project.installer.steps.length == 0) {
+            return;
+        }
         const installer = this.project.installer;
         const installerTime = installer.startedAt;
         const eventRef = installer.eventTrigger;
@@ -118,7 +118,7 @@ export class InstallStreamer implements IDisposable {
             return;
         }
         if (installer.running == false) {
-            this.onInstallerComplete(installer.success);
+            this.onInstallerComplete(installer.success ? undefined : false);
         }
     }
 
@@ -133,10 +133,10 @@ export class InstallStreamer implements IDisposable {
         this._ws.send(JSON.stringify(msg));
     }
 
-    private onInstallerComplete = (success: boolean) => {
+    private onInstallerComplete = (error?: Error | boolean) => {
         const msg: InstallerResult = {
             type: "installerResult",
-            success: success,
+            success: error === undefined,
             time: this.project.installer.exitedAt
         };
         this._ws.send(JSON.stringify(msg));
@@ -179,12 +179,17 @@ export class InstallStreamer implements IDisposable {
         }
     }
 
-    public [Symbol.dispose]() {
+    private onShouldDispose = () => {
+        this[Symbol.asyncDispose]();
+    };
+
+    public async [Symbol.asyncDispose]() {
         if (this._disposed) {
             return;
         }
         this._disposed = true;
         this._disposeController.abort();
+        this.project.removeListener("dispose", this.onShouldDispose);
         this._installer.removeListener("start", this.onInstallerStart);
         this._installer.removeListener("exit", this.onInstallerComplete);
         this._installer.removeListener("step", this.onInstallerStepStart);
@@ -194,10 +199,8 @@ export class InstallStreamer implements IDisposable {
         }
         if (this._ws.readyState === this._ws.CONNECTING || this._ws.readyState === this._ws.OPEN) {
             // 1001: resource shutting down
-            this._ws.close(1001, "disposed");
+            this._ws.close(1001, "PROJECT_DISPOSE");
+            await once(this._ws, "close");
         }
-        //
-        const idx = InstallStreamerCollection.indexOf(this);
-        InstallStreamerCollection.splice(idx, 1);
     }
 }

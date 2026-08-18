@@ -1,13 +1,14 @@
 import WebSocket from "ws"
 import type { BoopProject } from "../../../project/boop.project.js";
 import { ServiceProject } from "../../../project/service.project.js";
-import { IDisposable } from "../../../utilities.js";
+import { IAsyncDisposable } from "../../../utilities.js";
 import { WebhookEvent } from "../../../webhook.js";
 import { join } from "node:path";
-import logger, { listProjectLogs } from "../../../../logger.js";
+import logger, { listProjectLogs } from "../../../log.js";
 import { createReadStream } from "node:fs";
 import { finished } from "node:stream/promises";
-import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME } from "../../../../constants.js";
+import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME } from "../../../constants.js";
+import { once } from "node:events";
 
 type Deploy = {
     type: "deploy",
@@ -50,9 +51,7 @@ type ProcessOutput = {
     output: string
 }
 
-export const ProjectStreamerCollection: ProjectStreamer[] = [];
-
-export class ProjectStreamer implements IDisposable {
+export class ProjectStreamer implements IAsyncDisposable {
     private _ws: WebSocket;
     private _withProcess: boolean = false;
     private _disposed: boolean = false;
@@ -67,10 +66,9 @@ export class ProjectStreamer implements IDisposable {
     constructor(ws: WebSocket, project: BoopProject, streamMainProcess = false) {
         this._ws = ws;
         this.project = project;
+        this.project.on("dispose", this.onShouldDispose);
         this._withProcess = streamMainProcess;
         this.wsInit();
-        //
-        ProjectStreamerCollection.push(this);
     }
 
     private async wsInit() {
@@ -213,12 +211,17 @@ export class ProjectStreamer implements IDisposable {
         }
     }
 
-    public [Symbol.dispose]() {
+    private onShouldDispose = () => {
+        this[Symbol.asyncDispose]();
+    };
+
+    public async [Symbol.asyncDispose]() {
         if (this._disposed) {
             return;
         }
         this._disposed = true;
         this._disposeController.abort("disposed");
+        this.project.removeListener("dispose", this.onShouldDispose);
         this.project.removeListener("deploy", this.onProjectDeploy);
         this.project.installer.removeListener("start", this.onProjectInstall);
         this.project.removeListener("stop", this.onProjectStop);
@@ -229,10 +232,8 @@ export class ProjectStreamer implements IDisposable {
         }
         if (this._ws.readyState === this._ws.CONNECTING || this._ws.readyState === this._ws.OPEN) {
             // 1001: resource shutting down
-            this._ws.close(1001, "disposed");
+            this._ws.close(1001, "PROJECT_DISPOSE");
+            await once(this._ws, "close");
         }
-        //
-        const idx = ProjectStreamerCollection.indexOf(this);
-        ProjectStreamerCollection.splice(idx, 1);
     }
 }

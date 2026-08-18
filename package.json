@@ -1,13 +1,16 @@
 {
     "name": "@xerren09/boop",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "description": "A lightweight NodeJS CI/CD server for GitHub repositories ",
     "preferGlobal": true,
     "scripts": {
+        "setup": "npm ci && npm --prefix ./web ci",
         "build:ui": "npm run --prefix ./web build",
         "build:app": "tsc --build",
-        "build": "npm run build:app && npm run build:ui",
+        "build": "npm run build:ui && npm run build:app",
         "start": "node ./bin/boop.js",
+        "dev:app": "npm run build:app && npm run start",
+        "dev": "npm run build:app && concurrently --kill-others-on-fail --names core,vite \"npm run start\" \"npm run --prefix ./web dev\"",
         "prepublishOnly": "npm run build"
     },
     "type": "module",
@@ -15,10 +18,10 @@
         "bin/"
     ],
     "bin": {
-        "boop": "./bin/boop.js"
+        "boop": "bin/boop.js"
     },
     "engines": {
-        "node": ">= 16.9.0"
+        "node": ">= 25.2.1"
     },
     "repository": {
         "type": "git",
@@ -32,17 +35,21 @@
     "bugs": {
         "url": "https://github.com/Xerren09/Boop/issues"
     },
-    "homepage": "https://github.com/Xerren09/Boop#readme",
+    "homepage": "https://github.com/Xerren09/Boop",
     "devDependencies": {
         "@eslint/js": "^9.39.2",
+        "@types/async-lock": "^1.4.2",
         "@types/cors": "^2.8.19",
         "@types/express": "^5.0.6",
         "@types/express-ws": "^3.0.6",
         "@types/morgan": "^1.9.10",
         "@types/node": "^25.0.9",
+        "@types/path-to-regexp": "^1.0.29",
+        "@types/ws": "^8.18.1",
         "@typescript-eslint/eslint-plugin": "^8.53.0",
         "@typescript-eslint/parser": "^8.53.0",
-        "eslint": "^9.39.2",
+        "concurrently": "^10.0.4",
+        "eslint": "^10.8.0",
         "eslint-import-resolver-typescript": "^4.4.4",
         "globals": "^17.0.0",
         "typescript": "^6.0.2",
@@ -50,24 +57,27 @@
     },
     "keywords": [
         "ci-cd",
-        "utility",
         "github",
         "webhook",
         "server",
-        "build",
-        "host",
         "tool",
-        "development"
+        "build",
+        "development",
+        "nodejs-cli",
+        "cli",
+        "webui"
     ],
     "dependencies": {
+        "async-lock": "^1.4.1",
         "cors": "^2.8.5",
         "dotenv": "^17.2.3",
         "express": "^5.2.1",
-        "express-ws": "^5.0.2",
         "http-proxy-3": "^1.23.2",
         "morgan": "^1.10.1",
+        "path-to-regexp": "^8.4.2",
         "tree-kill": "^1.2.2",
         "winston": "^3.19.0",
+        "ws": "^8.21.1",
         "yaml": "^2.8.2"
     }
 }
