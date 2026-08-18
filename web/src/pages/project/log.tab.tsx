@@ -1,7 +1,6 @@
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import Section from "../../components/section";
 import { ProjectProvider, type LogEntry } from "../../api/api";
-import Stack from "../../components/stack";
 import LogList from "../../components/logList";
 
 const REFRESH_DEBOUNCE_MS = 1500;
@@ -10,7 +9,7 @@ export default function ProjectLogTab(props: {refreshKey?: unknown}) {
     const project = useContext(ProjectProvider);
     const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
 
-    function getLog() {
+    const getLog = useCallback(() => {
         if (project) {
             project.getProjectLog().then((logs) => {
                 if (logs) {
@@ -18,7 +17,7 @@ export default function ProjectLogTab(props: {refreshKey?: unknown}) {
                 }
             })
         }
-    }
+    }, [project]);
 
     useEffect(() => { 
         const id = setTimeout(() => {
@@ -27,11 +26,11 @@ export default function ProjectLogTab(props: {refreshKey?: unknown}) {
         return () => {
             clearTimeout(id);
         };
-    }, [props.refreshKey]);
+    }, [getLog, props.refreshKey]);
 
     useEffect(() => {
         getLog();
-    }, [project]);
+    }, [getLog, project]);
 
     return (
         <Section
@@ -40,9 +39,7 @@ export default function ProjectLogTab(props: {refreshKey?: unknown}) {
                 height: "100%"
             }}
         >
-            <Stack verticalFill horizontalFill style={{maxHeight: "50vh", overflow: "auto"}}>
-                <LogList log={logEntries}/>
-            </Stack>
+            <LogList log={logEntries} style={{maxHeight: "50vh", height: "50vh"}}/>
         </Section>
     )
 }
