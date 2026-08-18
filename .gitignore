@@ -109,4 +109,4 @@ dist
 # Boop dynamic stuff
 /projects/
 /bin/
-/dist/
+/web/build
