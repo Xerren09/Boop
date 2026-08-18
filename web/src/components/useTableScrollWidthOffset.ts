@@ -16,7 +16,6 @@ export default function useTableScrollWidthOffset(element?: HTMLElement | null) 
             if (scrollOffsetVisible != shouldOffset) {
                 // eslint-disable-next-line react-hooks/set-state-in-effect
                 setScrollOffset(() => shouldOffset);
-                console.log(shouldOffset);
             }
         }
     });
