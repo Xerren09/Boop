@@ -6,7 +6,7 @@ import Runtime from "../runtime";
 import { List, useDynamicRowHeight, useListRef, type RowComponentProps } from "react-window";
 import { useEffect, useRef } from "react";
 
-export default function LogList(props: { log: LogEntry[] }) {
+export default function LogList(props: { log: LogEntry[], style?: React.CSSProperties }) {
     const list = useListRef(null);
     const _scrolled = useRef(false);
     const rowHeight = useDynamicRowHeight({
@@ -25,15 +25,14 @@ export default function LogList(props: { log: LogEntry[] }) {
             index: props.log.length-1
         });
         _scrolled.current = true;
-    }, [props.log]);
+    }, [list, props.log]);
     return (
-        <Accordion multiple collapsible style={{maxHeight: "inherit"}}>
+        <Accordion multiple collapsible style={{overflowY: "auto",width: "100%", ...props.style}}>
             <List
                 rowComponent={RenderItem}
                 rowCount={props.log.length}
                 rowHeight={rowHeight}
                 rowProps={{ items: props.log }}
-                style={{ maxHeight: "inherit" }}
                 listRef={list}
             /> 
         </Accordion> 
@@ -43,7 +42,7 @@ export default function LogList(props: { log: LogEntry[] }) {
 function RenderItem({
     index,
     style,
-        items
+    items
     }: RowComponentProps<{
         items: LogEntry[];
     }>) {
