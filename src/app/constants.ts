@@ -4,7 +4,7 @@ import { config } from "dotenv";
 config({ quiet: true });
 
 // HACK: this is bad but what can you do.
-export const BOOP_BASE_DIR = join(resolve__dirname(import.meta.url), "..");
+export const BOOP_BASE_DIR = join(resolve__dirname(import.meta.url), "..", "..");
 /**
  * Path to the web control interface's directory.
  */
