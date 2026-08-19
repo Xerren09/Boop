@@ -1,4 +1,1 @@
 name: Local test
-variables:
-  - name: PROJECT
-    value: testAPI
