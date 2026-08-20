@@ -81,6 +81,7 @@ export const CLICommands: CMD[]  = [
         command: "help",
         description: "Prints all commands and their related info.",
         func: help,
+        expectsArgsLike: ["command"]
     }
 ]
 
@@ -202,14 +203,29 @@ async function exit(cli: Interface, command: string, args: string[]) {
 }
 
 async function help(cli: Interface, command: string, args: string[]) {
+    const helpCmd = args[0] ?? null;
+    if (helpCmd) {
+        const cmd = CLICommands.find(el => el.command.startsWith(helpCmd));
+        if (cmd) {
+            printCommandHelp(cmd);
+        }
+        else {
+            console.log(`No command '${helpCmd}' found.`);
+        }
+        return;
+    }
     for (const entry of CLICommands) {
-        console.log(styleText("blue", `\n${entry.command}`), ":");
-        console.log(`\t${entry.description}`);
-        if (entry.expectsArgsLike || entry.persistentArgs) {
-            console.log(`\tArgs: ${[...(entry.expectsArgsLike ?? []).map(el => styleText("blueBright", `<${el}>`)), ...(entry.persistentArgs ?? []).map(el => styleText("blueBright", `${el}`))].join(", ")}`);
-        }
-        if (entry.flags) {
-            console.log(`\tFlags: ${[...entry.flags ?? []].map(el => styleText("gray", `${el}`)).join(", ")}`);
-        }
+        printCommandHelp(entry);
+    }
+}
+
+function printCommandHelp(command: CMD) {
+    console.log(styleText("blue", `\n${command.command}`), ":");
+    console.log(`\t${command.description}`);
+    if (command.expectsArgsLike || command.persistentArgs) {
+        console.log(`\tArgs: ${[...(command.expectsArgsLike ?? []).map(el => styleText("blueBright", `<${el}>`)), ...(command.persistentArgs ?? []).map(el => styleText("blueBright", `${el}`))].join(", ")}`);
+    }
+    if (command.flags) {
+        console.log(`\tFlags: ${[...command.flags ?? []].map(el => styleText("gray", `${el}`)).join(", ")}`);
     }
 }
