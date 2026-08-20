@@ -63,16 +63,19 @@ async function BOOP() {
     // Catch and log Load and Deploy exceptions so other functional projects can still run
     try {
         await Manager.LoadAll();
+        console.log("Projects loaded.");
     }
     catch (err) {
         logger.logException(err);
     }
     try {
         await Manager.DeployAll();
+        console.log("Projects deployed.");
     }
     catch (err) {
         logger.logException(err);
     }
+    console.log("\n====");
     cli.prompt();
     // Wait for CLI exit or other termination signal
     const abortHandler = new AbortController();
