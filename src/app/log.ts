@@ -15,7 +15,7 @@ export interface BoopLogger extends winston.Logger {
     logException: (exception: any) => void
 }
 
-function createLogger(path: string, level?: string | null, devLevel?: string | null) {
+function createLogger(path: string, level?: string | null, disableConsole?: boolean, consoleLevel?: string | null) {
     const instance = winston.createLogger({
         transports: [
             new winston.transports.File({
@@ -31,13 +31,13 @@ function createLogger(path: string, level?: string | null, devLevel?: string | n
             })
         ],
     });
-    if (isDevEnv()) {
+    if (disableConsole !== true) {
         instance.add(new winston.transports.Console({
             format: winston.format.combine(
                 winston.format.colorize(),
                 winston.format.simple()
             ),
-            level: devLevel ?? "silly"
+            level: consoleLevel ?? "warn"
         }));
     }
     instance["logException"] = logException;
@@ -49,10 +49,11 @@ export default logger as BoopLogger;
 
 export function createProjectLogger(projectRoot: string): BoopLogger {
     const path = join(projectRoot, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME);
-    const _logger = createLogger(path);
+    const _logger = createLogger(path, null, isDevEnv() == false, "silly");
     return _logger;
 }
 
+// TODO: take a look at this later
 function logException(this: BoopLogger, exception: any) {
     if (exception instanceof AggregateError) {
         this.error(exception.message);
