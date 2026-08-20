@@ -64,7 +64,7 @@ export const CLICommands: CMD[]  = [
         command: "install",
         func: install,
         description: "Installs a project from the given URL.",
-        expectsArgsLike: ["githubURL"]
+        expectsArgsLike: ["githubURL", "branch?"]
     },
     {
         command: "uninstall",
@@ -173,7 +173,7 @@ async function install(cli: Interface, command: string, args: string[]) {
     if (URL.canParse(remote) == false || name === null) {
         throw new Error(`Invalid URL, '${remote}' is a not valid github repository.`);;
     }
-    console.log("Downloading project from ", remote, branch, "...");
+    console.log("Downloading project from ", remote, "branch:", branch ?? "main", "...");
     const fresh = await Manager.Create(remote, branch);
     console.log("Project successfully created.");
     console.log("Installing...");
