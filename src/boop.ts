@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { styleText, parseArgs, type ParseArgsOptionsConfig } from 'node:util';
+import { styleText } from 'node:util';
 import { once } from 'node:events';
 import { pathExists } from './app/utilities.js';
 import { join } from 'node:path';
@@ -63,19 +63,28 @@ async function BOOP() {
     // Catch and log Load and Deploy exceptions so other functional projects can still run
     try {
         await Manager.LoadAll();
-        console.log("Projects loaded.");
+        if (Manager.projects.length == 0) {
+            console.log("No projects to load.");
+        }
+        else {
+            console.log("Projects loaded.");
+        }
     }
     catch (err) {
         logger.logException(err);
     }
     try {
-        await Manager.DeployAll();
-        console.log("Projects deployed.");
+        if (Manager.projects.length != 0) {
+            await Manager.DeployAll();
+            console.log("Projects deployed.");
+        }        
     }
     catch (err) {
         logger.logException(err);
     }
-    console.log("\n====");
+    finally {
+        console.log("\n====");
+    }
     cli.prompt();
     // Wait for CLI exit or other termination signal
     const abortHandler = new AbortController();
