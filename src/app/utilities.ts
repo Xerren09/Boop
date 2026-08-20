@@ -47,9 +47,9 @@ export function resolve__dirname(importUrl: string) {
  * @param path 
  * @returns 
  */
-export async function pathExists(path: PathLike): Promise<boolean> {
+export async function pathExists(path: PathLike, readOnly?: boolean): Promise<boolean> {
     try {
-        await access(path, W_OK | R_OK);
+        await access(path, readOnly ? R_OK : (W_OK | R_OK));
         return true;
     }
     catch {

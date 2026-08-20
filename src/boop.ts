@@ -38,7 +38,7 @@ async function BOOP() {
         console.log(`====`);
         console.log(`Boop listening on port`, styleText("blueBright", `${port}`));
         console.log(`Webhook listener available at`, styleText("blueBright", `http://localhost:${port}/boop/webhook`));
-        if (await pathExists(join(WEB_INTERFACE_DIR, "index.html"))) {
+        if (await pathExists(join(WEB_INTERFACE_DIR, "index.html"), true)) {
             console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
         }
         else {

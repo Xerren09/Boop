@@ -39,7 +39,7 @@ async function createExpressServer() {
     server.post('/boop/webhook', webhookHandler);
     // API router
     server.use('/boop/api', apiRouter);
-    if (await pathExists(join(WEB_INTERFACE_DIR, "index.html"))) {
+    if (await pathExists(join(WEB_INTERFACE_DIR, "index.html"), true)) {
         // WebUI router
         server.use('/boop/', uiRouter);
     }
