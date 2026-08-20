@@ -1,13 +1,14 @@
 import WebSocket from "ws"
 import type { BoopProject } from "../../../project/boop.project.js";
-import type { InstallerStep, InstallRunner } from "../../../shell/installRunner.js";
-import { IAsyncDisposable, isNodeAbortException } from "../../../utilities.js";
+import type { InstallerLog, InstallerStep, InstallRunner } from "../../../shell/installRunner.js";
+import { type IAsyncDisposable, isNodeAbortException } from "../../../utilities.js";
 import { join } from "node:path";
-import { PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../../constants.js";
+import { PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "../../../constants.js";
 import { createReadStream } from "node:fs";
 import { finished } from "node:stream/promises";
-import { makeLogDirName } from "../../../log.js";
+import { listProjectLogs, makeLogDirName } from "../../../log.js";
 import { once } from "node:events";
+import { readFile } from "node:fs/promises";
 
 type InstallerStart = {
     type: "installerStart",
@@ -81,7 +82,27 @@ export class InstallStreamer implements IAsyncDisposable {
      */
     private sendHistory = async () => {
         if (this.project.installer.steps.length == 0) {
-            return;
+            try {
+                const files = await listProjectLogs(this.project, "installer");
+                if (files.length == 0) {
+                    return;
+                }
+                const latest = files.reduce((prev, current) => (prev && prev.time > current.time) ? prev : current);
+                const raw = await readFile(join(latest.dir, PROJECT_LOG_RESULT_FILE_NAME));
+                const file = JSON.parse(raw.toString()) as InstallerLog;
+                const msg: InstallerResult = {
+                    type: "installerResult",
+                    success: file.steps.every(el => el.exitCode === 0),
+                    time: file.time
+                };
+                this._ws.send(JSON.stringify(msg));
+            }
+            catch {
+                // If this errors, silently ignore it
+            }
+            finally {
+                return;
+            }
         }
         const installer = this.project.installer;
         const installerTime = installer.startedAt;
