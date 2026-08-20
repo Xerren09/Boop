@@ -141,11 +141,16 @@ async function status(cli: Interface, command: string, args: string[]) {
     console.log(`Boop installed at: ${BOOP_BASE_DIR}.`);
     console.log(`Projects installed at: ${PROJECTS_DIR}.\n`);
     if (args[0] == "all" || args[0] == undefined) {
-        for (let index = 0; index < Manager.projects.length; index++) {
-            const project = Manager.projects[index];
-            projectStatusReadout(project);
-            if (index + 1 != Manager.projects.length) {
-                console.log("\n");
+        if (Manager.projects.length === 0) {
+            console.log(`No projects installed. Use the 'install' command to install a project.`);
+        }
+        else {
+            for (let index = 0; index < Manager.projects.length; index++) {
+                const project = Manager.projects[index];
+                projectStatusReadout(project);
+                if (index + 1 != Manager.projects.length) {
+                    console.log("\n");
+                }
             }
         }
         return;
