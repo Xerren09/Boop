@@ -7,22 +7,42 @@ import { join } from "path";
 import { PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME, PROJECT_LOG_FILE_NAME, PROJECT_LOG_RESULT_FILE_NAME, PROJECT_LOGS_DIR_NAME } from "../../constants.js";
 import Manager from "../../project/manager.js";
 import { ServiceProject } from "../../project/service.project.js";
-import { listProjectLogs } from "../../log.js";
+import logger, { listProjectLogs } from "../../log.js";
 import { pathExists } from "../../utilities.js";
+import type { BoopProject } from "../../project/boop.project.js";
 
+declare module 'express-serve-static-core' {
+    interface Request {
+        project: BoopProject;
+    }
+}
+
+async function handleFileStreamResponse(filePath: string, res: express.Response) {
+    try {
+        res.contentType("text");
+        await using stream = createReadStream(filePath);
+        stream.pipe(res, { end: false });
+        await finished(stream, {cleanup: true});
+    }
+    catch (err) {
+        if (err instanceof SuppressedError) {
+            err = err.suppressed;
+        }
+        if (res.headersSent == false) {
+            res.status(500).json(err);
+        }
+        else {
+            logger.logException(err);
+        }
+    }
+    finally {
+        res.end();
+    }
+}
 
 export const apiRouter = express.Router();
 
-apiRouter.use("/projects/:projectName", (req, res, next) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        res.status(404).send(`No project with the name ${project} exists.`);
-        return;
-    }
-    else {
-        next();
-    }
-});
+// Boop general API
 
 apiRouter.get("/status", (_req, res) => {
     const ret = {
@@ -46,11 +66,23 @@ apiRouter.get("/projects", (_req, res) => {
     res.status(200).json(ret);
 });
 
-apiRouter.get("/projects/:projectName", (req, res) => {
+// Projects control API
+
+// Project guard
+apiRouter.use("/projects/:projectName", (req, res, next) => {
     const project = Manager.projects.find(item => item.name === req.params.projectName);
     if (project == undefined) {
+        res.status(404).send(`No project with the name "${req.params.projectName}" is installed.`);
         return;
     }
+    else {
+        req.project = project;
+        next();
+    }
+});
+
+apiRouter.get("/projects/:projectName", (req, res) => {
+    const project = req.project;
     const ret = {
         name: project.name,
         remote: project.remoteUrl,
@@ -63,10 +95,7 @@ apiRouter.get("/projects/:projectName", (req, res) => {
 });
 
 apiRouter.delete("/projects/:projectName", async (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
-    }
+    const project = req.project;
     try {
         await Manager.Delete(project);
         res.sendStatus(200);
@@ -77,51 +106,29 @@ apiRouter.delete("/projects/:projectName", async (req, res) => {
 });
 
 apiRouter.get("/projects/:projectName/logs/project", async (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
-    }
+    const project = req.project;
     const path = join(project.projectDir, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME);
-    try {
-        res.contentType("text");
-        await using stream = createReadStream(path);
-        stream.pipe(res, { end: false });
-        await finished(stream, { cleanup: true });
+    if (await pathExists(path) == false) {
+        return res.status(404).send("Log file not found.");
     }
-    catch (err) {
-        if (err instanceof SuppressedError) {
-            err = err.suppressed;
-        }
-        if (res.headersSent == false) {
-            res.status(500).json(err);
-        }
-    }
-    finally {
-        res.end();
-    }
+    return await handleFileStreamResponse(path, res);
 });
 
 apiRouter.get("/projects/:projectName/logs/webhook", async (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
-    }
+    const project = req.project;
     const ret = project.webhookEvents.events;
     res.status(200).json(ret);
 });
 
 apiRouter.get("/projects/:projectName/logs/deploy", async (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
-    }
+    const project = req.project;
     try {
         if (project instanceof ServiceProject) {
             const files = await listProjectLogs(project, "output");
             res.status(200).json(files);
         }
         else {
-            res.sendStatus(404);
+            res.status(400).send("Service projects do not keep deploy logs.");
         }
     }
     catch (err) {
@@ -130,61 +137,40 @@ apiRouter.get("/projects/:projectName/logs/deploy", async (req, res) => {
 });
 
 apiRouter.get("/projects/:projectName/logs/deploy/:log", async (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
+    const project = req.project;
+    if (project instanceof ServiceProject == false) {
+        return res.status(400).send("Service projects do not keep deploy logs.");
     }
-    if (project instanceof ServiceProject) {
-        const logTime = Number(req.params.log);
-        const wantsProcessOutput = `${req.query?.process}`.toLowerCase() == "true";
-        try {
-            const logs = await listProjectLogs(project, "output");
-            const log = logs.find(el => el.time == logTime);
-            if (!log) {
-                return res.sendStatus(404);
-            }
-            if (wantsProcessOutput) {
-                const path = join(log.dir, PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME);
-                if (await pathExists(path) == false) {
-                    return res.status(404).send(`No output file found with for this log.`);
-                }
-                try {
-                    res.contentType("text");
-                    await using stream = createReadStream(path);
-                    stream.pipe(res, { end: false });
-                    await finished(stream, {cleanup: true});
-                }
-                catch (err) {
-                    if (err instanceof SuppressedError) {
-                        err = err.suppressed;
-                    }
-                    if (res.headersSent == false) {
-                        res.status(500).json(err);
-                    }
-                }
-                finally {
-                    res.end();
-                }
-            }
-            else {
-                const content = await readFile(join(log.dir, PROJECT_LOG_RESULT_FILE_NAME));
-                res.status(200).json(JSON.parse(content.toString()));
-            }
+    const logTime = Number(req.params.log);
+    if (Number.isNaN(logTime)) {
+        return res.status(400).send("Log timestamp is not a number.");
+    }
+    const wantsProcessOutput = `${req.query?.process}`.toLowerCase() == "true";
+    try {
+        const deployLogs = await listProjectLogs(project, "output");
+        const log = deployLogs.find(el => el.time == logTime);
+        if (log === undefined) {
+            return res.status(404).send("No matching deploy log found.");
         }
-        catch (err) {
-            res.status(500).json(err);
+        if (wantsProcessOutput) {
+            const path = join(log.dir, PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME);
+            if (await pathExists(path) == false) {
+                return res.status(404).send(`No output file found for this log.`);
+            }
+            return await handleFileStreamResponse(path, res);
+        }
+        else {
+            const content = await readFile(join(log.dir, PROJECT_LOG_RESULT_FILE_NAME));
+            res.status(200).json(JSON.parse(content.toString()));
         }
     }
-    else {
-        res.sendStatus(404);
+    catch (err) {
+        res.status(500).json(err);
     }
 });
 
 apiRouter.get("/projects/:projectName/logs/install", async (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
-    }
+    const project = req.project;
     try {
         const files = await listProjectLogs(project, "installer");
         res.status(200).json(files);
@@ -195,20 +181,17 @@ apiRouter.get("/projects/:projectName/logs/install", async (req, res) => {
 });
 
 apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
+    const project = req.project;
+    const logTime = Number(req.params.log);
+    if (Number.isNaN(logTime)) {
+        return res.status(400).send("Log timestamp is not a number.");
     }
+    const logStep = Number(req.query["step"] ?? -1);
     try {
-        const logStep = Number(req.query["step"] ?? -1);
-        const logTime = Number(req.params.log);
-        if (Number.isNaN(logTime)) {
-            res.status(400).send(`"${req.params.log}" is not a valid number.`);
-        }
         const files = await listProjectLogs(project, "installer");
         const log = files.find(el => el.time == logTime);
         if (!log) {
-            return res.status(404).send("No logfile found.");
+            return res.status(404).send("No matching install log found.");
         }
         if (logStep == -1) {
             // Send back installer result only
@@ -221,23 +204,7 @@ apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
             if (await pathExists(path) == false) {
                 return res.status(404).send(`No step file found with ID "${logStep}".`);
             }
-            try {
-                res.contentType("text");
-                await using stream = createReadStream(path);
-                stream.pipe(res, { end: false });
-                await finished(stream, {cleanup: true});
-            }
-            catch (err) {
-                if (err instanceof SuppressedError) {
-                    err = err.suppressed;
-                }
-                if (res.headersSent == false) {
-                    res.status(500).json(err);
-                }
-            }
-            finally {
-                res.end();
-            }
+            return await handleFileStreamResponse(path, res);
         }
     }
     catch (err) {
@@ -246,10 +213,7 @@ apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
 });
 
 apiRouter.post("/projects/:projectName/start", async (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
-    }
+    const project = req.project;
     try {
         await project.deploy();
         res.sendStatus(200);
@@ -260,10 +224,7 @@ apiRouter.post("/projects/:projectName/start", async (req, res) => {
 });
 
 apiRouter.post("/projects/:projectName/stop", async (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
-    }
+    const project = req.project;
     try {
         await project.stop();
         res.sendStatus(200);
@@ -274,10 +235,7 @@ apiRouter.post("/projects/:projectName/stop", async (req, res) => {
 });
 
 apiRouter.post("/projects/:projectName/restart", async (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
-    }
+    const project = req.project;
     try {
         await project.restart();
         res.sendStatus(200);
@@ -288,50 +246,40 @@ apiRouter.post("/projects/:projectName/restart", async (req, res) => {
 });
 
 apiRouter.get("/projects/:projectName/env", (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
-    }
+    const project = req.project;
     res.status(200).json(project.environment.variables);
 });
 
 apiRouter.get("/projects/:projectName/env/:key", (req, res) => {
-    const project = Manager.projects.find(item => item.name === req.params.projectName);
-    if (project == undefined) {
-        return;
-    }
+    const project = req.project;
     if (req.params.key) {
         res.status(200).json(project.environment.get(req.params.key));
     }
     else {
-        res.status(404).json(null);
+        res.status(404).send("No environment variable found.");
     }
 });
 
 apiRouter.patch("/projects/:projectName/env", (req, res) => {
+    const project = req.project;
     if (req.body?.key != undefined && req.body?.value != undefined) {
-        const project = Manager.projects.find(item => item.name === req.params.projectName);
-        if (project == undefined) {
-            return;
-        }
         project.environment.set(req.body.key, req.body.value);
-        res.sendStatus(202);
+        res.sendStatus(200);
     }
     else {
-        res.sendStatus(400);
+        const badKey = req.body?.key == undefined;
+        const badValue = req.body?.value == undefined;
+        res.status(400).send(`Invalid arguments: ${badKey ? "key" : ""} ${badKey && badValue ? " and ": ""} ${badValue ? "value" : ""} undefined.`);
     }
 });
 
 apiRouter.delete("/projects/:projectName/env", (req, res) => {
+    const project = req.project;
     if (req.body.key != undefined) {
-        const project = Manager.projects.find(item => item.name === req.params.projectName);
-        if (project == undefined) {
-            return;
-        }
         project.environment.delete(req.body.key);
-        res.sendStatus(202);
+        res.sendStatus(200);
     }
     else {
-        res.sendStatus(400);
+        res.status(404).send("No environment variable found.");
     }
 });
