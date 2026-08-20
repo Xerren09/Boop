@@ -51,7 +51,7 @@ async function BOOP() {
         else if (BOOP_SECRET == "") {
             logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
         }
-        console.log(`====\n`);
+        console.log(`====`);
     }
     catch (err) {
         if ((err as NodeJS.ErrnoException).code === "EADDRINUSE") {
@@ -83,7 +83,7 @@ async function BOOP() {
         logger.logException(err);
     }
     finally {
-        console.log("\n====");
+        console.log("====\n");
     }
     cli.prompt();
     // Wait for CLI exit or other termination signal

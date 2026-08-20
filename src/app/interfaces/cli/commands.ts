@@ -6,7 +6,7 @@ import Manager from "../../project/manager.js";
 import { ServiceProject } from "../../project/service.project.js";
 import { getProjectNameFromRemote } from "../../utilities.js";
 import { BOOP_PORT } from "../../settings.js";
-import { BOOP_BASE_DIR, PROJECTS_DIR } from "../../constants.js";
+import { BOOP_BIN_DIR, PROJECTS_DIR } from "../../constants.js";
 
 interface CMD {
     command: string,
@@ -138,7 +138,7 @@ async function restart(cli: Interface, command: string, args: string[]) {
 }
 
 async function status(cli: Interface, command: string, args: string[]) {
-    console.log(`Boop installed at: ${BOOP_BASE_DIR}.`);
+    console.log(`Boop installed at: ${BOOP_BIN_DIR}.`);
     console.log(`Projects installed at: ${PROJECTS_DIR}.\n`);
     if (args[0] == "all" || args[0] == undefined) {
         if (Manager.projects.length === 0) {

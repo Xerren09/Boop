@@ -1,14 +1,20 @@
-import { join } from "path";
+import { join, normalize } from "path";
+import { homedir } from "os";
 import { resolve__dirname } from "./utilities.js";
-import { config } from "dotenv";
-config({ quiet: true });
 
+/**
+ * Path to Boop's install directory.
+ */
 // HACK: this is bad but what can you do.
-export const BOOP_BASE_DIR = join(resolve__dirname(import.meta.url), "..", "..");
+export const BOOP_BIN_DIR = join(resolve__dirname(import.meta.url), "..", "..");
+/**
+ * Path to the .boop directory containing installed projects and logs.
+ */
+export const BOOP_BASE_DIR = normalize(join(homedir(), ".boop"));
 /**
  * Path to the web control interface's directory.
  */
-export const WEB_INTERFACE_DIR = join(BOOP_BASE_DIR, 'bin', 'web');
+export const WEB_INTERFACE_DIR = join(BOOP_BIN_DIR, 'bin', 'web');
 /**
  * Path leading to the `projects` folder, where repositories are downloaded.
  */

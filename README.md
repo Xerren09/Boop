@@ -26,6 +26,8 @@ By default Boop will listen on port `8004`. This can be changed:
 
 `boop --port 1234`
 
+Projects are installed into the current user's home folder, in the `.boop` directory.
+
 ## Security
 
 Disclaimer here. Boop is intended for scenarios where you have your own server and know how to safely configure it; and it was built with that in mind.
@@ -35,11 +37,11 @@ Disclaimer here. Boop is intended for scenarios where you have your own server a
 
 ### Webhooks
 
-Webhooks should be secured with a secret that will be used to verify incoming webhook payloads. This can be either set through a .env file in Boop's root via the `SECRET` key or through the `--secret` argument:
+Webhooks should be secured with a secret that will be used to verify incoming webhook payloads. This can be either set through a .env file in Boop's working root via the `SECRET` key or through the `--secret` argument:
 
 `boop --secret <signature>`
 
-Or in `.\.env`:
+Or in `USERHOME\.boop\.env`:
 
 ```env
 SECRET=signature
@@ -156,9 +158,9 @@ Example:
 ### > install
 Accepted arguments: `<repository-url>`
 
-Clones a git repository from the URL and registers it as a project if a configuration file exists, then builds and deploys it. 
+Clones a git repository from the URL and registers it as a project if a configuration file exists, then builds and deploys it. The URL is directly passed to git, so any it can parse is accepted. 
 
-The URL is directly passed to git, so any it can parse is accepted. 
+Projects are installed into the current user's home folder, in the `.boop` directory.
 
 ### > uninstall
 Accepted arguments: `<project-name>`

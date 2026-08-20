@@ -1,7 +1,11 @@
 import { config } from "dotenv";
 import { parseArgs, ParseArgsOptionsConfig } from "node:util";
-import { DEBUG_ENV_BYPASS_GIT_PULL_KEY, ENV_DISABLE_WEBHOOK_SECURITY_KEY, ENV_PORT_KEY, ENV_SECRET_KEY } from "./constants.js";
-config({ quiet: true });
+import { BOOP_BASE_DIR, DEBUG_ENV_BYPASS_GIT_PULL_KEY, ENV_DISABLE_WEBHOOK_SECURITY_KEY, ENV_PORT_KEY, ENV_SECRET_KEY } from "./constants.js";
+import { join } from "node:path";
+config({
+    quiet: true,
+    path: join(BOOP_BASE_DIR, ".env")
+});
 
 const boopArgsOptions: ParseArgsOptionsConfig = {
     port: {
