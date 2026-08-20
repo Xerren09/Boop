@@ -1,0 +1,10 @@
+#frontPageContent {
+    transition-duration: 1s;
+}
+
+@media screen and (width > 500px) {
+    #frontPageContent {
+        margin-top: -42px;
+        transition-duration: 1s;
+    }
+}

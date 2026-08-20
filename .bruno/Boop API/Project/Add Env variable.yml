@@ -1,0 +1,22 @@
+info:
+  name: Add Env variable
+  type: http
+  seq: 7
+
+http:
+  method: PATCH
+  url: http://localhost:8004/boop/api/projects/{{PROJECT}}/env
+  body:
+    type: form-urlencoded
+    data:
+      - name: key
+        value: foo
+      - name: value
+        value: BAR
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

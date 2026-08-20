@@ -1,21 +1,49 @@
-# Build instructions
+# Building Boop
 
-These instructions are for building Boop from scratch from this repo. They should not be used otherwise.
+The project requires at least NodeJS v25.2.1 to be installed.
 
-## app
+#### Steps:
+1. `npm run setup`
+    - Installs both the CLI dependencies and the WebUI project's.
+2. `npm run build`
+    - Builds Boop with the WebUI installed. 
+
+### Separate components
+
+The core application and the WebUI are not tightly coupled and can be built independently. It is also possible to ignore the WebUI and run Boop without it.
+
+## Core
+
+The main application includes the CLI, webserver (webhook, proxies, API), and project manager.
+
+#### Steps:
+1. `npm run build:app`
+
+The program will be built in `.\bin\`.
+
+### Development ENV
 
 Create a `.env` file to the root of the web folder, and add the following keys:
 ```env
+// Should be the same as the key used to signed the webhook requests so they can be verified.
+SECRET=test
+
+// Disables webhook security and allows webhook requests to be processed.
+DISABLE_WEBHOOK_SECURITY=true
+
+
+// Mainly used for extra logging; all logs are printed to console.
 NODE_ENV=development
-SECRET=<hash>
-```
-Setting `NODE_ENV` to `development` will disable the webhook processor's security check. Setting the `SECRET` here will just make life easier, no need to use the `--secret` flag anymore.
 
-## web
-
-This is built with CRA. Create a `.env` file to the root of the web folder, and add the following keys:
-```env
-BUILD_PATH='../bin/ui/files'
-GENERATE_SOURCEMAP=false
+// Will skip pulling or cloning projects from github during project installation after intial setup.
+BYPASS_GIT_PULL=true
 ```
-This will ensure the output files go to the top level bin folder, and no giant sourcemaps will be generated for npm.
+
+## Web UI
+
+#### Steps:
+1. `npm run build:ui`
+
+The Web UI is built with Vite. Output files will be copied to `.\bin\web`.
+
+Boop can start without the Web UI compiled, but it will display a warning in startup.

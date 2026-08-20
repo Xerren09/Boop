@@ -1,0 +1,15 @@
+info:
+  name: List install
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: http://localhost:8004/boop/api/projects/{{PROJECT}}/logs/install
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

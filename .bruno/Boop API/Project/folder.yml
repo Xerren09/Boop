@@ -1,0 +1,10 @@
+info:
+  name: Project
+  type: folder
+  seq: 1
+
+request:
+  auth: inherit
+  variables:
+    - name: PROJECT
+      value: testAPI

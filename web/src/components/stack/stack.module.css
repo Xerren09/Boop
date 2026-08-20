@@ -1,0 +1,17 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  width: auto;
+  height: auto;
+  box-sizing: border-box;
+}
+.stack > * {
+  text-overflow: ellipsis;
+}
+.stack > :not(:first-child) {
+  margin-top: 0px;
+}
+.stack > *:not(.ms-StackItem) {
+  flex-shrink: 1;
+}

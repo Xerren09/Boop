@@ -1,122 +1,122 @@
 #!/usr/bin/env node
-
-import express from 'express';
-import expressWs from "express-ws";
-const app = express();
-expressWs(app);
-import { config } from "dotenv";
-config();
-import { join } from 'path';
-import morgan from "morgan";
+import { styleText } from 'node:util';
+import { once } from 'node:events';
+import { pathExists } from './app/utilities.js';
+import { join } from 'node:path';
+import { WEB_INTERFACE_DIR } from './app/constants.js';
+import { BOOP_DISABLE_WEBHOOK_SECURITY, BOOP_PORT, BOOP_SECRET } from './app/settings.js';
 // Boop application imports
-import { webhook } from './app/webhook.js'
-import { activeProjects, projectSelector } from "./app/projects/index.js";
-import { existsSync, mkdirSync, readdirSync } from "fs";
-import { projectsFolderPath } from "./app/constants.js";
-import { BoopProject } from "./app/projects/project.js";
-import { apiRouter } from "./api/api.router.js";
-import { uiRouter } from "./ui/ui.router.js";
-import { logger } from "./app/logger.js";
-import { getArgValue } from "./utils.js";
+import Manager from './app/project/manager.js';
+import logger from './app/log.js';
+import { checkGitAvailable } from './app/shell/git.js';
+// Interfaces
+import { createCLI } from './app/interfaces/cli/cli.js';
+import { createHTTPServer } from './app/interfaces/http/server.js';
 
-// Port flag:
-let port = process.env.PORT || 8004;
-const argPort = getArgValue("--port");
-if (argPort !== undefined) {
-    let val = Number(argPort);
-    if (Number.isNaN(val) === false) {
-        port = val;
-    }
-}
-// Secret flag:
-const secret = getArgValue("--secret");
-if (secret !== undefined) {
-    process.env.SECRET = secret;
-}
-else {
-    logger.warn("No SECRET variable set; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
-}
-//
-
-app.use(express.json());
-app.use(express.urlencoded());
-
-app.use(morgan(
-    ':method :url :status :remote-addr :res[content-length] - :response-time ms',
+async function BOOP() {
+    //
+    if (await checkGitAvailable() == false)
     {
-        stream: {
-            write: (message) => {
-                logger.info(message.trim());
-            },
-        },
-        skip(req, res) {
-            // Skip UI router + project selector
-            if (req.method === "GET")
-                return true;
-            if (req.originalUrl.startsWith("/boop/webhook"))
-                return false;
-            if (req.originalUrl.startsWith("/boop/api"))
-                return false;
-            return true;
-        },
+        // Consider this a fatal error since nothing works without git
+        throw new Error("Git is not available, but Boop needs it to work. Install git and try again.");
     }
-));
-
-// Webhook entry
-app.post('/boop/webhook', webhook);
-
-// API router
-app.use('/boop/api', apiRouter);
-
-app.use('/boop/', uiRouter);
-
-// Entry point for all other requests, these either get ignored or forwarded to the project hosts
-app.all('*', projectSelector);
-
-// BOOP
-app.listen(port, () => {
-    if (existsSync(projectsFolderPath)) {
-        const items = readdirSync(projectsFolderPath, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name);
-        for (const projectDir of items) {
-            // Start project
-            const projectFilePath = join(projectsFolderPath, projectDir, "project.json");
-            if (existsSync(projectFilePath)) {
-                const projectName = projectDir;
-                const project = new BoopProject(projectName);
-                project.start().then(() => {
-                    activeProjects.push(project);
-                }).catch(err => {
-                    logger.error(`Project startup ${project.name} failed (${err}).`);
-                });
-            }
+    //
+    const port = BOOP_PORT;
+    console.log(`                         __ `);
+    console.log(` _____ _____ _____ _____|  |`);
+    console.log(`| __  |     |     |  _  |  |`);
+    console.log(`| __ -|  |  |  |  |   __|__|`);
+    console.log(`|_____|_____|_____|__|  |__|`);
+    console.log(`Tiny CI/CD server for GitHub webhooks!\n`);
+    // Use a stack to auto dispose of everything in order; get rid of the logger last
+    await using stack = new AsyncDisposableStack();
+    stack.adopt(logger, async () => { logger.end(); await once(logger, "finish") });
+    const cli = stack.use(createCLI());
+    try {
+        stack.use(await createHTTPServer(port));
+        // App info stuff
+        console.log(`====`);
+        console.log(`Boop listening on port`, styleText("blueBright", `${port}`));
+        console.log(`Webhook listener available at`, styleText("blueBright", `http://localhost:${port}/boop/webhook`));
+        if (await pathExists(join(WEB_INTERFACE_DIR, "index.html"), true)) {
+            console.log(`Web interface available at`, styleText("blueBright", `http://localhost:${port}/boop/`));
+        }
+        else {
+            console.warn(`Web interface not installed.`);
+        }
+        // ENV warnings
+        if (BOOP_DISABLE_WEBHOOK_SECURITY) {
+            logger.warn("Webhook security disabled; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
+        }
+        else if (BOOP_SECRET == "") {
+            logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
+        }
+        console.log(`====`);
+    }
+    catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "EADDRINUSE") {
+            logger.error("HTTP server port already taken.", { port: port });
+        }
+        // A fault here is fatal; rethrow
+        throw err;
+    }
+    // Catch and log Load and Deploy exceptions so other functional projects can still run
+    try {
+        await Manager.LoadAll();
+        if (Manager.projects.length == 0) {
+            console.log("No projects to load.");
+        }
+        else {
+            console.log("Projects loaded.");
         }
     }
-    else {
-        mkdirSync(projectsFolderPath);
+    catch (err) {
+        logger.logException(err);
     }
-    logger.info(`------ Boop listening on port ${port} ------`);
-});
-
-const shutDownHandler = (crash?: boolean) => { 
-    logger.info("------------ Boop shutting down ------------");
-    for (const project of activeProjects) {
-        if (project.process) {
-            project.process.kill();
+    try {
+        if (Manager.projects.length != 0) {
+            await Manager.DeployAll();
+            console.log("Projects deployed.");
+        }        
+    }
+    catch (err) {
+        logger.logException(err);
+    }
+    finally {
+        console.log("====\n");
+    }
+    cli.prompt();
+    // Wait for CLI exit or other termination signal
+    const abortHandler = new AbortController();
+    try {
+        await Promise.race([
+            once(cli, "close", {signal: abortHandler.signal}),
+            once(process, "SIGINT", {signal: abortHandler.signal}),
+            once(process, "SIGTERM", {signal: abortHandler.signal}),
+            once(process, "uncaughtException", { signal: abortHandler.signal }),
+            once(process, "unhandledRejection", { signal: abortHandler.signal }),
+        ]);
+    }
+    catch (e) {
+        if (e instanceof Error) {
+            logger.logException(e);
+            process.exitCode = 1;
         }
-        logger.info(`${project.name} disposed.`);
     }
-    logger.info("-------------- Boop shut down --------------");
-    if (crash !== true) {
-        process.exit(0);
+    finally {
+        abortHandler.abort("exiting");
     }
-};
+    console.info("\n====\nPreparing to shut down...");
+    // Manually dispose of Manager so we can keep a log of any dispose errors. 
+    // The other diposables are interfaces that we don't care about if they error out, they won't cause issues and get cleaned up by Node when the process exits.
+    try {
+        await Manager[Symbol.asyncDispose]();
+    }
+    catch (err) {
+        logger.logException(err);
+        process.exitCode = 1;
+    }
+    console.info("Boop going to rest...");
+}
 
-process.once('SIGINT', shutDownHandler);
-
-process.once('uncaughtException', (err) => {
-    logger.error(`------------------ FATAL ------------------`);
-    logger.error(`FATAL: ${err.message}${err.cause ? ` (cause: ${err.cause})` : undefined}`);
-    logger.error(`FATAL: ${err.stack}`);
-    shutDownHandler(true);
-    process.exit(1);
-});
+BOOP();
