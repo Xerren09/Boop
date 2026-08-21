@@ -300,7 +300,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
                     const __signal = force === true ? 'SIGKILL' : 'SIGTERM';
                     this._wasKilled = true;
                     if (entireProcessTree === true) {
-                        treeKill(this._process.pid, __signal, (err?: Error | null) => {
+                        treeKill(this._process.pid, __signal, async (err?: Error | null) => {
                             if (err) {
                                 if (process.platform === "win32") {
                                     if ((err as KillError).code === 128) {
@@ -321,6 +321,10 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
                                 reject(new Error(`Process "${this._process.spawnargs.join(" ")}" (${this.pid}) could not be stopped.`, { cause: err }));
                             }
                             else {
+                                if (process.platform === "win32") {
+                                    return resolve();
+                                }
+                                await once(this, "exit");
                                 resolve();
                             }
                         });
