@@ -1,6 +1,6 @@
 {
     "name": "@xerren09/boop",
-    "version": "3.0.0",
+    "version": "3.0.1",
     "description": "A lightweight NodeJS CI/CD server for GitHub repositories ",
     "preferGlobal": true,
     "scripts": {
