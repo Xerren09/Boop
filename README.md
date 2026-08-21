@@ -1,4 +1,9 @@
-# Boop!
+Boop!
+===
+![NPM Version](https://img.shields.io/npm/v/%40xerren09%2Fboop)
+![NPM Bundle Size](https://img.shields.io/bundlephobia/min/%40xerren09%2Fboop)
+![NPM Last Update](https://img.shields.io/npm/last-update/%40xerren09%2Fboop)
+
 Boop! is a tiny NodeJS CI/CD server that can pull, build and host your Node apps when in need of a quick development server!
 
 ## Features
@@ -12,7 +17,7 @@ The project data, deploy outputs, and each step of the build process is availabl
 
 ## Installation
 
-Boop requires at least **NodeJS v25.2.1**, and git to be installed.
+Boop requires at least **NodeJS v24.19.0**, and git to be installed.
 
 Install the app globally: 
 
