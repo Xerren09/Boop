@@ -43,6 +43,17 @@ async function createExpressServer() {
         // WebUI router
         server.use('/boop/', uiRouter);
     }
+    else {
+        server.use('/boop/', (req, res, next) => {
+            res.status(404).send(`
+                <h1>404 - Web UI not available.</h1>
+                
+                <p>The <code>/boop/</code> route is reserved for Boop's internal workings. If you see this message, the Web UI component is either disabled, Boop has no permission to see it, or was not compiled.</p>
+
+                <p>For the management API, use <code>/boop/api/</code>, and read Boop's README file.</p>
+            `);
+        });
+    }
     // Entry point for all other requests, these either get ignored or forwarded to the project hosts
     server.all('/{*splat}', projectSelector);
     return server;
