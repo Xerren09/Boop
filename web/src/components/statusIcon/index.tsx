@@ -25,7 +25,7 @@ export default function StatusIcon(props: StatusIconProps) {
 
     return (
         <div style={{ display: "flex" }}>
-            <Tooltip content={props.status} relationship="description">
+            <Tooltip content={props.status ?? "pending"} relationship="description">
                 {
                     getIcon()
                 }
@@ -34,7 +34,7 @@ export default function StatusIcon(props: StatusIconProps) {
     );
 }
 
-export type Status = "ok" | "error" | "warning" | "pending" | "paused" | "killed";
+export type Status = "ok" | "error" | "warning" | "pending" | "paused" | "killed" | undefined;
 
 export type StatusIconProps = {
     status: Status,
