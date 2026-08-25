@@ -17,18 +17,18 @@ export function useProjectStreamer(projectId: string, withProcess?: boolean) {
         const message: ProjectStateEvent = JSON.parse(msg) as ProjectStateEvent;
         switch (message.type) {
             case "install": {
-                setStatus("installing");
+                setStatus(() => "installing");
                 break;
             }
             case "webhook": {
-                setLastWebhookEvent(message.event);
+                setLastWebhookEvent(() => message.event);
                 break;
             }
             case "processStart": {
                 const process = new RemoteProcess(message.cmd);
                 process.dispatch(message);
                 _process.current = process;
-                setMainprocess(_process.current)                
+                setMainprocess(() => _process.current)                
                 break;
             }
             case "processOutput":
@@ -40,23 +40,23 @@ export function useProjectStreamer(projectId: string, withProcess?: boolean) {
             }
             case "installerResult": {
                 if (message.success == false) {
-                    setStatus("installFailed");
+                    setStatus(() => "installFailed");
                 }
                 else {
-                    setStatus("installSuccess");
+                    setStatus(() => "installSuccess");
                 }
                 break;
             }
             case "deploy": {
-                setStatus(message.success ? "deployed" : "error");
+                setStatus(() => message.success ? "deployed" : "error");
                 break;
             }
             case "stop": {
-                setStatus(message.wasKilled ? "stopped" : "error");
+                setStatus(() => message.wasKilled ? "stopped" : "error");
                 break;
             }
             default: {
-                console.log(message);
+                console.error("Unknown ProjectStreamer message received:", message);
             }
         }
     }
@@ -70,6 +70,11 @@ export function useProjectStreamer(projectId: string, withProcess?: boolean) {
         ws.addEventListener("message", (message) => {
             onMessage(message.data);
         });
+        ws.addEventListener("close", (evt) => { 
+            if (evt.reason === "PROJECT_DISPOSE") {
+                setStatus(() => "disposed");
+            }
+        })
         return () => {
             ws.close(1000, "client dispose");
         };

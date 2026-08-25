@@ -47,7 +47,7 @@ export function useInstallStreamer(projectId: string) {
                 break;
             }
             default: {
-                console.warn("Unknown install streamer message:", message);
+                console.error("Unknown InstallStreamer message received:", message);
             }
         }
     }
