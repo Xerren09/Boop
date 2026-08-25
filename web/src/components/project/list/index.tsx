@@ -41,7 +41,6 @@ export default function ProjectList(props: Props) {
     const touchDevice = useMediaQuery('only screen and (pointer:coarse)');
 
     const disableActions = useMemo(() => {
-        console.log(touchDevice);
         return props.disableActions || touchDevice;
     }, [props.disableActions, touchDevice]);
 
