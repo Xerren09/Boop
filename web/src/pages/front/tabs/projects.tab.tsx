@@ -29,13 +29,15 @@ export default function BoopProjectsTab() {
     return (
         <Section
             title="Projects"
-            right={
-                <Tooltip content={`Refreshes the list of available projects. Updates automatically every ${REFRESH_TIME_MS/1000} seconds.`} relationship="description">
-                    <Button icon={<ArrowSyncRegular/>} onClick={refreshProjectList} appearance="subtle"></Button>
-                </Tooltip>
-            }
         >
-            <ProjectList projects={projects}/>
+            <ProjectList
+                projects={projects}
+                right={ 
+                    <Tooltip content={`Refreshes the list of available projects. Updates automatically every ${REFRESH_TIME_MS/1000} seconds.`} relationship="description">
+                        <Button icon={<ArrowSyncRegular/>} onClick={refreshProjectList} appearance="subtle"></Button>
+                    </Tooltip>
+                }
+            />
         </Section>
     );
 }
