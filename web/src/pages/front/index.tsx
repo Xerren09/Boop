@@ -32,9 +32,10 @@ export default function FrontPage() {
                 <Caption1 italic>Node { status?.nodeVer }  //  { status?.system }-{ status?.arch }  //  <Runtime short start={startupTime}/></Caption1>
             </Stack>
 
-            <Stack gap={16} horizontalAlign="end" id={styles.frontPageContent}>
-                <ThemeSwitchButton/>
-    
+            <Stack gap={16} horizontalFill id={styles.frontPageContent}>
+                <Stack horizontalFill horizontalAlign="end">
+                    <ThemeSwitchButton/>
+                </Stack>
                 <BoopProjectsTab />
                 {
                     /*
