@@ -291,7 +291,7 @@ export interface EventLog {
 
 export interface InstallerLog {
     time: number,
-    ref?: string | null,
+    ref: string | null,
     steps: {
         cmd: string,
         log: string,
@@ -304,7 +304,7 @@ export interface InstallerLog {
 
 export interface ServiceDeployLog {
     time: number,
-    ref?: string | null,
+    ref: string | null,
     process: InstallerLog["steps"][number]
 }
 
