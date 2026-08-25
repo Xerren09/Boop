@@ -78,7 +78,7 @@ export default function ProjectList(props: Props) {
 
     return (
         <Stack gap={8} horizontalFill verticalFill>
-            <Stack horizontal horizontalAlign="space-between">
+            <Stack horizontal horizontalFill horizontalAlign="space-between" gap={18}>
                 <SearchBox
                     placeholder="Search..."
                     onChange={onChange}
@@ -88,6 +88,9 @@ export default function ProjectList(props: Props) {
                         maxWidth: 250
                     }}
                 />
+                {
+                    props.right
+                }
             </Stack>
             <Table style={{width: "100%"}}>
                 <TableHeader>
@@ -115,5 +118,9 @@ export default function ProjectList(props: Props) {
 
 type Props = {
     projects: ProjectEntry[],
-    disableActions?: boolean
+    disableActions?: boolean,
+    /**
+     * Slot for components right of the SearchBox. They will be displayed aligned to the right of the container.
+     */
+    right?: React.ReactNode
 }
