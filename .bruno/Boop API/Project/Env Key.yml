@@ -1,0 +1,31 @@
+info:
+  name: Env Key
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: http://localhost:8004/boop/api/projects/{{PROJECT}}/env/{{key}}
+  auth: inherit
+
+runtime:
+  variables:
+    - name: key
+      value: PORT
+  scripts:
+    - type: tests
+      code: |-
+        test("response matches the Env Key schema", function () {
+            const envSchema = {
+                type: ["number", "string", "null"],
+            };
+
+            expect(res.getBody()).to.have.jsonSchema(envSchema);
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true

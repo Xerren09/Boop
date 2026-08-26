@@ -1,7 +1,7 @@
 info:
   name: Add Env variable
   type: http
-  seq: 7
+  seq: 8
 
 http:
   method: PATCH
@@ -20,3 +20,4 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true
