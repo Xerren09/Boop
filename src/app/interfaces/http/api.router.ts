@@ -10,6 +10,7 @@ import { ServiceProject } from "../../project/service.project.js";
 import logger, { listProjectLogs } from "../../log.js";
 import { pathExists } from "../../utilities.js";
 import type { BoopProject } from "../../project/boop.project.js";
+import { serializeError } from "serialize-error";
 
 declare module 'express-serve-static-core' {
     interface Request {
@@ -29,7 +30,7 @@ async function handleFileStreamResponse(filePath: string, res: express.Response)
             err = err.suppressed;
         }
         if (res.headersSent == false) {
-            res.status(500).json(err);
+            res.status(500).json(serializeError(err));
         }
         else {
             logger.logException(err);
@@ -101,7 +102,7 @@ apiRouter.delete("/projects/:projectName", async (req, res) => {
         res.sendStatus(200);
     }
     catch (error) {
-        res.status(500).json(error);
+        res.status(500).json(serializeError(error));
     }
 });
 
@@ -132,7 +133,7 @@ apiRouter.get("/projects/:projectName/logs/deploy", async (req, res) => {
         }
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -165,7 +166,7 @@ apiRouter.get("/projects/:projectName/logs/deploy/:log", async (req, res) => {
         }
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -176,7 +177,7 @@ apiRouter.get("/projects/:projectName/logs/install", async (req, res) => {
         res.status(200).json(files);
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -208,7 +209,7 @@ apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
         }
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -219,7 +220,7 @@ apiRouter.post("/projects/:projectName/start", async (req, res) => {
         res.sendStatus(200);
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -230,7 +231,7 @@ apiRouter.post("/projects/:projectName/stop", async (req, res) => {
         res.sendStatus(200);
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -241,7 +242,7 @@ apiRouter.post("/projects/:projectName/restart", async (req, res) => {
         res.sendStatus(200);
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -252,8 +253,9 @@ apiRouter.get("/projects/:projectName/env", (req, res) => {
 
 apiRouter.get("/projects/:projectName/env/:key", (req, res) => {
     const project = req.project;
-    if (req.params.key) {
-        res.status(200).json(project.environment.get(req.params.key));
+    const val = project.environment.get(req.params.key);
+    if (val != null) {
+        res.status(200).json(val);
     }
     else {
         res.status(404).send("No environment variable found.");
