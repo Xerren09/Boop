@@ -97,6 +97,7 @@ export class WebhookEventQueue implements IAsyncDisposable{
         if (this._disposed) {
             return;
         }
+        this._disposed = true;
         await this.cancelAll();
     }
 }
