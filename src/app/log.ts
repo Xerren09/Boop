@@ -124,7 +124,7 @@ interface EventLogDirHandle {
 
 export interface EventLog {
     time: number,
-    ref?: string | null
+    ref: string | null
 }
 
 export interface ProcessLog {
