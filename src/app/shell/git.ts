@@ -20,7 +20,10 @@ const GIT_BASE_COMMAND = "git -c credential.interactive=false -c core.askPass=tr
  */
 export async function downloadRemote(remoteUrl: string, branch?: string | null, cancel?: AbortSignal) {
     await lock.acquire(remoteUrl, async () => { 
-        assert(URL.canParse(remoteUrl), `'${remoteUrl}' is not a valid URL.`)
+        assert(URL.canParse(remoteUrl), `'${remoteUrl}' is not a valid URL.`);
+        if (await checkGitRemoteAccess(remoteUrl) === false) {
+            throw new Error("Git does not have access to the remote.");
+        }
         const name = getProjectNameFromRemote(remoteUrl);
         assert(name, `'${remoteUrl}' is not a valid project URL.`);
         const projectPath = join(PROJECTS_DIR, name);
@@ -53,4 +56,15 @@ export async function checkGitAvailable() {
     const proc = exec(`git --version`);
     const [code, signal] = await once(proc, "exit");
     return code == 0; 
+}
+
+/**
+ * Checks if a git remote is accessible to the system.
+ * @param remote 
+ * @returns `true` if git could access the remote, `false` if not.
+ */
+export async function checkGitRemoteAccess(remote: string) {
+    const proc = exec(`${GIT_BASE_COMMAND}ls-remote '${remote}'`, { timeout: 30000 });
+    const [code, signal] = await once(proc, "exit");
+    return code == 0;
 }
