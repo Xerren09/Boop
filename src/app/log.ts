@@ -1,11 +1,9 @@
 import winston from "winston";
 import { LOG_FILE, PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "./constants.js";
 import { join } from "path";
-import { isDevEnv } from "./utilities.js";
 import { readdir } from "fs/promises";
 import { BoopProject } from "./project/boop.project.js";
-import { npm, NpmConfigSetLevels } from "winston/lib/winston/config/index.js";
-
+import { BoopConfiguration } from "./settings.js";
 export interface BoopLogger extends winston.Logger {
     /**
      * Logs an {@link Error} object with its `cause` property. Handles nested errors.
@@ -44,12 +42,12 @@ function createLogger(path: string, level?: string | null, disableConsole?: bool
     return instance as BoopLogger;
 }
 
-const logger = createLogger(LOG_FILE);
+const logger = createLogger(LOG_FILE, null, BoopConfiguration.DEBUG == false);
 export default logger as BoopLogger;
 
 export function createProjectLogger(projectRoot: string): BoopLogger {
     const path = join(projectRoot, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME);
-    const _logger = createLogger(path, null, isDevEnv() == false, "silly");
+    const _logger = createLogger(path, null, BoopConfiguration.DEBUG == false, "silly");
     return _logger;
 }
 

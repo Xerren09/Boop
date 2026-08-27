@@ -5,7 +5,7 @@ import { BoopProject } from "../../project/boop.project.js";
 import Manager from "../../project/manager.js";
 import { ServiceProject } from "../../project/service.project.js";
 import { getProjectNameFromRemote } from "../../utilities.js";
-import { BOOP_PORT } from "../../settings.js";
+import { BoopConfiguration } from "../../settings.js";
 import { BOOP_BIN_DIR, PROJECTS_DIR } from "../../constants.js";
 
 interface CMD {
@@ -165,7 +165,7 @@ async function status(cli: Interface, command: string, args: string[]) {
 function projectStatusReadout(project: BoopProject) {
     console.log(`${project.name}:`, styleText(project.deployed ? "greenBright" : "redBright", `${project.deployed ? "deployed" : "stopped"}`));
     console.log(`\tType:`, `${project.type}`);
-    console.log(`\tRouter:`, styleText("blueBright", project.deployed ? `http://localhost:${BOOP_PORT}/${project.name}` : '---'));
+    console.log(`\tRouter:`, styleText("blueBright", project.deployed ? `http://localhost:${BoopConfiguration.port}/${project.name}` : '---'));
     if (project instanceof ServiceProject) {
         console.log(`\tDirect:`, styleText("blueBright", project.deployed ? `http://localhost:${project.environment.get("port")}/` : '---'));
     }

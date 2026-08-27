@@ -11,7 +11,7 @@ import { getProjectNameFromRemote, IAsyncDisposable } from "../utilities.js";
 import AsyncLock from "async-lock";
 import { writeFile } from "fs/promises";
 import { getWorkflowFile, parseWorkflow, type WorkflowConfig } from "../workflow.js";
-import { DEBUG_ENV_BYPASS_GIT_PULL } from "../settings.js";
+import { BoopConfiguration } from "../settings.js";
 
 enum LockKeys {
     Webhook = "webhook",
@@ -189,7 +189,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
         this.throwIfNotInWebhookContext(eventReference);
         await this.lock.acquire(LockKeys.Pull, async () => { 
             try {
-                if (DEBUG_ENV_BYPASS_GIT_PULL == false) {
+                if (BoopConfiguration.DEBUG_DisableGitPull == false) {
                     await downloadRemote(this.remoteUrl, this._config.acceptBranch, cancel);
                 }
                 const workflow = await parseWorkflow(await getWorkflowFile(this.binDir));

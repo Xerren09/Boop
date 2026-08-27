@@ -18,19 +18,58 @@ const boopArgsOptions: ParseArgsOptionsConfig = {
         type: 'boolean'
     }
 };
-const args = parseArgs({ options: boopArgsOptions });
+class BoopSettings {
+    private _port: number = 8004;
+    private _secret: string = "";
+    private _debugDisableWebhookSecurity: boolean = false;
+    private _debugBypassGitPull: boolean = false;
+    private _debugDevEnv: boolean = false;
 
-// Port flag:
-const port = ((Number((args.values.port as string)) || null) ?? (Number(process.env[ENV_PORT_KEY]) || null) ?? 8004);
-process.env[ENV_PORT_KEY] = `${port}`;
-// Secret flag:
-const secret = args.values.secret ?? process.env[ENV_SECRET_KEY] ?? "";
-process.env[ENV_SECRET_KEY] = `${secret}`;
-// DisableWebhookSecurity flag:
-const disableWebhookSecurity = args.values.disableWebhookSecurity ?? process.env[ENV_DISABLE_WEBHOOK_SECURITY_KEY] ?? false;
-process.env[ENV_DISABLE_WEBHOOK_SECURITY_KEY] = `${disableWebhookSecurity}`;
+    constructor() {
+        this.load();
+    }
 
-export const BOOP_PORT = port;
-export const BOOP_SECRET = process.env[ENV_SECRET_KEY] ?? null;
-export const BOOP_DISABLE_WEBHOOK_SECURITY = process.env[ENV_DISABLE_WEBHOOK_SECURITY_KEY]?.toLowerCase() === "true";
-export const DEBUG_ENV_BYPASS_GIT_PULL = process.env[DEBUG_ENV_BYPASS_GIT_PULL_KEY]?.toLowerCase() === "true";
+    private load() {
+        const args = parseArgs({ options: boopArgsOptions });
+        // Port flag:
+        const port = ((Number((args.values.port as string)) || null) ?? (Number(process.env[ENV_PORT_KEY]) || null) ?? 8004);
+        process.env[ENV_PORT_KEY] = `${port}`;
+        this._port = port;
+        // Secret flag:
+        const secret = args.values.secret?.toString() ?? process.env[ENV_SECRET_KEY] ?? "";
+        process.env[ENV_SECRET_KEY] = `${secret}`;
+        this._secret = secret;
+        // DisableWebhookSecurity flag:
+        const disableWebhookSecurity = (args.values.disableWebhookSecurity ?? process.env[ENV_DISABLE_WEBHOOK_SECURITY_KEY] ?? false) == true;
+        process.env[ENV_DISABLE_WEBHOOK_SECURITY_KEY] = `${disableWebhookSecurity}`;
+        this._debugDisableWebhookSecurity = disableWebhookSecurity;
+        // BypassGitPull flag:
+        const bypassGitPull = process.env[DEBUG_ENV_BYPASS_GIT_PULL_KEY]?.toLowerCase() === "true";
+        this._debugBypassGitPull = bypassGitPull;
+        // Environment:
+        const devEnv = process.env["NODE_ENV"] == "development";
+        this._debugDevEnv = devEnv;
+    }
+
+    get port() {
+        return this._port;
+    }
+
+    get secret() {
+        return this._secret;
+    }
+
+    get DEBUG_DisableWebhookSecurity() {
+        return this._debugDisableWebhookSecurity;
+    }
+
+    get DEBUG_DisableGitPull() {
+        return this._debugBypassGitPull;
+    }
+
+    get DEBUG() {
+        return this._debugDevEnv;
+    }
+}
+
+export const BoopConfiguration = new BoopSettings();

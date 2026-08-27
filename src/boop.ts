@@ -4,7 +4,7 @@ import { once } from 'node:events';
 import { pathExists } from './app/utilities.js';
 import { join } from 'node:path';
 import { WEB_INTERFACE_DIR } from './app/constants.js';
-import { BOOP_DISABLE_WEBHOOK_SECURITY, BOOP_PORT, BOOP_SECRET } from './app/settings.js';
+import { BoopConfiguration } from './app/settings.js';
 // Boop application imports
 import Manager from './app/project/manager.js';
 import logger from './app/log.js';
@@ -21,7 +21,7 @@ async function BOOP() {
         throw new Error("Git is not available, but Boop needs it to work. Install git and try again.");
     }
     //
-    const port = BOOP_PORT;
+    const port = BoopConfiguration.port;
     console.log(`                         __ `);
     console.log(` _____ _____ _____ _____|  |`);
     console.log(`| __  |     |     |  _  |  |`);
@@ -45,10 +45,10 @@ async function BOOP() {
             console.warn(`Web interface not installed.`);
         }
         // ENV warnings
-        if (BOOP_DISABLE_WEBHOOK_SECURITY) {
+        if (BoopConfiguration.DEBUG_DisableWebhookSecurity) {
             logger.warn("Webhook security disabled; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
         }
-        else if (BOOP_SECRET == "") {
+        else if (BoopConfiguration.secret == "") {
             logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
         }
         console.log(`====`);

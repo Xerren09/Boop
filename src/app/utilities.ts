@@ -69,10 +69,6 @@ export function getProjectNameFromRemote(url: string) {
     return res?.groups?.projectID ?? null;
 }
 
-export function isDevEnv(): boolean {
-    return process.env["NODE_ENV"] == "development";
-}
-
 export function isNodeErrnoException(err: any, code?: string): err is NodeJS.ErrnoException {
     return (err instanceof Error) && ((err as NodeJS.ErrnoException).code !== undefined) && (code !== undefined ? (err as NodeJS.ErrnoException).code == code : true)
 }
