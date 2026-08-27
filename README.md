@@ -52,6 +52,8 @@ Projects are installed into the current user's home folder, in the `.boop` direc
 
 Installing projects can be done via either triggering a webhook event through GitHub, typically done automatically when the webhook was first configured, or manually through the CLI ([see `install` command](#install)).
 
+Installs will fail if git doesn't have permissions to access the target repository. It is your responsibility to configure git accordingly.
+
 ## Webhook
 
 Webhook events from GitHub can be directed to the following route:
@@ -84,7 +86,7 @@ SECRET=signature
 ```
 
 > [!CAUTION]  
-> **Omitting a `secret` will allow anyone to use Boop and push updates to your deployed projects.**
+> **Omitting a `secret` will cause Boop to reject ALL incoming events.**
 
 > [!NOTE]
 > See GitHub's guide on [securing your webhooks](https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks) for more.
