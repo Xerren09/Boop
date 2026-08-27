@@ -210,11 +210,13 @@ function parseWebhookEvent(req: express.Request): WebhookEvent {
 function isSignatureValid(req: express.Request): boolean {
     // Ignore security check
     if (BoopConfiguration.DEBUG_DisableWebhookSecurity) {
+        logger.warn("Webhook security is disabled; skipping validation.");
         return true;
     }
     else {
         // If no SECRET is defined, we can't validate the signature, so reject it.
         if (!BoopConfiguration.secret) {
+            logger.warn("No secret is configured; rejecting event.");
             return false;
         }
     }

@@ -1,6 +1,6 @@
 import Manager from "../../project/manager.js";
-import { createInterface, Interface } from "node:readline/promises";
-import { CompleterResult } from "node:readline";
+import { createInterface, type Interface } from "node:readline/promises";
+import type { CompleterResult } from "node:readline";
 import { CLICommands } from "./commands.js";
 
 export function createCLI() {

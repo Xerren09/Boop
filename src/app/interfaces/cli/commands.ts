@@ -1,7 +1,7 @@
-import { Interface } from "node:readline/promises";
+import { type Interface } from "node:readline/promises";
 import { styleText } from "node:util";
 import { AppProject } from "../../project/app.project.js";
-import { BoopProject } from "../../project/boop.project.js";
+import { type BoopProject } from "../../project/boop.project.js";
 import Manager from "../../project/manager.js";
 import { ServiceProject } from "../../project/service.project.js";
 import { getProjectNameFromRemote } from "../../utilities.js";

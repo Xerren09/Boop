@@ -44,6 +44,7 @@ async function createExpressServer() {
         server.use('/boop/', uiRouter);
     }
     else {
+        logger.warn("Web interface not available.");
         server.use('/boop/', (req, res, next) => {
             res.status(404).send(`
                 <h1>404 - Web UI not available.</h1>
