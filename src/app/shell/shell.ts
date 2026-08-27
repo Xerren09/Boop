@@ -5,9 +5,23 @@ import logger from "../log.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
 import { IAsyncDisposable } from "../utilities.js";
-import { ENV_DISABLE_WEBHOOK_SECURITY_KEY, ENV_PORT_KEY, ENV_SECRET_KEY } from "../constants.js";
+import { DEBUG_ENV_BYPASS_GIT_PULL_KEY, ENV_DISABLE_WEBHOOK_SECURITY_KEY, ENV_PORT_KEY, ENV_SECRET_KEY } from "../constants.js";
 import { Readable, Transform } from "stream";
 import { createWriteStream, WriteStream } from "fs";
+
+/**
+ * A copy of `process.env` clean of Boop's configuration variables.
+ * @returns 
+ */
+export function getCleanEnv(): NodeJS.ProcessEnv {
+    const env = { ...process.env };
+    delete env[ENV_SECRET_KEY]; // Don't leak the secret
+    delete env[ENV_PORT_KEY];
+    delete env[ENV_DISABLE_WEBHOOK_SECURITY_KEY];
+    delete env[DEBUG_ENV_BYPASS_GIT_PULL_KEY];
+    delete env["NODE_ENV"];
+    return env;
+}
 
 /**
  * Spawns a new shell and runs the given command.
@@ -28,11 +42,7 @@ export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.Pro
         });
     }
     else if (process.platform === "linux") {
-        const __env = { ...process.env };
-        // Get rid of Boop specific variables
-        delete __env[ENV_SECRET_KEY]; // Don't leak the secret
-        delete __env[ENV_PORT_KEY];
-        delete __env[ENV_DISABLE_WEBHOOK_SECURITY_KEY];
+        const __env = getCleanEnv();
         _proc = spawn(command, {
             cwd: cwd,
             shell: true,
