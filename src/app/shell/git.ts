@@ -9,6 +9,8 @@ import AsyncLock from "async-lock";
 
 const lock = new AsyncLock();
 
+const GIT_BASE_COMMAND = "git -c credential.interactive=false -c core.askPass=true ";
+
 /**
  * Downloads the project's files from the specified remote.
  * 
@@ -24,12 +26,13 @@ export async function downloadRemote(remoteUrl: string, branch?: string | null, 
         const projectPath = join(PROJECTS_DIR, name);
         const projectBinPath = join(projectPath, PROJECT_BIN_DIR_NAME);
         // Pull by default
-        let command: string = `git pull ${remoteUrl} ${branch ?? ""}`;
+        let command: string = `pull '${remoteUrl}' '${branch ?? ""}'`;
         if (await pathExists(projectBinPath) == false) {
             // Clone if files don't exist
             await mkdir(projectBinPath);
-            command = `git clone --single-branch ${branch ? `--branch ${branch}` : ""} "${remoteUrl}" .`
+            command = `clone --single-branch ${branch ? `--branch '${branch}'` : ""} '${remoteUrl}' .`
         }
+        command = `${GIT_BASE_COMMAND}${command}`;
         const proc = exec(command, {
             cwd: projectBinPath,
             signal: cancel
