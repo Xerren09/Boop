@@ -4,13 +4,15 @@ import { join } from "path";
 import { readdir } from "fs/promises";
 import { BoopProject } from "./project/boop.project.js";
 import { BoopConfiguration } from "./settings.js";
+import { serializeError } from "serialize-error";
 export interface BoopLogger extends winston.Logger {
     /**
      * Logs an {@link Error} object with its `cause` property. Handles nested errors.
-     * @param exception 
+     * @param exception The `Error` instance or other thrown value to log. 
+     * @param message Optional error message. If not given, {@link Error.message} will be used.
      * @returns 
      */
-    logException: (exception: any) => void
+    logException: (exception: any, message?: string) => void
 }
 
 function createLogger(path: string, level?: string | null, disableConsole?: boolean, consoleLevel?: string | null) {
@@ -51,26 +53,9 @@ export function createProjectLogger(projectRoot: string): BoopLogger {
     return _logger;
 }
 
-// TODO: take a look at this later
-function logException(this: BoopLogger, exception: any) {
-    if (exception instanceof AggregateError) {
-        this.error(exception.message);
-        for (let index = 0; index < exception.errors.length; index++) {
-            const error = exception.errors[index];
-            this.logException(error);
-        }
-    }
-    else if (exception instanceof SuppressedError) {
-        this.error(exception.error);
-        this.logException(exception.suppressed);
-    }
-    else if (exception instanceof Error) {
-        this.error(exception.message);
-        this.debug("Exception:", { exception: parseError(exception)});
-    }
-    else {
-        this.error(exception);
-    }
+function logException(this: BoopLogger, exception: any, message?: string) {
+    const msg = message ?? (exception instanceof Error ? exception.message : exception);
+    this.error(msg, { exception: serializeError(exception) });
 }
 
 /**
