@@ -2,14 +2,14 @@ import { join } from "path";
 import { PROJECT_BIN_DIR_NAME, PROJECTS_DIR } from "../constants.js";
 import { getProjectNameFromRemote, pathExists } from "../utilities.js";
 import { mkdir } from "fs/promises";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { once } from "events";
 import assert from "assert";
 import AsyncLock from "async-lock";
 
 const lock = new AsyncLock();
 
-const GIT_BASE_COMMAND = "git -c credential.interactive=false -c core.askPass=true ";
+const GIT_BASE_ARGS = ['-c', 'credential.interactive=false', '-c', 'core.askPass=true'];
 
 /**
  * Downloads the project's files from the specified remote.
@@ -29,21 +29,30 @@ export async function downloadRemote(remoteUrl: string, branch?: string | null, 
         const projectPath = join(PROJECTS_DIR, name);
         const projectBinPath = join(projectPath, PROJECT_BIN_DIR_NAME);
         // Pull by default
-        let command: string = `pull '${remoteUrl}' '${branch ?? ""}'`;
+        let args: string[] = [...GIT_BASE_ARGS];
         if (await pathExists(projectBinPath) == false) {
             // Clone if files don't exist
             await mkdir(projectBinPath);
-            command = `clone --single-branch ${branch ? `--branch '${branch}'` : ""} '${remoteUrl}' .`
+            args.push("clone", "--single-branch");
+            if (branch) {
+                args.push("--branch", `${branch}`);
+            }
+            args.push(`${remoteUrl}`, ".");
         }
-        command = `${GIT_BASE_COMMAND}${command}`;
-        const proc = exec(command, {
+        else {
+            args.push("pull", `${remoteUrl}`);
+            if (branch) {
+                args.push(`${branch}`);
+            }
+        }
+        const proc = execFile("git", args, {
             cwd: projectBinPath,
             signal: cancel
         });
-        // This is a shell so shouldn't throw
         const [code, signal] = await once(proc, "exit");
         if (code !== 0) {
-            throw new Error(`Failed to sync from remote via '${command}': ${code ?? signal}`, { cause: {code, signal} });
+            const cmd = `git ${args.join(" ")}`;
+            throw new Error(`Failed to sync from remote via '${cmd}': ${code ?? signal}`, { cause: {code, signal} });
         } 
     });
 }
@@ -53,9 +62,14 @@ export async function downloadRemote(remoteUrl: string, branch?: string | null, 
  * @returns 
  */
 export async function checkGitAvailable() {
-    const proc = exec(`git --version`);
-    const [code, signal] = await once(proc, "exit");
-    return code == 0; 
+    const proc = execFile(`git`, ["--version"]);
+    try {
+        const [code, signal] = await once(proc, "exit");
+        return code == 0; 
+    }
+    catch {
+        return false;
+    }
 }
 
 /**
@@ -64,7 +78,12 @@ export async function checkGitAvailable() {
  * @returns `true` if git could access the remote, `false` if not.
  */
 export async function checkGitRemoteAccess(remote: string) {
-    const proc = exec(`${GIT_BASE_COMMAND}ls-remote '${remote}'`, { timeout: 30000 });
-    const [code, signal] = await once(proc, "exit");
-    return code == 0;
+    const proc = execFile(`git`, [...GIT_BASE_ARGS, 'ls-remote', `${remote}`], { timeout: 30000 });
+    try {
+        const [code, signal] = await once(proc, "exit");
+        return code == 0;
+    }
+    catch {
+        return false;
+    }
 }
