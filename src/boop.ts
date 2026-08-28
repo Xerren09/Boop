@@ -10,7 +10,7 @@ import Manager from './app/project/manager.js';
 import logger from './app/log.js';
 import { checkGitAvailable } from './app/shell/git.js';
 // Interfaces
-import { createCLI } from './app/interfaces/cli/cli.js';
+import { createCLI, prettyPrintError } from './app/interfaces/cli/cli.js';
 import { createHTTPServer } from './app/interfaces/http/server.js';
 
 async function BOOP() {
@@ -44,12 +44,11 @@ async function BOOP() {
         else {
             console.warn(`Web interface not installed.`);
         }
-        // ENV warnings
         if (BoopConfiguration.DEBUG_DisableWebhookSecurity) {
-            logger.warn("Webhook security disabled; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
+            console.warn("Webhook security disabled; Webhook will accept any request regardless of source. This means anyone can issue build requests to your server.");
         }
         else if (BoopConfiguration.secret == "") {
-            logger.warn("No SECRET variable set; Webhook will not accept any events. Use 'DISABLE_WEBHOOK_SECURITY' environment variable to allow webhooks without a secret set.");
+            console.warn("No SECRET variable set; Webhook will not accept any events.");
         }
         console.log(`====`);
     }
@@ -62,16 +61,21 @@ async function BOOP() {
     }
     // Catch and log Load and Deploy exceptions so other functional projects can still run
     try {
+        console.log("Loading projects...");
         await Manager.LoadAll();
+    }
+    catch (err) {
+        console.error("Error while loading:");
+        prettyPrintError(err);
+        logger.logException(err);
+    }
+    finally {
         if (Manager.projects.length == 0) {
-            console.log("No projects to load.");
+            console.log("No projects loaded.");
         }
         else {
             console.log("Projects loaded.");
         }
-    }
-    catch (err) {
-        logger.logException(err);
     }
     try {
         if (Manager.projects.length != 0) {
@@ -80,6 +84,8 @@ async function BOOP() {
         }        
     }
     catch (err) {
+        console.error("Not all projects deployed successfully. Use the 'status' command for more details.");
+        prettyPrintError(err);
         logger.logException(err);
     }
     finally {
@@ -97,9 +103,10 @@ async function BOOP() {
             once(process, "unhandledRejection", { signal: abortHandler.signal }),
         ]);
     }
-    catch (e) {
-        if (e instanceof Error) {
-            logger.logException(e);
+    catch (err) {
+        logger.logException(err);
+        prettyPrintError(err);
+        if (err instanceof Error) {
             process.exitCode = 1;
         }
     }
@@ -114,6 +121,7 @@ async function BOOP() {
     }
     catch (err) {
         logger.logException(err);
+        prettyPrintError(err);
         process.exitCode = 1;
     }
     console.info("Boop going to rest...");
