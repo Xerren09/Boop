@@ -54,7 +54,6 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
                 return _search;
             }
             try {
-                logger.info(`Loading project '${projectName}'.`);
                 const projectFile = join(PROJECTS_DIR, projectName, PROJECT_FILE_NAME);
                 if (await pathExists(projectFile) == false) {
                     throw new Error(`Project does not exist on disk.`);
@@ -66,8 +65,8 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
                 return project;
             }
             catch (err) {
-                const error = new Error(`Failed to load project '${projectName}'`, { cause: err });
-                throw error;
+                logger.logException(err, `Failed to load project '${projectName}'`);
+                throw err;
             }
         });
     }
@@ -80,7 +79,7 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
         return await this.lock.acquire("unload", async () => {
             const project = (typeof (target) == "string") ? this.Find(target) : target;
             if (project == undefined) {
-                throw new Error(`Project does not exist.`);
+                throw new Error(`Can not unload project not in memory.`);
             }
             try {
                 // Remove project from the list before we unload it so if it fails it doesn't stay available in an invalid state
@@ -91,9 +90,8 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
                 logger.info(`Unloaded project '${project.name}'`);
             }
             catch (err) {
-                const error = new Error(`Failed to unload project '${project.name}'`, { cause: err });
-                logger.logException(error);
-                throw error;
+                logger.logException(err, `Failed to unload project '${project.name}'`);
+                throw err;
             }
         });
     }
@@ -106,7 +104,6 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
      */
     public async Create(remote: string, branch?: string | null): Promise<BoopProject> {
         return await this.lock.acquire("create", async () => { 
-            // FIXME: add lock
             logger.info(`Creating new project from '${remote}'.`);
             const projectName = getProjectNameFromRemote(remote);
             if (projectName == null) {
@@ -114,11 +111,11 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
                 throw new Error(`Could not extract valid project name from "${remote}"`);
             }
             const projectDir = join(PROJECTS_DIR, projectName);
+            if (await pathExists(join(projectDir, PROJECT_FILE_NAME))) {
+                logger.error(`Project already exists.`);
+                throw new Error(`Project already exists.`);
+            }
             try {
-                if (await pathExists(join(projectDir, PROJECT_FILE_NAME))) {
-                    logger.error(`Project already exists.`);
-                    throw new Error(`Project already exists.`);
-                }
                 if (await pathExists(projectDir) == false) {
                     await mkdir(projectDir);
                 }
@@ -157,6 +154,7 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
     public async Delete(target: string | BoopProject): Promise<void> {
         return await this.lock.acquire("delete", async () => {
             logger.info(`Deleting project '${(typeof (target) == "string") ? target : target.name}'.`);
+            // TODO: allow delete when project is not loaded but exists on disk
             const project = (typeof (target) == "string") ? this.Find(target) : target;
             if (project == undefined) {
                 throw new Error(`Project does not exist.`);
@@ -200,8 +198,7 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
                     await this.Load(name);
                 }
                 catch (err) {
-                    logger.error(`Failed to load project '${name}'.`);
-                    errors.push(err);
+                    errors.push(new Error(`Failed to load project '${name}'`, {cause: err}));
                 }
             }
             if (errors.length != 0) {
@@ -227,13 +224,13 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
                         await project.deploy();
                     }
                     catch (err) {
-                        errors.push(err);
-                        logger.error(`Failed to deploy project '${project.name}'.`);
+                        // Wrap error so we know which ones failed.
+                        errors.push(new Error(`Failed to deploy project '${project.name}'`, { cause: err }));
                     }
                 }
             }
             if (errors.length != 0) {
-                logger.warn("Some projects failed to deploy.");
+                logger.error("Some projects failed to deploy.");
                 throw new AggregateError(errors, `One or more projects could not be deployed.`);
             }
             else {
@@ -269,7 +266,7 @@ class ProjectManager extends EventEmitter implements IAsyncDisposable {
                 }
                 catch (err) {
                     logger.error(`Failed to stop project '${project.name}'`);
-                    errors.push(err);
+                    errors.push(new Error(`Failed to stop project '${project.name}'`, {cause: err}));
                 }
             }
             if (errors.length != 0) {

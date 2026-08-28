@@ -200,9 +200,8 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
                 this.log.info(`Remote cloned.`, { event: eventReference });
             }
             catch (err) {
-                const error = new Error(`Git pull failed.`, { cause: err });
-                this.log.logException(error);
-                throw error;
+                this.log.logException(err, "Syncing with remote failed.");
+                throw err;
             }
         });
     }
@@ -228,7 +227,7 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
                 this.log.info(`Installer finished.`, { event: eventReference });
             }
             catch (err) {
-                this.log.logException(err);
+                this.log.logException(err, "Installer failed.");
                 throw err;
             }
         });
@@ -254,9 +253,8 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
                 this.log.info(`Deployed.`, { event: eventReference });
             }
             catch (err) {
-                const error = new Error(`Failed to deploy project.`, { cause: err });
-                this.log.logException(error);
-                throw error;
+                this.log.logException(err, "Failed to deploy project.");
+                throw err;
             }
             finally {
                 this.emit("deploy", this.deployed);
@@ -282,9 +280,8 @@ export abstract class BoopProject extends EventEmitter implements IAsyncDisposab
                 }
             }
             catch (err) {
-                const error = new Error(`Failed to stop project.`, { cause: err });
-                this.log.logException(error);
-                throw error;
+                this.log.logException(err, `Failed to stop project.`);
+                throw err;
             }
             finally {
                 // Always send stop because a failed stop is likely an invalid state; better safe than sorry.
