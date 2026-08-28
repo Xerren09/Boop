@@ -21,6 +21,7 @@ class WebhookTask implements IAsyncDisposable {
         this._event = evt;
         this._cancel = new AbortController();
         this._task = task(this._cancel.signal);
+        // HACK: eat the error 
         this._task.catch(() => {}).finally(() => { this._task = undefined; });
     }
     get disposed(): boolean {
