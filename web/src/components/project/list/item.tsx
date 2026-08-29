@@ -4,11 +4,18 @@ import { useProjectStreamer } from "../../../api/streamers/useProjectStreamer";
 import { ProjectStatusIcon } from "../statusIcon";
 import { Link as RouterLink } from "react-router"; 
 import ProjectControlButton from "../controlButton";
-import type { ProjectType } from "../../../api/api";
+import { BoopAPI, type ProjectType } from "../../../api/api";
 import { MoreHorizontalFilled } from "@fluentui/react-icons";
+import { useMemo } from "react";
 
 export default function ProjectListItem(props: Props) {
-    const { projectStatus, lastWebhookEvent } = useProjectStreamer(props.name);
+    const url = useMemo(() => {
+        const base = BoopAPI.constructApiURL(`projects/${props.name}`);
+        base.protocol = "ws:"
+        return base;
+    }, [props.name]);
+
+    const { projectStatus, lastWebhookEvent } = useProjectStreamer(url);
     
     return (
         <TableRow key={props.name} style={{

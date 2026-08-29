@@ -19,9 +19,9 @@ const statusHeadingMap: { [key in NonNullable<InstallerStatus>]: string } = {
     "killed": "Build aborted"
 }
 
-export default function ProjectInstallerTab(props: { projectId: string }) {
-    const project = useContext(ProjectProvider);
-    const { steps, status, triggerEvent } = useInstallStreamer(props.projectId);
+export default function ProjectBuildTab() {
+    const project = useContext(ProjectProvider)!;
+    const { steps, status, triggerEvent } = useInstallStreamer(project?.installSocketUrl);
 
     const [isLive, setLiveStatus] = useState<boolean>(true);
     const [selectedFileHandle, setSelectedFileHandle] = useState<EventLog | null>(null);

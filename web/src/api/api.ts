@@ -63,6 +63,11 @@ export class BoopProject {
     readonly type: ProjectType;
     readonly baseUrl: URL;
     readonly proxyUrl: URL;
+    readonly installSocketUrl: URL;
+    readonly socketUrl: URL;
+
+    private readonly errorEmitter: Subject<unknown>;
+
 
     constructor(name: string, remote: string, type: ProjectType) {
         this.name = name;
@@ -70,6 +75,12 @@ export class BoopProject {
         this.type = type;
         this.baseUrl = BoopAPI.constructApiURL(`projects/${this.name}/`);
         this.proxyUrl = new URL(name, BoopAPI.origin);
+        const sockUrl = new URL(this.baseUrl);
+        sockUrl.protocol = "ws:";
+        this.socketUrl = sockUrl;
+        const instUrl = new URL("installer", this.baseUrl);
+        instUrl.protocol = "ws:";
+        this.installSocketUrl = instUrl;
     }
 
     private getRequestUrl(path: string, qparams?: { [key: string]: number | string | boolean, }): URL {

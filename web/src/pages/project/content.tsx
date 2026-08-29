@@ -11,7 +11,7 @@ import { ProjectIcon } from "../../components/project/typeIcon";
 import Runtime from "../../components/runtime";
 import Section from "../../components/section";
 import Stack from "../../components/stack";
-import ProjectInstallerTab from "./build.tab";
+import ProjectBuildTab from "./build.tab";
 import ProjectDeployTab from "./deploy.tab";
 import EnvironmentVariableEditor from "./environment.tab";
 import ProjectWebhookEventsTab from "./events.tab";
@@ -21,7 +21,7 @@ import { useNavigate } from "react-router";
 export function ProjectPageContent() {
     const project = useContext(ProjectProvider)!;
 
-    const { projectStatus, lastWebhookEvent, mainProcess } = useProjectStreamer(project.name, true);
+    const { projectStatus, lastWebhookEvent, mainProcess } = useProjectStreamer(project.socketUrl, true);
 
     const { currentTab, switchTab } = useHashTabs(ProjectTab);
     const [port, setPort] = useState<string | null>(null);
@@ -187,7 +187,7 @@ export function ProjectPageContent() {
                     currentTab === ProjectTab.Deploy && <ProjectDeployTab process={mainProcess} status={projectStatus} directUrlHref={ directUrlHref } />
                 }
                 {
-                    currentTab === ProjectTab.Build && <ProjectInstallerTab projectId={ project!.name }/>
+                    currentTab === ProjectTab.Build && <ProjectBuildTab/>
                 }
                 {
                     currentTab === ProjectTab.Environment && <EnvironmentVariableEditor/>
