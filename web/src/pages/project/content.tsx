@@ -99,12 +99,14 @@ export function ProjectPageContent() {
                         <ProjectControlButton
                             action="start"
                             appearance="subtle"
-                            hideLabel={ compactToolbar }
+                            hideLabel={compactToolbar}
+                            projectState={projectStatus}
                         />
                         <ProjectControlButton
                             action="stop"
                             appearance="subtle"
-                            hideLabel={ compactToolbar }
+                            hideLabel={compactToolbar}
+                            projectState={projectStatus}
                         />
                         <ProjectControlButton
                             action="restart"
