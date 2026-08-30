@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import  Stack from "../../components/stack";
 import { Breadcrumb, BreadcrumbButton, BreadcrumbDivider, BreadcrumbItem, Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger } from "@fluentui/react-components";
-import { BoopAPI, BoopProject, ProjectProvider } from "../../api/api";
+import { APIError, BoopAPI, BoopProject, ProjectProvider } from "../../api/api";
 import ProjectPageSkeleton from "./skeleton";
 import ThemeSwitchButton from "../../components/theme/button";
 import { ProjectPageContent } from "./content";
@@ -23,7 +23,12 @@ export default function ProjectPage() {
                         setProject(proj);
                     }
                 }
-                catch {
+                catch (err) {
+                    if (err instanceof APIError) {
+                        if (err.name === "ConnectionError") {
+                            navigation("/");
+                        }
+                    }
                     setProject(null);
                 }
             }
@@ -47,20 +52,18 @@ export default function ProjectPage() {
                     </Breadcrumb>
                     <ThemeSwitchButton/>
                 </Stack>
-                
                 {
                     project ? <ProjectPageContent/> : <ProjectPageSkeleton/>
                 }
-
             </Stack>
             {
-                project === null && <ProjectNotFoundPopup open={project === null} onDismiss={() => { navigation("..") }} projectId={ projectId! } />
+                project === null && <ProjectNotFoundAlert open={project === null} onDismiss={() => { navigation("..") }} projectId={ projectId! } />
             }
         </ProjectProvider>
     );
 }
 
-function ProjectNotFoundPopup(props: {open: boolean, onDismiss: () => void, projectId: string}) {
+function ProjectNotFoundAlert(props: {open: boolean, onDismiss: () => void, projectId: string}) {
     return (
         <>
             <Dialog
@@ -73,7 +76,11 @@ function ProjectNotFoundPopup(props: {open: boolean, onDismiss: () => void, proj
               >
                 <DialogSurface>
                     <DialogBody>
-                        <DialogTitle> <ErrorCircleColor/> Project Not Found </DialogTitle>
+                        <DialogTitle>
+                            <Stack horizontal gap={6} verticalAlign="center">
+                                <ErrorCircleColor fontSize={26}/> Project Not Found 
+                            </Stack>
+                        </DialogTitle>
                         <DialogContent>
                             No project with the name "{ props.projectId ?? "<unknown>" }" is installed.
                         </DialogContent>
