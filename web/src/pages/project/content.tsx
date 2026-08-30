@@ -13,7 +13,7 @@ import Section from "../../components/section";
 import Stack from "../../components/stack";
 import ProjectBuildTab from "./build.tab";
 import ProjectDeployTab from "./deploy.tab";
-import EnvironmentVariableEditor from "./environment.tab";
+import ProjectEnvironmentTab from "./environment.tab";
 import ProjectWebhookEventsTab from "./events.tab";
 import ProjectLogTab from "./log.tab";
 import { useNavigate } from "react-router";
@@ -195,7 +195,6 @@ export function ProjectPageContent() {
                     <Tab value={ ProjectTab.Events }>Events</Tab>
                     <Tab value={ ProjectTab.Log }>Log</Tab>
                 </TabList>
-
                 {
                     currentTab === ProjectTab.Deploy && <ProjectDeployTab process={mainProcess} status={projectStatus} directUrlHref={ directUrlHref } />
                 }
@@ -203,7 +202,7 @@ export function ProjectPageContent() {
                     currentTab === ProjectTab.Build && <ProjectBuildTab/>
                 }
                 {
-                    currentTab === ProjectTab.Environment && <EnvironmentVariableEditor/>
+                    currentTab === ProjectTab.Environment && <ProjectEnvironmentTab/>
                 }
                 {
                     currentTab === ProjectTab.Events && <ProjectWebhookEventsTab refreshKey={lastWebhookEvent}/>
