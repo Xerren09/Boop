@@ -43,12 +43,19 @@ export class BoopAPI {
     }
 
     static async getProject(projectId: string) {
-        const projectInfo = await makeRequest<ProjectInfo>(this.constructApiURL(`projects/${projectId}`), "GET");
-        if (projectInfo) {
-            return new BoopProject(projectInfo.name, projectInfo.remote, projectInfo.type);
+        try {
+            const projectInfo = await makeRequest<ProjectInfo>(this.constructApiURL(`projects/${projectId}`), "GET");
+            if (projectInfo) {
+                return new BoopProject(projectInfo.name, projectInfo.remote, projectInfo.type);
+            }
         }
-        else {
-            throw `No project with ID "${projectId}" exists.`;
+        catch (err) {
+            if (err instanceof APIError) {
+                if (err.name == "APIError") {
+                    throw new Error(`No project with ID "${projectId}" exists.`);
+                }
+            }
+            throw err;
         }
     }
 
