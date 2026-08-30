@@ -5,7 +5,7 @@ import Section from "../../../components/section";
 import { useCallback, useEffect, useState } from "react";
 import { BoopAPI, type ProjectEntry } from "../../../api/api";
 
-const REFRESH_TIME_MS = 15000;
+const REFRESH_TIME_MS = 30000;
 
 export default function BoopProjectsTab() {
     const [projects, setProjects] = useState<ProjectEntry[]>([]);
@@ -13,6 +13,8 @@ export default function BoopProjectsTab() {
     const refreshProjectList = useCallback(() => {
         BoopAPI.getProjectList().then(list => {
             setProjects(() => list);
+        }).catch((err) => {
+            console.error("Failed to fetch project list", err);
         });
     }, []);
 
