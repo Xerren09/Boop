@@ -7,6 +7,7 @@ import { APIError, BoopAPI, BoopProject, ProjectProvider } from "../../api/api";
 import ProjectPageSkeleton from "./skeleton";
 import ThemeSwitchButton from "../../components/theme/button";
 import { ProjectPageContent } from "./content";
+import { APIErrorDialog } from "./apiErrorDialog";
 
 export default function ProjectPage() {
     const { projectId } = useParams<string>();
@@ -26,7 +27,8 @@ export default function ProjectPage() {
                 catch (err) {
                     if (err instanceof APIError) {
                         if (err.name === "ConnectionError") {
-                            navigation("/");
+                            // Let the APIErrorDialog show the warning
+                            return;
                         }
                     }
                     setProject(null);
@@ -56,6 +58,9 @@ export default function ProjectPage() {
                     project ? <ProjectPageContent/> : <ProjectPageSkeleton/>
                 }
             </Stack>
+            {
+                <APIErrorDialog errorStream={project ? project.onError : BoopAPI.onError} onDismiss={project ? undefined : () => {navigation("..")}}/>
+            }
             {
                 project === null && <ProjectNotFoundAlert open={project === null} onDismiss={() => { navigation("..") }} projectId={ projectId! } />
             }

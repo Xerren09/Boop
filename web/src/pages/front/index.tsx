@@ -6,6 +6,7 @@ import Runtime from "../../components/runtime";
 import { BoopAPI, type BoopStatus } from "../../api/api";
 import BoopProjectsTab from "./tabs/projects.tab";
 import ThemeSwitchButton from "../../components/theme/button";
+import { APIErrorDialog } from "../project/apiErrorDialog";
 
 export default function FrontPage() {
     const [status, setStatus] = useState<BoopStatus | null>(null);
@@ -16,7 +17,7 @@ export default function FrontPage() {
             if (status) {
                 setStatus(status);
             }
-        });
+        })
     }, []);
 
     const startupTime = useMemo(() => {
@@ -35,7 +36,9 @@ export default function FrontPage() {
                     }
                 </Caption1>
             </Stack>
-
+            {
+                <APIErrorDialog errorStream={BoopAPI.onError}/>    
+            }
             <Stack gap={16} horizontalFill id={styles.frontPageContent}>
                 <Stack horizontalFill horizontalAlign="end">
                     <ThemeSwitchButton/>
