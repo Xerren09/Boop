@@ -8,7 +8,7 @@ const statusMap: { [key in NonNullable<ProjectStatus>]: Status } = {
     "installing": "pending",
     "installSuccess": "pending",
     "error": "error",
-    "disposed": "killed"
+    "disposed": "disposed"
 }
 
 export function ProjectStatusIcon(props: Props) {
