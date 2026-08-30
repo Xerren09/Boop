@@ -16,6 +16,12 @@ export class BoopAPI {
         return this._apiURL;
     }
 
+    private static errorEmitter: Subject<unknown> = new Subject();
+
+    static get onError() {
+        return this.errorEmitter as Observable<unknown>;
+    }
+
     static setOrigin(origin: string | URL | null) {
         if (origin == null) {
             this._origin = new URL(window.location.origin);
@@ -34,17 +40,17 @@ export class BoopAPI {
     }
 
     static getStatus(): Promise<BoopStatus | undefined> {
-        return makeRequest<BoopStatus>(this.constructApiURL(`status`), "GET");
+        return this.makeRequest<BoopStatus>(this.constructApiURL(`status`), "GET");
     }
 
     static async getProjectList(): Promise<ProjectEntry[]> {
-        const arr = await makeRequest<ProjectEntry[]>(this.constructApiURL(`projects`), "GET");
+        const arr = await this.makeRequest<ProjectEntry[]>(this.constructApiURL(`projects`), "GET");
         return arr ?? []
     }
 
     static async getProject(projectId: string) {
         try {
-            const projectInfo = await makeRequest<ProjectInfo>(this.constructApiURL(`projects/${projectId}`), "GET");
+            const projectInfo = await this.makeRequest<ProjectInfo>(this.constructApiURL(`projects/${projectId}`), "GET");
             if (projectInfo) {
                 return new BoopProject(projectInfo.name, projectInfo.remote, projectInfo.type);
             }
@@ -60,8 +66,19 @@ export class BoopAPI {
     }
 
     static deleteProject(projectId: string) {
-        return makeRequest<ProjectInfo>(this.constructApiURL(`projects/${projectId}`), "DELETE");
+        return this.makeRequest<ProjectInfo>(this.constructApiURL(`projects/${projectId}`), "DELETE");
     }
+
+    private static async makeRequest<T>(url: string | URL, method: "GET" | "POST" | "DELETE" | "PATCH", body?: object) : Promise<T | undefined> {
+        try {
+            const ret = await makeRequest<T>(url, method, body);
+            return ret;
+        }
+        catch (err) {
+            this.errorEmitter.next(err);
+            throw err;
+        }
+    };
 }
 
 
