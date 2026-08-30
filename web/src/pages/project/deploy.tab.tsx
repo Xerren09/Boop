@@ -17,7 +17,8 @@ const statusHeadingMap: { [key in NonNullable<ProjectStatus>]: string } = {
     "installFailed": "Installer failed",
     "installSuccess": "Installer complete",
     "stopped": "Stopped",
-    "error": "Error"
+    "error": "Error",
+    "disposed": "Project unavailable"
 }
 
 export default function ProjectDeployTab(props: { status: ProjectStatus, process?: RemoteProcess | null, directUrlHref?: string }) {
@@ -87,6 +88,11 @@ export default function ProjectDeployTab(props: { status: ProjectStatus, process
                 <StatusDescriptionItem<ProjectStatus> value={"installSuccess"} >
                     <Text>
                         This project has just been built, and will be deployed momentarily. Check the build logs via the <ProjectTabLink target={ProjectTab.Build}><em>build</em></ProjectTabLink> tab, or stay here to wait for deployment information.
+                    </Text>
+                </StatusDescriptionItem>
+                <StatusDescriptionItem<ProjectStatus> value={"disposed"} >
+                    <Text>
+                        The project was unloaded by Boop. This either means Boop is shutting down, or the project was deleted.
                     </Text>
                 </StatusDescriptionItem>
             </StatusDescription>
