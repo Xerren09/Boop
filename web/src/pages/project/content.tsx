@@ -17,6 +17,7 @@ import EnvironmentVariableEditor from "./environment.tab";
 import ProjectWebhookEventsTab from "./events.tab";
 import ProjectLogTab from "./log.tab";
 import { useNavigate } from "react-router";
+import { ProjectDisposedAlert } from "../../components/project/disposedAlert";
 
 export function ProjectPageContent() {
     const project = useContext(ProjectProvider)!;
@@ -79,8 +80,17 @@ export function ProjectPageContent() {
         });
     }, [project, projectStatus]);
 
+    useEffect(() => { 
+        if (projectStatus === "disposed") {
+            switchTab(ProjectTab.Deploy);
+        }
+    }, [projectStatus]);
+
     return (
         <>
+            {
+                <ProjectDisposedAlert open={ projectStatus === "disposed" } />
+            }
             {
                 // Project info section
             }
@@ -175,11 +185,12 @@ export function ProjectPageContent() {
                     style={{
                         overflowX: "auto"
                     }}
+                    disabled={ projectStatus === "disposed" }
                 >
                     <Tab value={ ProjectTab.Deploy }>Deploy</Tab>
                     <Tab value={ ProjectTab.Build }>Build</Tab>
                     {
-                        project!.type == "service" && <Tab value={ ProjectTab.Environment }>Environment</Tab>
+                        project!.type == "service" && <Tab value={ProjectTab.Environment}>Environment</Tab>
                     }
                     <Tab value={ ProjectTab.Events }>Events</Tab>
                     <Tab value={ ProjectTab.Log }>Log</Tab>
