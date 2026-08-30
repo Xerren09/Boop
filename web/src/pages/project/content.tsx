@@ -71,7 +71,7 @@ export function ProjectPageContent() {
      * Effect for fetching the PORT environment variable on deployed.
      */
     useEffect(() => {
-        if (!project || project.type == "webapp") {
+        if (!project || project.type == "webapp" || projectStatus !== "deployed") {
             return;
         }
         project.getEnv("PORT").then(_port => {
