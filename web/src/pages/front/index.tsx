@@ -29,7 +29,11 @@ export default function FrontPage() {
             <Stack>
                 <LargeTitle style={{color: "#00abec"}}>Boop!</LargeTitle>
                 <Subtitle2><Link href="https://github.com/Xerren09/Boop" target="_blank">A lightweight NodeJS CI/CD server for GitHub repositories</Link></Subtitle2>
-                <Caption1 italic>Node { status?.nodeVer }  //  { status?.system }-{ status?.arch }  //  <Runtime short start={startupTime}/></Caption1>
+                <Caption1 italic>
+                    {
+                        status && <Text>Node {status?.nodeVer}  //  {status?.system}-{status?.arch}  //  <Runtime short start={startupTime} /></Text>
+                    }
+                </Caption1>
             </Stack>
 
             <Stack gap={16} horizontalFill id={styles.frontPageContent}>
