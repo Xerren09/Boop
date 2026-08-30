@@ -9,6 +9,11 @@ import AsyncLock from "async-lock";
 
 const lock = new AsyncLock();
 
+/**
+ * Since Boop is essentially headless, disable git credential prompts.
+ * 
+ * See {@link https://git-scm.com/docs/git-config#Documentation/git-config.txt-credentialinteractive|git config credentials.interactive}
+ */
 const GIT_BASE_ARGS = ['-c', 'credential.interactive=false', '-c', 'core.askPass=true'];
 
 /**
