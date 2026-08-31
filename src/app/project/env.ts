@@ -2,7 +2,7 @@ import { writeFile, readFile } from "fs/promises";
 import { pathExists } from "../utilities.js";
 
 export type Environment = {
-    [key: string]: string | number | boolean
+    [key: string]: string
 }
 
 export class EnvFile {
@@ -29,8 +29,7 @@ export class EnvFile {
             const text = (await readFile(this.file)).toString('utf8');
             if (text.length != 0) {
                 const p = JSON.parse(text) as Environment;
-                for (const _key of Object.keys(p)) {
-                    const key = this.normaliseKey(_key);
+                for (const key of Object.keys(p)) {
                     this.set(key, p[key]);
                 }
             }
@@ -42,10 +41,10 @@ export class EnvFile {
 
     public set(key: string, value: string | number | boolean) {
         key = this.normaliseKey(key);
-        this._env[key] = value;
+        this._env[key] = `${value}`;
     }
 
-    public get(key: string): string | number | boolean | null {
+    public get(key: string): string | null {
         key = this.normaliseKey(key);
         if (this._env[key] != undefined) {
             return this._env[key];
