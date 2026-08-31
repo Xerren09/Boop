@@ -48,4 +48,4 @@ export type ProjectStateEvent = {
 
 export type ProjectStateEvents = ProjectStateEvent["type"];
 
-export type ProjectStatus = 'deployed' | 'stopped' | 'error' | 'installing' | 'installSuccess' | 'installFailed' | null;
+export type ProjectStatus = 'deployed' | 'stopped' | 'error' | 'installing' | 'installSuccess' | 'installFailed' | 'disposed' | null;

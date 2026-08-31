@@ -2,6 +2,7 @@ import { Dialog, DialogTrigger, Button, DialogSurface, DialogBody, DialogTitle, 
 import { AddRegular } from "@fluentui/react-icons";
 import { useRef, useState } from "react";
 import Stack from "../../../../components/stack";
+import type { IDialogBodyProps } from "../../../../components/IDialogBody";
 
 interface NewEnvironmentVariableDialogProps {
     onSubmit: (key: string, value: string) => void
@@ -15,18 +16,30 @@ interface NewEnvironmentVariableDialogProps {
 export default function NewEnvironmentVariableDialog(props: NewEnvironmentVariableDialogProps) {
     const [open, setOpen] = useState(false);
 
+    function onClose(data?: { key: string; value: string; }) {
+        if (!data) {
+            return;
+        }
+        props.onSubmit(data.key, data.value);
+        setOpen(() => false);
+    }
+
     return (
-        <>
-            <Button icon={<AddRegular />} appearance="primary" onClick={() => { setOpen(() => true) }}>Create new</Button>
-            {
-                // Unmount the dialog to clear the validation state. Easier than playing around with validation callbacks
-                open && <EditDialog onSubmit={props.onSubmit} onOpenChange={(state) => {setOpen(() => state)}} open={ open }></EditDialog>
-            }
-        </>
+        <Dialog
+            open={open}
+            onOpenChange={(evt, data) => {setOpen(() => data.open)}}
+        >
+            <DialogTrigger>
+                <Button icon={<AddRegular />} appearance="primary">Create new</Button>
+            </DialogTrigger>
+            <DialogSurface>
+                <Content close={onClose}/>
+            </DialogSurface>
+        </Dialog>
     );
 }
 
-function EditDialog(props: { onSubmit: (key: string, value: string) => void; open: boolean, onOpenChange: (open: boolean) => void }) {
+function Content(props: IDialogBodyProps<{ key: string, value: string }>) {
     const keyInput = useRef<HTMLInputElement | null>(null);
     const valueInput = useRef<HTMLInputElement | null>(null);
     
@@ -69,69 +82,57 @@ function EditDialog(props: { onSubmit: (key: string, value: string) => void; ope
         }
         const key = keyInput.current.value.toUpperCase();
         const value = valueInput.current.value;
-        props.onSubmit(key, value);
-        props.onOpenChange(false);
+        props.close({ key, value });
     }
-
     return (
-        <>
-            <Dialog
-                open={props.open}
-                unmountOnClose
-                onOpenChange={(evt, data) => { props.onOpenChange(data.open); }}
-            >
-                <DialogSurface>
-                    <DialogBody>
-                        <DialogTitle>Define New Environment Variable</DialogTitle>
-                        <DialogContent>
-                            <Stack gap={12} style={{ marginTop: 18, marginBottom: 18 }}>
-                                <Stack horizontalFill gap={3}>
-                                    <Field
-                                        label={"Variable Name"}
-                                        validationState={ keyValid ? "none" : "error" }
-                                        validationMessage={keyValid ? "": "Providing a value is required."}
-                                        required
-                                    >
-                                        <Input
-                                            ref={keyInput}
-                                            placeholder="Name"
-                                            onChange={(_target, val) => {
-                                                if (!keyInput.current) {
-                                                    return;
-                                                }
-                                                keyInput.current.value = val.value.toUpperCase();
-                                                validateKey();
-                                            }}
-                                        />
-                                    </Field>
-                                </Stack>
-                                <Stack horizontalFill gap={3}>
-                                    <Field
-                                        label={"Value"}
-                                        validationState={ valValid ? "none" : "error" }
-                                        validationMessage={valValid ? "": "Providing a value is required."}
-                                        required
-                                    >
-                                        <Input
-                                            ref={valueInput}
-                                            placeholder="Value"
-                                            onChange={() => {
-                                                validateValue();
-                                            }}
-                                        />
-                                    </Field>
-                                </Stack>
-                            </Stack>
-                        </DialogContent>
-                        <DialogActions>
-                            <Button appearance="primary" autoFocus onClick={Submit}>Create</Button>
-                            <DialogTrigger disableButtonEnhancement>
-                                <Button appearance="secondary">Cancel</Button>
-                            </DialogTrigger>
-                        </DialogActions>
-                    </DialogBody>
-                </DialogSurface>
-            </Dialog>
-        </>
-    )
+        <DialogBody>
+            <DialogTitle>Define New Environment Variable</DialogTitle>
+            <DialogContent>
+                <Stack gap={12} style={{ marginTop: 18, marginBottom: 18 }}>
+                    <Stack horizontalFill gap={3}>
+                        <Field
+                            label={"Variable Name"}
+                            validationState={ keyValid ? "none" : "error" }
+                            validationMessage={keyValid ? "": "Providing a value is required."}
+                            required
+                        >
+                            <Input
+                                ref={keyInput}
+                                placeholder="Name"
+                                onChange={(_target, val) => {
+                                    if (!keyInput.current) {
+                                        return;
+                                    }
+                                    keyInput.current.value = val.value.toUpperCase();
+                                    validateKey();
+                                }}
+                            />
+                        </Field>
+                    </Stack>
+                    <Stack horizontalFill gap={3}>
+                        <Field
+                            label={"Value"}
+                            validationState={ valValid ? "none" : "error" }
+                            validationMessage={valValid ? "": "Providing a value is required."}
+                            required
+                        >
+                            <Input
+                                ref={valueInput}
+                                placeholder="Value"
+                                onChange={() => {
+                                    validateValue();
+                                }}
+                            />
+                        </Field>
+                    </Stack>
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button appearance="primary" autoFocus onClick={Submit}>Create</Button>
+                <DialogTrigger disableButtonEnhancement>
+                    <Button appearance="secondary">Cancel</Button>
+                </DialogTrigger>
+            </DialogActions>
+        </DialogBody>
+    );
 }

@@ -11,17 +11,18 @@ import { ProjectIcon } from "../../components/project/typeIcon";
 import Runtime from "../../components/runtime";
 import Section from "../../components/section";
 import Stack from "../../components/stack";
-import ProjectInstallerTab from "./build.tab";
+import ProjectBuildTab from "./build.tab";
 import ProjectDeployTab from "./deploy.tab";
-import EnvironmentVariableEditor from "./environment.tab";
+import ProjectEnvironmentTab from "./environment.tab";
 import ProjectWebhookEventsTab from "./events.tab";
 import ProjectLogTab from "./log.tab";
 import { useNavigate } from "react-router";
+import { ProjectDisposedAlert } from "../../components/project/disposedAlert";
 
 export function ProjectPageContent() {
     const project = useContext(ProjectProvider)!;
 
-    const { projectStatus, lastWebhookEvent, mainProcess } = useProjectStreamer(project.name, true);
+    const { projectStatus, lastWebhookEvent, mainProcess } = useProjectStreamer(project.socketUrl, true);
 
     const { currentTab, switchTab } = useHashTabs(ProjectTab);
     const [port, setPort] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export function ProjectPageContent() {
      * Effect for fetching the PORT environment variable on deployed.
      */
     useEffect(() => {
-        if (!project || project.type == "webapp") {
+        if (!project || project.type == "webapp" || projectStatus !== "deployed") {
             return;
         }
         project.getEnv("PORT").then(_port => {
@@ -79,8 +80,17 @@ export function ProjectPageContent() {
         });
     }, [project, projectStatus]);
 
+    useEffect(() => { 
+        if (projectStatus === "disposed") {
+            switchTab(ProjectTab.Deploy);
+        }
+    }, [projectStatus]);
+
     return (
         <>
+            {
+                <ProjectDisposedAlert open={ projectStatus === "disposed" } />
+            }
             {
                 // Project info section
             }
@@ -99,12 +109,14 @@ export function ProjectPageContent() {
                         <ProjectControlButton
                             action="start"
                             appearance="subtle"
-                            hideLabel={ compactToolbar }
+                            hideLabel={compactToolbar}
+                            projectState={projectStatus}
                         />
                         <ProjectControlButton
                             action="stop"
                             appearance="subtle"
-                            hideLabel={ compactToolbar }
+                            hideLabel={compactToolbar}
+                            projectState={projectStatus}
                         />
                         <ProjectControlButton
                             action="restart"
@@ -173,24 +185,24 @@ export function ProjectPageContent() {
                     style={{
                         overflowX: "auto"
                     }}
+                    disabled={ projectStatus === "disposed" }
                 >
                     <Tab value={ ProjectTab.Deploy }>Deploy</Tab>
                     <Tab value={ ProjectTab.Build }>Build</Tab>
                     {
-                        project!.type == "service" && <Tab value={ ProjectTab.Environment }>Environment</Tab>
+                        project!.type == "service" && <Tab value={ProjectTab.Environment}>Environment</Tab>
                     }
                     <Tab value={ ProjectTab.Events }>Events</Tab>
                     <Tab value={ ProjectTab.Log }>Log</Tab>
                 </TabList>
-
                 {
                     currentTab === ProjectTab.Deploy && <ProjectDeployTab process={mainProcess} status={projectStatus} directUrlHref={ directUrlHref } />
                 }
                 {
-                    currentTab === ProjectTab.Build && <ProjectInstallerTab projectId={ project!.name }/>
+                    currentTab === ProjectTab.Build && <ProjectBuildTab/>
                 }
                 {
-                    currentTab === ProjectTab.Environment && <EnvironmentVariableEditor/>
+                    currentTab === ProjectTab.Environment && <ProjectEnvironmentTab/>
                 }
                 {
                     currentTab === ProjectTab.Events && <ProjectWebhookEventsTab refreshKey={lastWebhookEvent}/>

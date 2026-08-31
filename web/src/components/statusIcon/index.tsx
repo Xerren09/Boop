@@ -1,5 +1,5 @@
 import { Spinner, Tooltip, type SpinnerProps } from "@fluentui/react-components";
-import { CheckmarkCircleColor, DismissCircleColor, ErrorCircleColor, FlashFilled, PauseFilled, WarningColor } from "@fluentui/react-icons";
+import { CheckmarkCircleColor, DismissCircleColor, DismissFilled, ErrorCircleColor, FlashFilled, PauseFilled, WarningColor } from "@fluentui/react-icons";
 
 export default function StatusIcon(props: StatusIconProps) {
 
@@ -16,7 +16,9 @@ export default function StatusIcon(props: StatusIconProps) {
             case "paused":
                 return <PauseFilled fontSize={size} primaryFill="orange" />
             case "killed":
-                return <FlashFilled fontSize={size} primaryFill="orange"/>
+                return <FlashFilled fontSize={size} primaryFill="orange" />
+            case "disposed":
+                return <DismissFilled fontSize={size} primaryFill="darkgrey" />
             case "pending":
             default:
                 return <Spinner size={ props.size ?? "small" }></Spinner>
@@ -25,7 +27,7 @@ export default function StatusIcon(props: StatusIconProps) {
 
     return (
         <div style={{ display: "flex" }}>
-            <Tooltip content={props.status} relationship="description">
+            <Tooltip content={props.status ?? "pending"} relationship="description">
                 {
                     getIcon()
                 }
@@ -34,7 +36,7 @@ export default function StatusIcon(props: StatusIconProps) {
     );
 }
 
-export type Status = "ok" | "error" | "warning" | "pending" | "paused" | "killed";
+export type Status = "ok" | "error" | "warning" | "pending" | "paused" | "killed" | "disposed" | undefined;
 
 export type StatusIconProps = {
     status: Status,

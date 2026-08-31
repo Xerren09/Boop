@@ -6,6 +6,7 @@ import Runtime from "../../components/runtime";
 import { BoopAPI, type BoopStatus } from "../../api/api";
 import BoopProjectsTab from "./tabs/projects.tab";
 import ThemeSwitchButton from "../../components/theme/button";
+import { APIErrorDialog } from "../project/apiErrorDialog";
 
 export default function FrontPage() {
     const [status, setStatus] = useState<BoopStatus | null>(null);
@@ -16,7 +17,7 @@ export default function FrontPage() {
             if (status) {
                 setStatus(status);
             }
-        });
+        })
     }, []);
 
     const startupTime = useMemo(() => {
@@ -29,12 +30,19 @@ export default function FrontPage() {
             <Stack>
                 <LargeTitle style={{color: "#00abec"}}>Boop!</LargeTitle>
                 <Subtitle2><Link href="https://github.com/Xerren09/Boop" target="_blank">A lightweight NodeJS CI/CD server for GitHub repositories</Link></Subtitle2>
-                <Caption1 italic>Node { status?.nodeVer }  //  { status?.system }-{ status?.arch }  //  <Runtime short start={startupTime}/></Caption1>
+                <Caption1 italic>
+                    {
+                        status && <Text>Node {status?.nodeVer}  //  {status?.system}-{status?.arch}  //  <Runtime short start={startupTime} /></Text>
+                    }
+                </Caption1>
             </Stack>
-
-            <Stack gap={16} horizontalAlign="end" id={styles.frontPageContent}>
-                <ThemeSwitchButton/>
-    
+            {
+                <APIErrorDialog errorStream={BoopAPI.onError}/>    
+            }
+            <Stack gap={16} horizontalFill id={styles.frontPageContent}>
+                <Stack horizontalFill horizontalAlign="end">
+                    <ThemeSwitchButton/>
+                </Stack>
                 <BoopProjectsTab />
                 {
                     /*

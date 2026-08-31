@@ -144,7 +144,7 @@ function formatter(start: number | Date, end?: number | Date, digital?: Array<nu
 function calculateTimeoutDuration(start: number | Date) {
     const delta = Math.floor((Date.now() - (start).valueOf()) / 1000);
     if (delta < 60) 
-        return delta
+        return 1
     if (delta < 3600) 
         return 60 - (delta % 60)
     if (delta < 86400)
