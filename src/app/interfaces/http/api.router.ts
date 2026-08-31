@@ -251,37 +251,60 @@ apiRouter.get("/projects/:projectName/env", (req, res) => {
     res.status(200).json(project.environment.variables);
 });
 
-apiRouter.get("/projects/:projectName/env/:key", (req, res) => {
-    const project = req.project;
-    const val = project.environment.get(req.params.key);
-    if (val != null) {
-        res.status(200).json(val);
-    }
-    else {
-        res.status(404).send("No environment variable found.");
-    }
-});
-
 apiRouter.patch("/projects/:projectName/env", (req, res) => {
     const project = req.project;
-    if (req.body?.key != undefined && req.body?.value != undefined) {
-        project.environment.set(req.body.key, req.body.value);
-        res.sendStatus(200);
+    const key: string | undefined = req.body?.key;
+    const val: string | number = req.body?.value ?? "";
+    if (!key) {
+        return res.status(400).send(`Environment variable key not specified.`);
     }
-    else {
-        const badKey = req.body?.key == undefined;
-        const badValue = req.body?.value == undefined;
-        res.status(400).send(`Invalid arguments: ${badKey ? "key" : ""} ${badKey && badValue ? " and ": ""} ${badValue ? "value" : ""} undefined.`);
+    if (typeof key !== "string") {
+        return res.status(400).send("Key must be a string.");
     }
+    project.environment.set(key, val);
+    res.sendStatus(202);
 });
 
 apiRouter.delete("/projects/:projectName/env", (req, res) => {
     const project = req.project;
-    if (req.body.key != undefined) {
-        project.environment.delete(req.body.key);
-        res.sendStatus(200);
+    const key = req.body?.key;
+    if (!key) {
+        return res.status(400).send(`Environment variable key not specified.`);
     }
-    else {
-        res.status(404).send("No environment variable found.");
+    if (typeof key !== "string") {
+        return res.status(400).send("Key must be a string.");
     }
+    project.environment.delete(key);
+    res.sendStatus(202);
+});
+
+apiRouter.get("/projects/:projectName/env/:key", (req, res) => {
+    const project = req.project;
+    const key = req.params.key;
+    if (project.environment.has(key) == false) {
+        return res.status(404).send("No environment variable found.");
+    }
+    const val = project.environment.get(req.params.key);
+    res.status(200).json(val);
+});
+
+apiRouter.post("/projects/:projectName/env/:key", (req, res) => {
+    const project = req.project;
+    const val = req.body.value ?? "";
+    const key = req.params.key;
+    if (!key) {
+        return res.status(404).send("No environment variable specified.");
+    }
+    project.environment.set(key, val === undefined ? "" : val);
+    res.sendStatus(202);
+});
+
+apiRouter.delete("/projects/:projectName/env/:key", (req, res) => {
+    const project = req.project;
+    const key = req.params.key;
+    if (!key) {
+        return res.status(404).send("No environment variable specified.");
+    }
+    project.environment.delete(key);
+    res.sendStatus(202);
 });
