@@ -1,6 +1,6 @@
 {
     "name": "@xerren09/boop",
-    "version": "3.0.1",
+    "version": "3.1.0",
     "description": "A lightweight NodeJS CI/CD server for GitHub repositories ",
     "preferGlobal": true,
     "scripts": {
@@ -75,6 +75,7 @@
         "http-proxy-3": "^1.23.2",
         "morgan": "^1.10.1",
         "path-to-regexp": "^8.4.2",
+        "serialize-error": "^13.0.1",
         "tree-kill": "^1.2.2",
         "winston": "^3.19.0",
         "ws": "^8.21.1",

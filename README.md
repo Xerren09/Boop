@@ -15,6 +15,21 @@ Once a valid event was received, Boop will attempt to clone the repository, buil
 * __Simple web UI:__
 The project data, deploy outputs, and each step of the build process is available *live* with their terminal outputs through the dedicated Web UI component.
 
+## Quick links
+
+ - [Installation](#installation)
+ - [Installing projects](#installing-projects)
+ - [Webhook](#webhook)
+ - [Security](#security)
+   - [Webhook signing](#webhook-signing)
+ - [Project configuration](#project-configuration)
+ - [Deploying](#deployments)
+   - [Webapps](#webapps)
+   - [Services](#services)
+ - [Interfaces](#interfaces)
+   - [CLI](#cli)
+   - [Web UI](#web-ui)
+
 ## Installation
 
 Boop requires at least **NodeJS v24.19.0**, and git to be installed.
@@ -33,14 +48,32 @@ By default Boop will listen on port `8004`. This can be changed:
 
 Projects are installed into the current user's home folder, in the `.boop` directory.
 
+## Installing projects
+
+Installing projects can be done via either triggering a webhook event through GitHub, typically done automatically when the webhook was first configured, or manually through the CLI ([see `install` command](#install)).
+
+Installs will fail if git doesn't have permissions to access the target repository. It is your responsibility to configure git accordingly.
+
+## Webhook
+
+Webhook events from GitHub can be directed to the following route:
+
+`/boop/webhook`
+
+> [!NOTE]  
+> If multiple valid events are received for a project in quick succession, the currently pending one will be cancelled. If an event is already queued it will be discarded completely, and only the latest event will be processed.
+
 ## Security
 
-Disclaimer here. Boop is intended for scenarios where you have your own server and know how to safely configure it; and it was built with that in mind.
+Disclaimer here. Boop is intended for scenarios where you have your own server and know how to safely configure it; and it was built with that in mind. Ideally it should be run in an isolated container and with limited permissions. Webhook events are verified, but at the end of the day they come from the internet and will - by design - casue Boop to download and run software.
 
 > [!WARNING]  
 > Boop also exposes some dangerous APIs. It should always run behind a well configured webserver that only exposes the desired routes.
 
-### Webhooks
+> [!WARNING]  
+> **Any route beginning with `/boop/` should not be freely exposed to the internet.** They allow for full access to Boop through its API!
+
+### Webhook Signing
 
 Webhooks should be secured with a secret that will be used to verify incoming webhook payloads. This can be either set through a .env file in Boop's working root via the `SECRET` key or through the `--secret` argument:
 
@@ -53,7 +86,7 @@ SECRET=signature
 ```
 
 > [!CAUTION]  
-> **Omitting a `secret` will allow anyone to use Boop and push updates to your deployed projects.**
+> **Omitting a `secret` will cause Boop to reject ALL incoming events.**
 
 > [!NOTE]
 > See GitHub's guide on [securing your webhooks](https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks) for more.
@@ -107,17 +140,6 @@ Both HTTP requests and WebSockets are proxied. Since you might want to access se
 > [!IMPORTANT]  
 > Proxies will not be started if the service's listening port is not explicitly given to Boop.
 
-## Webhook
-
-Webhook events from GitHub can be directed to the following route:
-
-`/boop/webhook`
-
-> [!NOTE]  
-> If multiple valid events are received for a project in quick succession, the currently pending one will be cancelled. If an event is already queued it will be discarded completely, and only the latest event will be processed.
-
-> [!WARNING]  
-> **Any route beginning with `/boop/` should not be freely exposed to the internet.** They allow for full access to Boop through its API!
 
 # Interfaces
 
@@ -127,22 +149,22 @@ Boop offers two control interfaces, a CLI which is always available, and a WebUI
 
 ![Boop CLI startup screen](./docs/images/CLI.jpg)
 
-### > start
+### start
 Accepted arguments: `<project-name>`, `all`
 
 Starts a given project.
 
-### > stop
+### stop
 Accepted arguments: `<project-name>`, `all [-force]`
 
 Stops a given project. Stopped projects are unavailable through proxies, and in the case of service projects, they are killed.
 
-### > restart
+### restart
 Accepted arguments: `<project-name>`
 
 Stops, then starts a given project.
 
-### > status
+### status
 Accepted arguments: `<project-name>`, `all`
 
 Prints the list of projects and their statuses.
@@ -160,14 +182,14 @@ Example:
     Index: <index-file-path>
 ```
 
-### > install
+### install
 Accepted arguments: `<repository-url>`
 
 Clones a git repository from the URL and registers it as a project if a configuration file exists, then builds and deploys it. The URL is directly passed to git, so any it can parse is accepted. 
 
 Projects are installed into the current user's home folder, in the `.boop` directory.
 
-### > uninstall
+### uninstall
 Accepted arguments: `<project-name>`
 
 Remove a given project.
@@ -175,10 +197,10 @@ Remove a given project.
 > [!CAUTION]
 > Deleted projects are shut down and permanently wiped from disk, along with all logs and files. This is irreversible.
 
-### > exit
+### exit
 Shuts down all project handlers and their sub-processes, then exists Boop.
 
-### > help
+### help
 Prints the same command list and information as this section.
 
 ## Web UI

@@ -8,8 +8,24 @@ http:
   url: http://localhost:8004/boop/api/projects/{{PROJECT}}/logs/webhook
   auth: inherit
 
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        const { webhookEventSchema } = require("./CommonSchemas.js");
+
+        test("response matches the Webhook Log schema", function () {
+            const webhookLogSchema = {
+                type: "array",
+                uniqueItems: true,
+                items: webhookEventSchema
+            };
+            expect(res.getBody()).to.have.jsonSchema(webhookLogSchema, { allErrors: true });
+        });
+
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true

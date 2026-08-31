@@ -1,7 +1,8 @@
 import Manager from "../../project/manager.js";
-import { createInterface, Interface } from "node:readline/promises";
-import { CompleterResult } from "node:readline";
+import { createInterface, type Interface } from "node:readline/promises";
+import type { CompleterResult } from "node:readline";
 import { CLICommands } from "./commands.js";
+import { BoopConfiguration } from "../../settings.js";
 
 export function createCLI() {
     let __shouldContinue = true;
@@ -22,7 +23,7 @@ export function createCLI() {
             }
         }
         catch (err) {
-            console.error(`Error: ${err instanceof Error ? err.message : err}`);
+            prettyPrintError(err);
         }
         finally {
             if (__shouldContinue) {
@@ -83,4 +84,54 @@ function parseArgs(str: string, command: string) {
     else {
         return ret;
     }
+}
+
+/**
+ * Prints error details to the console. Nester errors are grouped and they cause stacks are walked.
+ * 
+ * If {@link BoopConfiguration.DEBUG} is true, the value of every {@link Error.stack} is printed as well.
+ * @param err Any thrown value.
+ */
+export function prettyPrintError(err: unknown) {
+    if (err instanceof Error) {
+        if (err instanceof AggregateError) {
+            console.groupCollapsed(getErrorDescription(err));
+            for (let index = 0; index < err.errors.length; index++) {
+                const error = err.errors[index];
+                prettyPrintError(error);
+            }
+        }
+        else if (err instanceof SuppressedError) {
+            console.groupCollapsed(getErrorDescription(err));
+            console.error(`Error:`);
+            prettyPrintError(err.error);
+            console.error(`Suppressed:`);
+            prettyPrintError(err.suppressed);
+        }
+        else {
+            if (err.cause) {
+                console.groupCollapsed(getErrorDescription(err));
+                prettyPrintError(err.cause);
+            }
+            else {
+                console.error(`${getErrorDescription(err)}`);
+            }
+        }
+        if (BoopConfiguration.DEBUG && err.stack) {
+            console.error(`Stack:\n${err.stack}`);
+        }
+    }
+    else {
+        console.error(`${typeof err === "object" ? JSON.stringify(err, null, 2) : err}`);
+    }
+    console.groupEnd();
+}
+
+/**
+ * Returns the description, or if empty, the type name of the passed Error.
+ * @param err 
+ * @returns 
+ */
+function getErrorDescription(err: Error) {
+    return err.message.length == 0 ? err.name : err.message;
 }

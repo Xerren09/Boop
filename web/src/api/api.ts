@@ -1,6 +1,6 @@
 import { createContext } from "react";
 import type { ProcessStateMessage } from "./streamers/types";
-import { ReplaySubject, type Observable } from "rxjs";
+import { ReplaySubject, Subject, type Observable } from "rxjs";
 
 const apiPathFragment = "/boop/api/";
 
@@ -14,6 +14,12 @@ export class BoopAPI {
     static _apiURL: URL = new URL(apiPathFragment, this._origin);
     static get apiUrl() {
         return this._apiURL;
+    }
+
+    private static errorEmitter: Subject<unknown> = new Subject();
+
+    static get onError() {
+        return this.errorEmitter as Observable<unknown>;
     }
 
     static setOrigin(origin: string | URL | null) {
@@ -34,35 +40,62 @@ export class BoopAPI {
     }
 
     static getStatus(): Promise<BoopStatus | undefined> {
-        return makeRequest<BoopStatus>(this.constructApiURL(`status`), "GET");
+        return this.makeRequest<BoopStatus>(this.constructApiURL(`status`), "GET");
     }
 
     static async getProjectList(): Promise<ProjectEntry[]> {
-        const arr = await makeRequest<ProjectEntry[]>(this.constructApiURL(`projects`), "GET");
+        const arr = await this.makeRequest<ProjectEntry[]>(this.constructApiURL(`projects`), "GET");
         return arr ?? []
     }
 
     static async getProject(projectId: string) {
-        const projectInfo = await makeRequest<ProjectInfo>(this.constructApiURL(`projects/${projectId}`), "GET");
-        if (projectInfo) {
-            return new BoopProject(projectInfo.name, projectInfo.remote, projectInfo.type);
+        try {
+            const projectInfo = await this.makeRequest<ProjectInfo>(this.constructApiURL(`projects/${projectId}`), "GET");
+            if (projectInfo) {
+                return new BoopProject(projectInfo.name, projectInfo.remote, projectInfo.type);
+            }
         }
-        else {
-            throw `No project with ID "${projectId}" exists.`;
+        catch (err) {
+            if (err instanceof APIError) {
+                if (err.name == "APIError") {
+                    throw new Error(`No project with ID "${projectId}" exists.`);
+                }
+            }
+            throw err;
         }
     }
 
     static deleteProject(projectId: string) {
-        return makeRequest<ProjectInfo>(this.constructApiURL(`projects/${projectId}`), "DELETE");
+        return this.makeRequest<ProjectInfo>(this.constructApiURL(`projects/${projectId}`), "DELETE");
     }
+
+    private static async makeRequest<T>(url: string | URL, method: "GET" | "POST" | "DELETE" | "PATCH", body?: object) : Promise<T | undefined> {
+        try {
+            const ret = await makeRequest<T>(url, method, body);
+            return ret;
+        }
+        catch (err) {
+            this.errorEmitter.next(err);
+            throw err;
+        }
+    };
 }
 
-export class BoopProject {
+
+export class BoopProject  {
     readonly name: string;
     readonly remote: string;
     readonly type: ProjectType;
     readonly baseUrl: URL;
     readonly proxyUrl: URL;
+    readonly installSocketUrl: URL;
+    readonly socketUrl: URL;
+
+    private readonly errorEmitter: Subject<unknown>;
+
+    get onError() {
+        return this.errorEmitter as Observable<unknown>;
+    }
 
     constructor(name: string, remote: string, type: ProjectType) {
         this.name = name;
@@ -70,6 +103,13 @@ export class BoopProject {
         this.type = type;
         this.baseUrl = BoopAPI.constructApiURL(`projects/${this.name}/`);
         this.proxyUrl = new URL(name, BoopAPI.origin);
+        const sockUrl = new URL(this.baseUrl);
+        sockUrl.protocol = "ws:";
+        this.socketUrl = sockUrl;
+        const instUrl = new URL("installer", this.baseUrl);
+        instUrl.protocol = "ws:";
+        this.installSocketUrl = instUrl;
+        this.errorEmitter = new Subject<unknown>();
     }
 
     private getRequestUrl(path: string, qparams?: { [key: string]: number | string | boolean, }): URL {
@@ -82,60 +122,76 @@ export class BoopProject {
         return ret;
     }
 
+    async makeProjectRequest<T>(url: string | URL, method: "GET" | "POST" | "DELETE" | "PATCH", body?: object) : Promise<T | undefined> {
+        try {
+            const ret = await makeRequest<T>(url, method, body);
+            return ret;
+        }
+        catch (err) {
+            this.errorEmitter.next(err);
+            throw err;
+        }
+    };
+
     getInfo() : Promise<ProjectInfo | undefined> {
-        return makeRequest<ProjectInfo>(this.baseUrl, "GET");
+        return this.makeProjectRequest<ProjectInfo>(this.baseUrl, "GET");
     }
 
     start() {
-        return makeRequest(this.getRequestUrl("start"), "POST");
+        return this.makeProjectRequest(this.getRequestUrl("start"), "POST");
     }
 
     stop() {
-        return makeRequest(this.getRequestUrl("stop"), "POST");
+        return this.makeProjectRequest(this.getRequestUrl("stop"), "POST");
     }
 
     delete() {
-        return makeRequest(this.getRequestUrl("delete"), "DELETE");
+        return this.makeProjectRequest(this.getRequestUrl("delete"), "DELETE");
     }
 
     restart() {
-        return makeRequest(this.getRequestUrl("restart"), "POST");
+        return this.makeProjectRequest(this.getRequestUrl("restart"), "POST");
     }
 
     async getEnv() : Promise<ProjectEnv | null>
     async getEnv(key: string) : Promise<string | null>
     async getEnv(key?: string): Promise<ProjectEnv | string | null> {
         if (key !== undefined) {
-            const ret = await makeRequest<string>(this.getRequestUrl(`env/${key}`), "GET");
-            return ret ?? null;
+            try {
+                const ret = await this.makeProjectRequest<string>(this.getRequestUrl(`env/${key}`), "GET");
+                return ret ?? null;
+            }
+            catch {
+                return null;
+            }
         }
         else {
-            const ret = await makeRequest<ProjectEnv>(this.getRequestUrl("env"), "GET");
+            const ret = await this.makeProjectRequest<ProjectEnv>(this.getRequestUrl("env"), "GET");
             return ret ?? null;
         }
     }
 
-    setEnv(envKey: string, value: string) {
-        return makeRequest<void>(this.getRequestUrl("env"), "PATCH", { key: envKey, value: value });
+    setEnv(key: string, value: string) {
+        return this.makeProjectRequest<void>(this.getRequestUrl("env"), "PATCH", { key: key, value: value });
     }
 
-    deleteEnv(envKey: string) {
-        return makeRequest(this.getRequestUrl("env"), "DELETE", { key: envKey });
+    deleteEnv(key: string) {
+        return this.makeProjectRequest(this.getRequestUrl("env"), "DELETE", { key: key });
     }
 
     async getProjectLog() : Promise<LogEntry[] | undefined> {
         // logs/project
-        const str = await makeRequest<string>(this.getRequestUrl(`logs/project`), "GET");
+        const str = await this.makeProjectRequest<string>(this.getRequestUrl(`logs/project`), "GET");
         return parseSystemLog(str!);
     }
 
     async getWebhookLog() : Promise<WebhookEvent[]> {
-        const ret = await makeRequest<WebhookEvent[]>(this.getRequestUrl("logs/webhook"), "GET");
+        const ret = await this.makeProjectRequest<WebhookEvent[]>(this.getRequestUrl("logs/webhook"), "GET");
         return ret ?? [];
     }
 
     async listDeployLogs() : Promise<EventLog[]> {
-        const ret = await makeRequest<EventLog[]>(this.getRequestUrl("logs/deploy"), "GET");
+        const ret = await this.makeProjectRequest<EventLog[]>(this.getRequestUrl("logs/deploy"), "GET");
         return ret ?? [];
     }
 
@@ -144,14 +200,14 @@ export class BoopProject {
     async getDeployLog(log: number, processOutput?: boolean) : Promise<ServiceDeployLog | string | undefined> {
         // logs/deploy/:log
         if (processOutput) {
-            return makeRequest<string>(this.getRequestUrl(`logs/deploy/${log}`, {process: true}), "GET", undefined);
+            return this.makeProjectRequest<string>(this.getRequestUrl(`logs/deploy/${log}`, {process: true}), "GET", undefined);
         }
-        return makeRequest<ServiceDeployLog>(this.getRequestUrl(`logs/deploy/${log}`), "GET", undefined);
+        return this.makeProjectRequest<ServiceDeployLog>(this.getRequestUrl(`logs/deploy/${log}`), "GET", undefined);
     }
 
     async listInstallLogs() : Promise<EventLog[]> {
         // logs/install
-        const ret = await makeRequest<EventLog[]>(this.getRequestUrl("logs/install"), "GET");
+        const ret = await this.makeProjectRequest<EventLog[]>(this.getRequestUrl("logs/install"), "GET");
         return ret ?? [];
     }
 
@@ -160,27 +216,53 @@ export class BoopProject {
     getInstallLog(log: number, step?: number) : Promise<InstallerLog | string | undefined> {
         // logs/install/:log
         if (step === undefined) {
-            return makeRequest<InstallerLog>(this.getRequestUrl(`logs/install/${log}`), "GET");
+            return this.makeProjectRequest<InstallerLog>(this.getRequestUrl(`logs/install/${log}`), "GET");
         }
         else {
-            return makeRequest<string>(this.getRequestUrl(`logs/install/${log}`, { step }), "GET");
+            return this.makeProjectRequest<string>(this.getRequestUrl(`logs/install/${log}`, { step }), "GET");
         }
     }
 }
 
-async function makeRequest<T>(url: string | URL, method: "GET" | "POST" | "DELETE" | "PATCH", body?: object) : Promise<T | undefined> {
-    const response = await fetch(url, {
-        method: method,
-        body: body ? JSON.stringify(body) : undefined,
-        headers: body ? {
-            "Content-Type": "application/json",
-        } : undefined
-    });
-    try {
-        const typeHeader = response.headers.get("content-type");
-        if (!typeHeader) {
-            throw "Invalid response; missing content-type header";
+
+
+export class APIError extends Error {
+    readonly url?: URL = undefined;
+
+    constructor(message?: string, options?: { url?: string | URL, name?: string } & ErrorOptions) {
+        super(message, options);
+        if (options?.name && options?.name.length != 0) {
+            this.name = options.name;
         }
+        else {
+            this.name = "APIError";
+        }
+        if (options?.url) {
+            this.url = new URL(options.url);
+        }
+    }
+}
+
+async function makeRequest<T>(url: string | URL, method: "GET" | "POST" | "DELETE" | "PATCH", body?: object): Promise<T | undefined> {
+    let response: Response | undefined = undefined;
+    const stringBody = body ? JSON.stringify(body) : undefined;
+    try {
+        response = await fetch(url, {
+            method: method,
+            body: stringBody,
+            headers: body ? {
+                "Content-Type": "application/json",
+            } : undefined
+        });
+    }
+    catch (err) {
+        throw new APIError("Could not connect to Boop API", { cause: err, name: "ConnectionError", url });
+    }
+    const typeHeader = response.headers.get("content-type");
+    if (!typeHeader) {
+        throw new APIError("Response is missing its content-type header", { url });
+    }
+    try {
         const type = typeHeader.split(";")[0];
         let ret: unknown;
         switch (type) {
@@ -200,8 +282,10 @@ async function makeRequest<T>(url: string | URL, method: "GET" | "POST" | "DELET
     }
     catch (err) {
         if (response.ok == false) {
-            throw err;
+            throw new APIError("Request returned an error", { cause: err, url });
         }
+        // This is probably a decode error, not an API error.
+        throw err;
     }
 }
 
@@ -291,7 +375,7 @@ export interface EventLog {
 
 export interface InstallerLog {
     time: number,
-    ref?: string | null,
+    ref: string | null,
     steps: {
         cmd: string,
         log: string,
@@ -304,7 +388,7 @@ export interface InstallerLog {
 
 export interface ServiceDeployLog {
     time: number,
-    ref?: string | null,
+    ref: string | null,
     process: InstallerLog["steps"][number]
 }
 
@@ -315,8 +399,7 @@ export interface ProjectInfo {
     deployed: boolean,
     remote: string,
     type: ProjectType,
-    lastEvent: WebhookEvent | null,
-    localPort: number | null
+    lastEvent: WebhookEvent | null
 }
 
 export interface ProjectEnv {

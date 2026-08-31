@@ -47,7 +47,12 @@ export default function ProjectControlButton(props: Props) {
     const invokeCallback = async () => {
         try {
             setBusy(true);
-            await fetch(getAPICallURL(projectId, props.action), { method: "POST"});
+            if (props.action === "delete") {
+                await BoopAPI.deleteProject(projectId);
+            }
+            else {
+                await fetch(getAPICallURL(projectId, props.action), { method: "POST"});
+            }
             if (props.onSettled) {
                 props.onSettled();
             }

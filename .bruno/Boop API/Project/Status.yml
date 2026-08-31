@@ -1,7 +1,7 @@
 info:
   name: Status
   type: websocket
-  seq: 9
+  seq: 14
 
 websocket:
   url: ws://localhost:8004/boop/api/projects/{{PROJECT}}?withProcess={{shouldStreamMainProcess}}

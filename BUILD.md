@@ -23,20 +23,20 @@ The program will be built in `.\bin\`.
 
 ### Development ENV
 
-Create a `.env` file to the root of the web folder, and add the following keys:
+Create an `.env` file to the root of `USERHOME/.boop`, and add the following keys:
+
 ```env
 // Should be the same as the key used to signed the webhook requests so they can be verified.
 SECRET=test
 
-// Disables webhook security and allows webhook requests to be processed.
-DISABLE_WEBHOOK_SECURITY=true
-
+// Disables webhook security and allows unsigned webhook requests to be processed.
+DEBUG_DISABLE_WEBHOOK_SECURITY=true
 
 // Mainly used for extra logging; all logs are printed to console.
 NODE_ENV=development
 
 // Will skip pulling or cloning projects from github during project installation after intial setup.
-BYPASS_GIT_PULL=true
+DEBUG_BYPASS_GIT_PULL=true
 ```
 
 ## Web UI

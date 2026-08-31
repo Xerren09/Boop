@@ -12,12 +12,56 @@ http:
       type: query
       disabled: true
     - name: logTime
-      value: "1775430191780"
+      value: "1787589632990"
       type: path
   auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("response matches the Deploy Log schema", function () {
+          const searchParams = new URLSearchParams(req.getQueryString());
+          if (searchParams.has("process")) {
+            const outputSchema = {
+                type: "string"
+            };
+            expect(res.getBody()).to.have.jsonSchema(outputSchema, { allErrors: true });
+          }
+          else {
+            const logSchema = {
+              type: "object",
+              properties: {
+                  time: { type: "integer" },
+                  ref: { type: "string", format: "uuid", nullable: true},
+                  process: {
+                      type: "object",
+                      properties: {
+                          cmd: { type: "string" },
+                          log: { type: "string" },
+                          exitCode: { type: "integer", nullable: true },
+                          startTime: { type: "integer" },
+                          exitTime: { type: "integer" },
+                          killed: { type: "boolean" },
+                      },
+                      additionalProperties: false,
+                      get required() {
+                        return Object.keys(this.properties)
+                      }
+                  }
+              },
+              additionalProperties: false,
+              get required() {
+                return Object.keys(this.properties)
+              }
+            };
+            expect(res.getBody()).to.have.jsonSchema(logSchema, { allErrors: true });
+          }
+        });
 
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true

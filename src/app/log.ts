@@ -1,18 +1,18 @@
 import winston from "winston";
 import { LOG_FILE, PROJECT_LOG_FILE_NAME, PROJECT_LOGS_DEPLOY_DIR_NAME, PROJECT_LOGS_DIR_NAME, PROJECT_LOGS_INSTALL_DIR_NAME } from "./constants.js";
 import { join } from "path";
-import { isDevEnv } from "./utilities.js";
 import { readdir } from "fs/promises";
 import { BoopProject } from "./project/boop.project.js";
-import { npm, NpmConfigSetLevels } from "winston/lib/winston/config/index.js";
-
+import { BoopConfiguration } from "./settings.js";
+import { serializeError } from "serialize-error";
 export interface BoopLogger extends winston.Logger {
     /**
      * Logs an {@link Error} object with its `cause` property. Handles nested errors.
-     * @param exception 
+     * @param exception The `Error` instance or other thrown value to log. 
+     * @param message Optional error message. If not given, {@link Error.message} will be used.
      * @returns 
      */
-    logException: (exception: any) => void
+    logException: (exception: any, message?: string) => void
 }
 
 function createLogger(path: string, level?: string | null, disableConsole?: boolean, consoleLevel?: string | null) {
@@ -44,35 +44,18 @@ function createLogger(path: string, level?: string | null, disableConsole?: bool
     return instance as BoopLogger;
 }
 
-const logger = createLogger(LOG_FILE);
+const logger = createLogger(LOG_FILE, null, BoopConfiguration.DEBUG == false);
 export default logger as BoopLogger;
 
 export function createProjectLogger(projectRoot: string): BoopLogger {
     const path = join(projectRoot, PROJECT_LOGS_DIR_NAME, PROJECT_LOG_FILE_NAME);
-    const _logger = createLogger(path, null, isDevEnv() == false, "silly");
+    const _logger = createLogger(path, null, BoopConfiguration.DEBUG == false, "silly");
     return _logger;
 }
 
-// TODO: take a look at this later
-function logException(this: BoopLogger, exception: any) {
-    if (exception instanceof AggregateError) {
-        this.error(exception.message);
-        for (let index = 0; index < exception.errors.length; index++) {
-            const error = exception.errors[index];
-            this.logException(error);
-        }
-    }
-    else if (exception instanceof SuppressedError) {
-        this.error(exception.error);
-        this.logException(exception.suppressed);
-    }
-    else if (exception instanceof Error) {
-        this.error(exception.message);
-        this.debug("Exception:", { exception: parseError(exception)});
-    }
-    else {
-        this.error(exception);
-    }
+function logException(this: BoopLogger, exception: any, message?: string) {
+    const msg = message ?? (exception instanceof Error ? exception.message : exception);
+    this.error(msg, { exception: serializeError(exception) });
 }
 
 /**
@@ -124,7 +107,7 @@ interface EventLogDirHandle {
 
 export interface EventLog {
     time: number,
-    ref?: string | null
+    ref: string | null
 }
 
 export interface ProcessLog {

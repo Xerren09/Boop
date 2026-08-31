@@ -10,6 +10,7 @@ import { ServiceProject } from "../../project/service.project.js";
 import logger, { listProjectLogs } from "../../log.js";
 import { pathExists } from "../../utilities.js";
 import type { BoopProject } from "../../project/boop.project.js";
+import { serializeError } from "serialize-error";
 
 declare module 'express-serve-static-core' {
     interface Request {
@@ -29,7 +30,7 @@ async function handleFileStreamResponse(filePath: string, res: express.Response)
             err = err.suppressed;
         }
         if (res.headersSent == false) {
-            res.status(500).json(err);
+            res.status(500).json(serializeError(err));
         }
         else {
             logger.logException(err);
@@ -88,8 +89,7 @@ apiRouter.get("/projects/:projectName", (req, res) => {
         remote: project.remoteUrl,
         type: project.type,
         deployed: project.deployed,
-        lastEvent: project.webhookEvents.lastEvent ?? null,
-        localPort: project.environment.get("port") ?? null
+        lastEvent: project.webhookEvents.lastEvent ?? null
     }
     res.status(200).json(ret);
 });
@@ -101,7 +101,7 @@ apiRouter.delete("/projects/:projectName", async (req, res) => {
         res.sendStatus(200);
     }
     catch (error) {
-        res.status(500).json(error);
+        res.status(500).json(serializeError(error));
     }
 });
 
@@ -132,7 +132,7 @@ apiRouter.get("/projects/:projectName/logs/deploy", async (req, res) => {
         }
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -165,7 +165,7 @@ apiRouter.get("/projects/:projectName/logs/deploy/:log", async (req, res) => {
         }
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -176,7 +176,7 @@ apiRouter.get("/projects/:projectName/logs/install", async (req, res) => {
         res.status(200).json(files);
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -208,7 +208,7 @@ apiRouter.get("/projects/:projectName/logs/install/:log", async (req, res) => {
         }
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -219,7 +219,7 @@ apiRouter.post("/projects/:projectName/start", async (req, res) => {
         res.sendStatus(200);
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -230,7 +230,7 @@ apiRouter.post("/projects/:projectName/stop", async (req, res) => {
         res.sendStatus(200);
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -241,7 +241,7 @@ apiRouter.post("/projects/:projectName/restart", async (req, res) => {
         res.sendStatus(200);
     }
     catch (err) {
-        res.status(500).json(err);
+        res.status(500).json(serializeError(err));
     }
 });
 
@@ -250,36 +250,60 @@ apiRouter.get("/projects/:projectName/env", (req, res) => {
     res.status(200).json(project.environment.variables);
 });
 
-apiRouter.get("/projects/:projectName/env/:key", (req, res) => {
-    const project = req.project;
-    if (req.params.key) {
-        res.status(200).json(project.environment.get(req.params.key));
-    }
-    else {
-        res.status(404).send("No environment variable found.");
-    }
-});
-
 apiRouter.patch("/projects/:projectName/env", (req, res) => {
     const project = req.project;
-    if (req.body?.key != undefined && req.body?.value != undefined) {
-        project.environment.set(req.body.key, req.body.value);
-        res.sendStatus(200);
+    const key: string | undefined = req.body?.key;
+    const val: string | number = req.body?.value ?? "";
+    if (!key) {
+        return res.status(400).send(`Environment variable key not specified.`);
     }
-    else {
-        const badKey = req.body?.key == undefined;
-        const badValue = req.body?.value == undefined;
-        res.status(400).send(`Invalid arguments: ${badKey ? "key" : ""} ${badKey && badValue ? " and ": ""} ${badValue ? "value" : ""} undefined.`);
+    if (typeof key !== "string") {
+        return res.status(400).send("Key must be a string.");
     }
+    project.environment.set(key, val);
+    res.sendStatus(202);
 });
 
 apiRouter.delete("/projects/:projectName/env", (req, res) => {
     const project = req.project;
-    if (req.body.key != undefined) {
-        project.environment.delete(req.body.key);
-        res.sendStatus(200);
+    const key = req.body?.key;
+    if (!key) {
+        return res.status(400).send(`Environment variable key not specified.`);
     }
-    else {
-        res.status(404).send("No environment variable found.");
+    if (typeof key !== "string") {
+        return res.status(400).send("Key must be a string.");
     }
+    project.environment.delete(key);
+    res.sendStatus(202);
+});
+
+apiRouter.get("/projects/:projectName/env/:key", (req, res) => {
+    const project = req.project;
+    const key = req.params.key;
+    if (project.environment.has(key) == false) {
+        return res.status(404).send("No environment variable found.");
+    }
+    const val = project.environment.get(req.params.key);
+    res.status(200).json(val);
+});
+
+apiRouter.post("/projects/:projectName/env/:key", (req, res) => {
+    const project = req.project;
+    const val = req.body.value ?? "";
+    const key = req.params.key;
+    if (!key) {
+        return res.status(404).send("No environment variable specified.");
+    }
+    project.environment.set(key, val === undefined ? "" : val);
+    res.sendStatus(202);
+});
+
+apiRouter.delete("/projects/:projectName/env/:key", (req, res) => {
+    const project = req.project;
+    const key = req.params.key;
+    if (!key) {
+        return res.status(404).send("No environment variable specified.");
+    }
+    project.environment.delete(key);
+    res.sendStatus(202);
 });

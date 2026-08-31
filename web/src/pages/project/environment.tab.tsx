@@ -38,7 +38,7 @@ type EnvironmentVariable  = {
     value: string
 }
 
-export default function EnvironmentVariableEditor() {
+export default function ProjectEnvironmentTab() {
     const project = useContext(ProjectProvider);
 
     const style = tableStyles();

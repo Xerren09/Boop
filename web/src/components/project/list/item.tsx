@@ -2,14 +2,24 @@ import { Link, Menu, MenuButton, MenuList, MenuPopover, MenuTrigger, TableCell, 
 import Runtime from "../../runtime";
 import { useProjectStreamer } from "../../../api/streamers/useProjectStreamer";
 import { ProjectStatusIcon } from "../statusIcon";
-import { Link as RouterLink } from "react-router"; 
+import { useNavigate } from "react-router"; 
 import ProjectControlButton from "../controlButton";
-import type { ProjectType } from "../../../api/api";
+import { BoopAPI, type ProjectType } from "../../../api/api";
 import { MoreHorizontalFilled } from "@fluentui/react-icons";
+import { useMemo } from "react";
 
 export default function ProjectListItem(props: Props) {
-    const { projectStatus, lastWebhookEvent } = useProjectStreamer(props.name);
+    const url = useMemo(() => {
+        const base = BoopAPI.constructApiURL(`projects/${props.name}`);
+        base.protocol = "ws:"
+        return base;
+    }, [props.name]);
+    const nav = useNavigate();
+
+    const { projectStatus, lastWebhookEvent } = useProjectStreamer(url);
     
+    const disable = projectStatus === "disposed";
+
     return (
         <TableRow key={props.name} style={{
             display: props.hidden ? "none" : "table-row"
@@ -20,12 +30,10 @@ export default function ProjectListItem(props: Props) {
                     description={props.type === "service" ? "Service" : "Web application"}
                     truncate
                 >
-                    <RouterLink to={`/${props.name}`} style={{textDecoration: "none"}}>
-                        <Link>{props.name}</Link>
-                    </RouterLink>
+                    <Link disabled={disable} onClick={() => { nav(`/${props.name}`) }} style={{textDecoration: "none"}}>{props.name}</Link>
                 </TableCellLayout>
                 {
-                    props.disableActions ? null : (
+                    props.disableActions || disable ? null : (
                         <TableCellActions>
                             <Menu>
                                 <MenuTrigger disableButtonEnhancement>

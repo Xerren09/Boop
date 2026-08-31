@@ -1,12 +1,14 @@
 import { useRef, useState, useEffect } from "react";
 import type { InstallerStateMessage } from "./types";
-import { BoopAPI, RemoteProcess } from "../api";
+import { RemoteProcess } from "../api";
 import type { Status } from "../../components/statusIcon";
+import { BoopSocket } from "./BoopSocket";
 
-export type InstallerStatus = Exclude<Status, "warning" | "paused">;
+// Exclude disposed because if it goes offline the project main ws will too and that triggers a dialog
+export type InstallerStatus = NonNullable<Exclude<Status, "warning" | "paused" | "disposed">>;
 
-export function useInstallStreamer(projectId: string) {
-    const _socket = useRef<WebSocket | null>(null);
+export function useInstallStreamer(installSocketUrl: URL) {
+    const socket = useRef<BoopSocket<InstallerStateMessage> | null>(null);
     const _steps = useRef<RemoteProcess[]>([]);
     const _step = useRef<number>(-1);
 
@@ -14,8 +16,7 @@ export function useInstallStreamer(projectId: string) {
     const [installer, setInstaller] = useState<RemoteProcess[]>([])
     const [status, setStatus] = useState<InstallerStatus>("pending")
 
-    const onMessage = (msg: string) => {
-        const message: InstallerStateMessage = JSON.parse(msg) as InstallerStateMessage;
+    const onMessage = (message: InstallerStateMessage) => {
         switch (message.type) {
             case "installerStart": {
                 const stepList: RemoteProcess[]  = message.steps.map(step => new RemoteProcess(step));
@@ -47,27 +48,25 @@ export function useInstallStreamer(projectId: string) {
                 break;
             }
             default: {
-                console.warn("Unknown install streamer message:", message);
+                console.error("Unknown InstallStreamer message received:", message);
             }
         }
     }
 
     useEffect(() => {
-        if (_socket.current !== null && _socket.current.readyState === WebSocket.OPEN) {
+        if (socket.current !== null && socket.current.readyState === WebSocket.OPEN) {
             return;
         }
-        const ws = new WebSocket(`${BoopAPI.constructApiURL(`projects/${projectId}/installer`).toString().replace("http://", "ws://")}`);
-        _socket.current = ws;
-        const handler = (msg: MessageEvent<unknown>) => {
-            onMessage(msg.data as string);
-        }
-        _socket.current.addEventListener("message", handler);
+        const ws = new BoopSocket<InstallerStateMessage>(installSocketUrl);
+        socket.current = ws;
+        const sub = ws.message.subscribe((msg) => { 
+            onMessage(msg);
+        });
         return () => {
-            _socket.current?.close();
-            _socket.current?.removeEventListener("message", handler);
-            _socket.current = null;
-        };
-    }, [projectId]);
+            sub.unsubscribe();
+            ws.dispose();
+        }
+    }, [installSocketUrl]);
 
     return {
         steps: installer,

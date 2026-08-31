@@ -2,7 +2,7 @@ import { writeFile, readFile } from "fs/promises";
 import { pathExists } from "../utilities.js";
 
 export type Environment = {
-    [key: string]: string | number
+    [key: string]: string
 }
 
 export class EnvFile {
@@ -39,20 +39,26 @@ export class EnvFile {
         }
     }
 
-    public set(key: string, value: string | number) {
-        this._env[key.toUpperCase()] = value;
+    public set(key: string, value: string | number | boolean) {
+        key = this.normaliseKey(key);
+        this._env[key] = `${value}`;
     }
 
-    public get(key: string): string | number | null {
-        key = key.toUpperCase();
+    public get(key: string): string | null {
+        key = this.normaliseKey(key);
         if (this._env[key] != undefined) {
             return this._env[key];
         }
         return null;
     }
 
+    public has(key: string): boolean {
+        key = this.normaliseKey(key);
+        return this._env[key] !== undefined;
+    }
+
     public delete(key: string) {
-        key = key.toUpperCase();
+        key = this.normaliseKey(key);
         if (this._env[key] != undefined) {
             delete this._env[key];
         }
@@ -60,5 +66,9 @@ export class EnvFile {
 
     public async save() {
         await writeFile(this.file, JSON.stringify(this._env));
+    }
+
+    private normaliseKey(val: string) {
+        return `${val}`.toUpperCase();
     }
 }

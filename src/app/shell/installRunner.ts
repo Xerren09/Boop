@@ -226,7 +226,7 @@ export class InstallRunner extends EventEmitter {
     private async saveLog(dir: string, time: number, ref?: string) {
         const log: InstallerLog = {
             time: time,
-            ref: ref,
+            ref: ref ?? null,
             steps: this.steps.map((el, idx) => ({
                 cmd: el.cmd,
                 log: `${idx}.log`,

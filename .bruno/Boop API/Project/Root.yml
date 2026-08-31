@@ -8,8 +8,36 @@ http:
   url: http://localhost:8004/boop/api/projects/{{PROJECT}}/
   auth: inherit
 
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        const { webhookEventSchema, projectTypeSchema } = require("./CommonSchemas.js");
+
+        test("response matches the Project schema", function () {
+            const projectSchema = {
+                type: "object",
+                properties: {
+                    name: { type: "string" },
+                    remote: { type: "string", format: "url" },
+                    type: projectTypeSchema,
+                    deployed: { type: "boolean" },
+                    lastEvent: { 
+                      nullable: true,
+                      ...webhookEventSchema
+                    }
+                },
+                additionalProperties: false,
+                get required() {
+                  return Object.keys(this.properties)
+                }
+            };
+            expect(res.getBody()).to.have.jsonSchema(projectSchema, { allErrors: true });
+        });
+
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true

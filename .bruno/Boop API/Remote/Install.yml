@@ -1,0 +1,22 @@
+info:
+  name: Install
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: http://localhost:8004/boop/api/remote/install
+  body:
+    type: form-urlencoded
+    data:
+      - name: url
+        value: https://github.com/Xerren09/testAPI
+        description: The URL of the GitHub repository to install the project from
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
