@@ -89,8 +89,7 @@ apiRouter.get("/projects/:projectName", (req, res) => {
         remote: project.remoteUrl,
         type: project.type,
         deployed: project.deployed,
-        lastEvent: project.webhookEvents.lastEvent ?? null,
-        localPort: project.environment.get("port") ?? null
+        lastEvent: project.webhookEvents.lastEvent ?? null
     }
     res.status(200).json(ret);
 });
