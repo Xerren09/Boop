@@ -47,9 +47,9 @@ export function resolve__dirname(importUrl: string) {
  * @param path 
  * @returns 
  */
-export async function pathExists(path: PathLike): Promise<boolean> {
+export async function pathExists(path: PathLike, readOnly?: boolean): Promise<boolean> {
     try {
-        await access(path, W_OK | R_OK);
+        await access(path, readOnly ? R_OK : (W_OK | R_OK));
         return true;
     }
     catch {
@@ -67,10 +67,6 @@ const RemoteURLNameRegex = /(?<projectID>[^/]+)(?=\/$|$)/;
 export function getProjectNameFromRemote(url: string) {
     const res = RemoteURLNameRegex.exec(url);
     return res?.groups?.projectID ?? null;
-}
-
-export function isDevEnv(): boolean {
-    return process.env["NODE_ENV"] == "development";
 }
 
 export function isNodeErrnoException(err: any, code?: string): err is NodeJS.ErrnoException {

@@ -8,8 +8,24 @@ http:
   url: http://localhost:8004/boop/api/projects/{{PROJECT}}/logs/install
   auth: inherit
 
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        const { eventLogDirHandleSchema } = require("./CommonSchemas.js");
+
+        test("response matches the List schema", function () {
+          const listSchema = {
+            type: "array",
+            items: eventLogDirHandleSchema,
+          };
+
+          expect(res.getBody()).to.have.jsonSchema(listSchema, { allErrors: true });
+        });
+
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true

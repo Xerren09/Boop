@@ -1,7 +1,7 @@
 import WebSocket from "ws"
 import type { BoopProject } from "../../../project/boop.project.js";
 import { ServiceProject } from "../../../project/service.project.js";
-import { IAsyncDisposable } from "../../../utilities.js";
+import type { IAsyncDisposable } from "../../../utilities.js";
 import { WebhookEvent } from "../../../webhook.js";
 import { join } from "node:path";
 import logger, { listProjectLogs } from "../../../log.js";

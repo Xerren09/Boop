@@ -131,6 +131,6 @@ export class ServiceProject extends BoopProject {
 
 interface ServiceDeployLog extends EventLog {
     time: number,
-    ref?: string | null,
+    ref: string | null,
     process: ProcessLog
 }

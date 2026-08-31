@@ -1,11 +1,12 @@
-import { Interface } from "node:readline/promises";
+import { type Interface } from "node:readline/promises";
 import { styleText } from "node:util";
 import { AppProject } from "../../project/app.project.js";
-import { BoopProject } from "../../project/boop.project.js";
+import { type BoopProject } from "../../project/boop.project.js";
 import Manager from "../../project/manager.js";
 import { ServiceProject } from "../../project/service.project.js";
 import { getProjectNameFromRemote } from "../../utilities.js";
-import { BOOP_PORT } from "../../settings.js";
+import { BoopConfiguration } from "../../settings.js";
+import { BOOP_BIN_DIR, PROJECTS_DIR } from "../../constants.js";
 
 interface CMD {
     command: string,
@@ -64,7 +65,7 @@ export const CLICommands: CMD[]  = [
         command: "install",
         func: install,
         description: "Installs a project from the given URL.",
-        expectsArgsLike: ["githubURL"]
+        expectsArgsLike: ["githubURL", "branch?"]
     },
     {
         command: "uninstall",
@@ -81,6 +82,7 @@ export const CLICommands: CMD[]  = [
         command: "help",
         description: "Prints all commands and their related info.",
         func: help,
+        expectsArgsLike: ["command"]
     }
 ]
 
@@ -136,12 +138,19 @@ async function restart(cli: Interface, command: string, args: string[]) {
 }
 
 async function status(cli: Interface, command: string, args: string[]) {
+    console.log(`Boop installed at: ${BOOP_BIN_DIR}.`);
+    console.log(`Projects installed at: ${PROJECTS_DIR}.\n`);
     if (args[0] == "all" || args[0] == undefined) {
-        for (let index = 0; index < Manager.projects.length; index++) {
-            const project = Manager.projects[index];
-            projectStatusReadout(project);
-            if (index + 1 != Manager.projects.length) {
-                console.log("\n");
+        if (Manager.projects.length === 0) {
+            console.log(`No projects installed. Use the 'install' command to install a project.`);
+        }
+        else {
+            for (let index = 0; index < Manager.projects.length; index++) {
+                const project = Manager.projects[index];
+                projectStatusReadout(project);
+                if (index + 1 != Manager.projects.length) {
+                    console.log("\n");
+                }
             }
         }
         return;
@@ -156,7 +165,7 @@ async function status(cli: Interface, command: string, args: string[]) {
 function projectStatusReadout(project: BoopProject) {
     console.log(`${project.name}:`, styleText(project.deployed ? "greenBright" : "redBright", `${project.deployed ? "deployed" : "stopped"}`));
     console.log(`\tType:`, `${project.type}`);
-    console.log(`\tRouter:`, styleText("blueBright", project.deployed ? `http://localhost:${BOOP_PORT}/${project.name}` : '---'));
+    console.log(`\tRouter:`, styleText("blueBright", project.deployed ? `http://localhost:${BoopConfiguration.port}/${project.name}` : '---'));
     if (project instanceof ServiceProject) {
         console.log(`\tDirect:`, styleText("blueBright", project.deployed ? `http://localhost:${project.environment.get("port")}/` : '---'));
     }
@@ -173,7 +182,7 @@ async function install(cli: Interface, command: string, args: string[]) {
     if (URL.canParse(remote) == false || name === null) {
         throw new Error(`Invalid URL, '${remote}' is a not valid github repository.`);;
     }
-    console.log("Downloading project from ", remote, branch, "...");
+    console.log("Downloading project from ", remote, "branch:", branch ?? "main", "...");
     const fresh = await Manager.Create(remote, branch);
     console.log("Project successfully created.");
     console.log("Installing...");
@@ -202,14 +211,29 @@ async function exit(cli: Interface, command: string, args: string[]) {
 }
 
 async function help(cli: Interface, command: string, args: string[]) {
+    const helpCmd = args[0] ?? null;
+    if (helpCmd) {
+        const cmd = CLICommands.find(el => el.command.startsWith(helpCmd));
+        if (cmd) {
+            printCommandHelp(cmd);
+        }
+        else {
+            console.log(`No command '${helpCmd}' found.`);
+        }
+        return;
+    }
     for (const entry of CLICommands) {
-        console.log(styleText("blue", `\n${entry.command}`), ":");
-        console.log(`\t${entry.description}`);
-        if (entry.expectsArgsLike || entry.persistentArgs) {
-            console.log(`\tArgs: ${[...(entry.expectsArgsLike ?? []).map(el => styleText("blueBright", `<${el}>`)), ...(entry.persistentArgs ?? []).map(el => styleText("blueBright", `${el}`))].join(", ")}`);
-        }
-        if (entry.flags) {
-            console.log(`\tFlags: ${[...entry.flags ?? []].map(el => styleText("gray", `${el}`)).join(", ")}`);
-        }
+        printCommandHelp(entry);
+    }
+}
+
+function printCommandHelp(command: CMD) {
+    console.log(styleText("blue", `\n${command.command}`), ":");
+    console.log(`\t${command.description}`);
+    if (command.expectsArgsLike || command.persistentArgs) {
+        console.log(`\tArgs: ${[...(command.expectsArgsLike ?? []).map(el => styleText("blueBright", `<${el}>`)), ...(command.persistentArgs ?? []).map(el => styleText("blueBright", `${el}`))].join(", ")}`);
+    }
+    if (command.flags) {
+        console.log(`\tFlags: ${[...command.flags ?? []].map(el => styleText("gray", `${el}`)).join(", ")}`);
     }
 }

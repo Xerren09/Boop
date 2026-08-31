@@ -5,9 +5,23 @@ import logger from "../log.js";
 import { stripVTControlCharacters } from "util";
 import { constants } from "os";
 import { IAsyncDisposable } from "../utilities.js";
-import { ENV_DISABLE_WEBHOOK_SECURITY_KEY, ENV_PORT_KEY, ENV_SECRET_KEY } from "../constants.js";
+import { DEBUG_ENV_BYPASS_GIT_PULL_KEY, ENV_DISABLE_WEBHOOK_SECURITY_KEY, ENV_PORT_KEY, ENV_SECRET_KEY } from "../constants.js";
 import { Readable, Transform } from "stream";
 import { createWriteStream, WriteStream } from "fs";
+
+/**
+ * A copy of `process.env` clean of Boop's configuration variables.
+ * @returns 
+ */
+export function getCleanEnv(): NodeJS.ProcessEnv {
+    const env = { ...process.env };
+    delete env[ENV_SECRET_KEY]; // Don't leak the secret
+    delete env[ENV_PORT_KEY];
+    delete env[ENV_DISABLE_WEBHOOK_SECURITY_KEY];
+    delete env[DEBUG_ENV_BYPASS_GIT_PULL_KEY];
+    delete env["NODE_ENV"];
+    return env;
+}
 
 /**
  * Spawns a new shell and runs the given command.
@@ -28,11 +42,7 @@ export function shellExecuteAsync(command: string, cwd: string, env?: NodeJS.Pro
         });
     }
     else if (process.platform === "linux") {
-        const __env = { ...process.env };
-        // Get rid of Boop specific variables
-        delete __env[ENV_SECRET_KEY]; // Don't leak the secret
-        delete __env[ENV_PORT_KEY];
-        delete __env[ENV_DISABLE_WEBHOOK_SECURITY_KEY];
+        const __env = getCleanEnv();
         _proc = spawn(command, {
             cwd: cwd,
             shell: true,
@@ -300,7 +310,7 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
                     const __signal = force === true ? 'SIGKILL' : 'SIGTERM';
                     this._wasKilled = true;
                     if (entireProcessTree === true) {
-                        treeKill(this._process.pid, __signal, (err?: Error | null) => {
+                        treeKill(this._process.pid, __signal, async (err?: Error | null) => {
                             if (err) {
                                 if (process.platform === "win32") {
                                     if ((err as KillError).code === 128) {
@@ -321,6 +331,10 @@ export class BoopProcess extends EventEmitter implements IAsyncDisposable {
                                 reject(new Error(`Process "${this._process.spawnargs.join(" ")}" (${this.pid}) could not be stopped.`, { cause: err }));
                             }
                             else {
+                                if (process.platform === "win32") {
+                                    return resolve();
+                                }
+                                await once(this, "exit");
                                 resolve();
                             }
                         });

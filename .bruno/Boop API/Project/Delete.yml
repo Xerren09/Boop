@@ -1,0 +1,16 @@
+info:
+  name: Delete
+  type: http
+  seq: 13
+
+http:
+  method: DELETE
+  url: http://localhost:8004/boop/api/projects/{{PROJECT}}/
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -2,12 +2,19 @@ import { join } from "path";
 import { PROJECT_BIN_DIR_NAME, PROJECTS_DIR } from "../constants.js";
 import { getProjectNameFromRemote, pathExists } from "../utilities.js";
 import { mkdir } from "fs/promises";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { once } from "events";
 import assert from "assert";
 import AsyncLock from "async-lock";
 
 const lock = new AsyncLock();
+
+/**
+ * Since Boop is essentially headless, disable git credential prompts.
+ * 
+ * See {@link https://git-scm.com/docs/git-config#Documentation/git-config.txt-credentialinteractive|git config credentials.interactive}
+ */
+const GIT_BASE_ARGS = ['-c', 'credential.interactive=false', '-c', 'core.askPass=true'];
 
 /**
  * Downloads the project's files from the specified remote.
@@ -18,26 +25,39 @@ const lock = new AsyncLock();
  */
 export async function downloadRemote(remoteUrl: string, branch?: string | null, cancel?: AbortSignal) {
     await lock.acquire(remoteUrl, async () => { 
-        assert(URL.canParse(remoteUrl), `'${remoteUrl}' is not a valid URL.`)
+        assert(URL.canParse(remoteUrl), `'${remoteUrl}' is not a valid URL.`);
+        if (await checkGitRemoteAccess(remoteUrl) === false) {
+            throw new Error("Git does not have access to the remote.");
+        }
         const name = getProjectNameFromRemote(remoteUrl);
         assert(name, `'${remoteUrl}' is not a valid project URL.`);
         const projectPath = join(PROJECTS_DIR, name);
         const projectBinPath = join(projectPath, PROJECT_BIN_DIR_NAME);
         // Pull by default
-        let command: string = `git pull ${remoteUrl} ${branch ?? ""}`;
+        let args: string[] = [...GIT_BASE_ARGS];
         if (await pathExists(projectBinPath) == false) {
             // Clone if files don't exist
             await mkdir(projectBinPath);
-            command = `git clone --single-branch ${branch ? `--branch ${branch}` : ""} "${remoteUrl}" .`
+            args.push("clone", "--single-branch");
+            if (branch) {
+                args.push("--branch", `${branch}`);
+            }
+            args.push(`${remoteUrl}`, ".");
         }
-        const proc = exec(command, {
+        else {
+            args.push("pull", `${remoteUrl}`);
+            if (branch) {
+                args.push(`${branch}`);
+            }
+        }
+        const proc = execFile("git", args, {
             cwd: projectBinPath,
             signal: cancel
         });
-        // This is a shell so shouldn't throw
         const [code, signal] = await once(proc, "exit");
         if (code !== 0) {
-            throw new Error(`Failed to sync from remote via '${command}': ${code ?? signal}`, { cause: {code, signal} });
+            const cmd = `git ${args.join(" ")}`;
+            throw new Error(`Failed to sync from remote via '${cmd}': ${code ?? signal}`, { cause: {code, signal} });
         } 
     });
 }
@@ -47,7 +67,28 @@ export async function downloadRemote(remoteUrl: string, branch?: string | null, 
  * @returns 
  */
 export async function checkGitAvailable() {
-    const proc = exec(`git --version`);
-    const [code, signal] = await once(proc, "exit");
-    return code == 0; 
+    const proc = execFile(`git`, ["--version"]);
+    try {
+        const [code, signal] = await once(proc, "exit");
+        return code == 0; 
+    }
+    catch {
+        return false;
+    }
+}
+
+/**
+ * Checks if a git remote is accessible to the system.
+ * @param remote 
+ * @returns `true` if git could access the remote, `false` if not.
+ */
+export async function checkGitRemoteAccess(remote: string) {
+    const proc = execFile(`git`, [...GIT_BASE_ARGS, 'ls-remote', `${remote}`], { timeout: 30000 });
+    try {
+        const [code, signal] = await once(proc, "exit");
+        return code == 0;
+    }
+    catch {
+        return false;
+    }
 }

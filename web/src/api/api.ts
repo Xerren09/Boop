@@ -399,8 +399,7 @@ export interface ProjectInfo {
     deployed: boolean,
     remote: string,
     type: ProjectType,
-    lastEvent: WebhookEvent | null,
-    localPort: number | null
+    lastEvent: WebhookEvent | null
 }
 
 export interface ProjectEnv {

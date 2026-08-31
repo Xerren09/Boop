@@ -1,14 +1,20 @@
-import { join } from "path";
+import { join, normalize } from "path";
+import { homedir } from "os";
 import { resolve__dirname } from "./utilities.js";
-import { config } from "dotenv";
-config({ quiet: true });
 
+/**
+ * Path to Boop's install directory.
+ */
 // HACK: this is bad but what can you do.
-export const BOOP_BASE_DIR = join(resolve__dirname(import.meta.url), "..");
+export const BOOP_BIN_DIR = join(resolve__dirname(import.meta.url), "..", "..");
+/**
+ * Path to the .boop directory containing installed projects and logs.
+ */
+export const BOOP_BASE_DIR = normalize(join(homedir(), ".boop"));
 /**
  * Path to the web control interface's directory.
  */
-export const WEB_INTERFACE_DIR = join(BOOP_BASE_DIR, 'bin', 'web');
+export const WEB_INTERFACE_DIR = join(BOOP_BIN_DIR, 'bin', 'web');
 /**
  * Path leading to the `projects` folder, where repositories are downloaded.
  */
@@ -72,5 +78,5 @@ export const PROJECT_LOG_DEPLOY_OUTPUT_FILE_NAME = "output.log";
 
 export const ENV_PORT_KEY = "PORT";
 export const ENV_SECRET_KEY = "SECRET";
-export const ENV_DISABLE_WEBHOOK_SECURITY_KEY = "DISABLE_WEBHOOK_SECURITY";
-export const DEBUG_ENV_BYPASS_GIT_PULL_KEY = "BYPASS_GIT_PULL";
+export const ENV_DISABLE_WEBHOOK_SECURITY_KEY = "DEBUG_DISABLE_WEBHOOK_SECURITY";
+export const DEBUG_ENV_BYPASS_GIT_PULL_KEY = "DEBUG_BYPASS_GIT_PULL";

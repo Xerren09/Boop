@@ -4,7 +4,7 @@ import ProjectManager from "./project/manager.js";
 import logger from "./log.js";
 import AsyncLock from "async-lock";
 import { IAsyncDisposable } from "./utilities.js";
-import { BOOP_DISABLE_WEBHOOK_SECURITY, BOOP_SECRET } from "./settings.js";
+import { BoopConfiguration } from "./settings.js";
 
 class WebhookTask implements IAsyncDisposable {
     private _cancel: AbortController;
@@ -21,6 +21,7 @@ class WebhookTask implements IAsyncDisposable {
         this._event = evt;
         this._cancel = new AbortController();
         this._task = task(this._cancel.signal);
+        // HACK: eat the error 
         this._task.catch(() => {}).finally(() => { this._task = undefined; });
     }
     get disposed(): boolean {
@@ -97,6 +98,7 @@ export class WebhookEventQueue implements IAsyncDisposable{
         if (this._disposed) {
             return;
         }
+        this._disposed = true;
         await this.cancelAll();
     }
 }
@@ -186,7 +188,7 @@ function parseWebhookEvent(req: express.Request): WebhookEvent {
         },
         security: {
             hash: req.get('X-Hub-Signature-256') ?? null,
-            valid: BOOP_DISABLE_WEBHOOK_SECURITY ? false : isSignatureValid(req)
+            valid: BoopConfiguration.DEBUG_DisableWebhookSecurity ? false : isSignatureValid(req)
         },
         sender: {
             name: req.body.sender.login,  // "Codertocat"
@@ -208,12 +210,14 @@ function parseWebhookEvent(req: express.Request): WebhookEvent {
  * */
 function isSignatureValid(req: express.Request): boolean {
     // Ignore security check
-    if (BOOP_DISABLE_WEBHOOK_SECURITY) {
+    if (BoopConfiguration.DEBUG_DisableWebhookSecurity) {
+        logger.warn("Webhook security is disabled; skipping validation.");
         return true;
     }
     else {
         // If no SECRET is defined, we can't validate the signature, so reject it.
-        if (!BOOP_SECRET) {
+        if (!BoopConfiguration.secret) {
+            logger.warn("No secret is configured; rejecting event.");
             return false;
         }
     }
@@ -222,7 +226,7 @@ function isSignatureValid(req: express.Request): boolean {
     // Discard message if there is no signature
     if (signatureHash.length != 0) {
         const body: string = JSON.stringify(req.body);
-        const WEBHOOK_SECRET = BOOP_SECRET ?? "";
+        const WEBHOOK_SECRET = BoopConfiguration.secret ?? "";
         const signature = crypto.createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex");
         const trusted = Buffer.from(`sha256=${signature}`, 'ascii');
         const untrusted =  Buffer.from(signatureHash, 'ascii');
