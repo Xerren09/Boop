@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import styles from "./index.module.css";
 import Stack from "../../components/stack";
-import { Caption1, LargeTitle, Link, Subtitle2 } from "@fluentui/react-components";
+import { Caption1, LargeTitle, Link, Subtitle2, Text } from "@fluentui/react-components";
 import Runtime from "../../components/runtime";
 import { BoopAPI, type BoopStatus } from "../../api/api";
 import BoopProjectsTab from "./tabs/projects.tab";
