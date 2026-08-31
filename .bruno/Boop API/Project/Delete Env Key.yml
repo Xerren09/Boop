@@ -1,10 +1,10 @@
 info:
-  name: Env Key
+  name: Delete Env Key
   type: http
-  seq: 9
+  seq: 11
 
 http:
-  method: GET
+  method: DELETE
   url: http://localhost:8004/boop/api/projects/{{PROJECT}}/env/{{key}}
   body:
     type: form-urlencoded
@@ -17,12 +17,8 @@ runtime:
   scripts:
     - type: tests
       code: |-
-        test("response matches the Env Key schema", function () {
-            const envSchema = {
-                type: ["string", "null"],
-            };
-
-            expect(res.getBody()).to.have.jsonSchema(envSchema);
+        test("response is accepted", function () {
+            expect(res.getStatus()).to.equal(202);
         });
 
 settings:
