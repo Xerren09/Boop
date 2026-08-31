@@ -2,7 +2,7 @@ import { Observable, Subject } from "rxjs";
 
 export class BoopSocket<TMessageType = unknown> {
     private _reconnectId: number = -1;
-    private _reconnectAttempts: number = 0;
+    private _reconnectAttemptScaler: number = 0;
     private _message: Subject<TMessageType> = new Subject<TMessageType>();
     private _url: URL;
     private _socket?: WebSocket = undefined;
@@ -38,7 +38,7 @@ export class BoopSocket<TMessageType = unknown> {
     }
 
     private onOpen = () => {
-        this._reconnectAttempts = 0;
+        this._reconnectAttemptScaler = 0;
     }
 
     private onClose = (evt: CloseEvent) => {
@@ -67,12 +67,12 @@ export class BoopSocket<TMessageType = unknown> {
     }
 
     private attemptReconnect = () => {
-        const base = 1000 * 2 ** this._reconnectAttempts;
+        const base = 1000 * 2 ** this._reconnectAttemptScaler;
         const delay = base + getJitter();
         this._reconnectId = setTimeout(() => {
             this._reconnectId = -1;
-            if (this._reconnectAttempts < 10) {
-                this._reconnectAttempts++;
+            if (this._reconnectAttemptScaler < 5) {
+                this._reconnectAttemptScaler++;
             }
             this.connect(this._url);
         }, delay);
@@ -87,7 +87,6 @@ export class BoopSocket<TMessageType = unknown> {
     }
 
     dispose() {
-        console.log("Disposing", this.url);
         if (this._reconnectId != -1) {
             clearTimeout(this._reconnectId);
         }
