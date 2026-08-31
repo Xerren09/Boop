@@ -65,7 +65,7 @@ Webhook events from GitHub can be directed to the following route:
 
 ## Security
 
-Disclaimer here. Boop is intended for scenarios where you have your own server and know how to safely configure it; and it was built with that in mind.
+Disclaimer here. Boop is intended for scenarios where you have your own server and know how to safely configure it; and it was built with that in mind. Ideally it should be run in an isolated container and with limited permissions. Webhook events are verified, but at the end of the day they come from the internet and will - by design - casue Boop to download and run software.
 
 > [!WARNING]  
 > Boop also exposes some dangerous APIs. It should always run behind a well configured webserver that only exposes the desired routes.
